@@ -33,8 +33,9 @@ RUN echo 'server {' > /etc/nginx/conf.d/default.conf && \
     echo '    location / {' >> /etc/nginx/conf.d/default.conf && \
     echo '        try_files $uri $uri/ /index.html;' >> /etc/nginx/conf.d/default.conf && \
     echo '    }' >> /etc/nginx/conf.d/default.conf && \
-    echo '    location /api {' >> /etc/nginx/conf.d/default.conf && \
-    echo '        proxy_pass http://backend:3030/;' >> /etc/nginx/conf.d/default.conf && \
+    echo '    location /api/ {' >> /etc/nginx/conf.d/default.conf && \
+    echo '        rewrite ^/api/(.*) /$1 break;' >> /etc/nginx/conf.d/default.conf && \
+    echo '        proxy_pass http://backend:3030;' >> /etc/nginx/conf.d/default.conf && \
     echo '        proxy_http_version 1.1;' >> /etc/nginx/conf.d/default.conf && \
     echo '        proxy_set_header Upgrade $http_upgrade;' >> /etc/nginx/conf.d/default.conf && \
     echo '        proxy_set_header Connection "upgrade";' >> /etc/nginx/conf.d/default.conf && \
