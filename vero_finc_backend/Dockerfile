@@ -30,7 +30,7 @@ RUN npm ci --only=production
 COPY --from=builder /app/dist ./dist
 
 # Expose port
-EXPOSE 3000
+EXPOSE 3030
 
 # Set environment to production
 ENV NODE_ENV=production
