@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { CreateTransactionDto, UpdateTransactionDto, TransactionType, TransactionStatus, Category, Transaction } from '../types';
 import { categoryService } from '../services/categoryService';
 import { X, Save } from 'lucide-react';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -92,12 +94,30 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       const checking = await (await fetch('/api/accounts?type=checking')).json();
       const cards = await (await fetch('/api/accounts?type=credit_card')).json();
       setAccounts([...checking, ...cards]);
+      
+      // Verifica se não há contas cadastradas
+      if (checking.length === 0 && cards.length === 0) {
+        toast.warning('⚠️ Nenhuma conta cadastrada! Cadastre uma conta antes de criar transações.', {
+          position: 'top-center',
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+        return;
+      }
+      
       // Se não houver conta selecionada, seleciona a primeira
       if (!accountId && (checking.length > 0 || cards.length > 0)) {
         setAccountId((checking[0]?._id || cards[0]?._id) ?? '');
       }
     } catch (err) {
       setAccounts([]);
+      toast.error('Erro ao carregar contas. Tente novamente.', {
+        position: 'top-center',
+        autoClose: 3000,
+      });
     }
   };
 
@@ -172,7 +192,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-auto">
+    <>
+      <ToastContainer />
+      <div className="fixed inset-0 z-50 flex items-center justify-center overflow-auto">
       {/* Overlay com desfoque */}
       <div className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity md:block hidden" onClick={onClose} />
 
@@ -380,5 +402,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         </form>
       </div>
     </div>
+    </>
   );
 };
