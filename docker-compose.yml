@@ -28,7 +28,7 @@ services:
       MONGODB_URI: mongodb://admin:admin123@mongodb:27017/vero_finc?authSource=admin
       PORT: 3000
     ports:
-      - '3000:3005'
+      - '3030:3000'
     depends_on:
       - mongodb
     networks:
