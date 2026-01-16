@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: vero_finc_mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+      MONGO_INITDB_DATABASE: vero_finc
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    networks:
+      - vero_finc_network
+
+  backend:
+    build:
+      context: ./vero_finc_backend
+      dockerfile: Dockerfile
+    container_name: vero_finc_backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      MONGODB_URI: mongodb://admin:admin123@mongodb:27017/vero_finc?authSource=admin
+      PORT: 3000
+    ports:
+      - '3000:3000'
+    depends_on:
+      - mongodb
+    networks:
+      - vero_finc_network
+
+  frontend:
+    build:
+      context: ./ver_finc_frontend
+      dockerfile: Dockerfile
+    container_name: vero_finc_frontend
+    restart: unless-stopped
+    ports:
+      - '80:80'
+    depends_on:
+      - backend
+    networks:
+      - vero_finc_network
+
+volumes:
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+
+networks:
+  vero_finc_network:
+    driver: bridge
