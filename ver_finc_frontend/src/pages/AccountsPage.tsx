@@ -230,7 +230,7 @@ export const AccountsPage: React.FC = () => {
                   <div>
                     <p className="font-bold text-lg mb-1">{acc.name}</p>
                     <p className="text-sm opacity-90">
-                      Saldo: R$ {(acc.initialBalance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      Saldo: R$ {(acc.initialBalance/100 || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
                 </div>

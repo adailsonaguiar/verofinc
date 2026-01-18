@@ -52,8 +52,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     if (isOpen) {
       if (initialData) {
         setDescription(initialData.description);
-        // Corrige: valor já está em reais, multiplica por 100 para formatar corretamente
-        setAmount(formatCurrencyInput(Math.round(initialData.amount * 100).toString()));
+        setAmount(formatCurrencyInput(Math.round(initialData.amount).toString()));
         setDate(initialData.date.split('T')[0]);
         setType(initialData.type);
         setCategoryId(initialData.category._id);
@@ -87,6 +86,13 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       }
     }
   }, [type, accountId, accounts]);
+
+  // Recarregar categorias quando o tipo mudar
+  useEffect(() => {
+    if (isOpen) {
+      loadCategories();
+    }
+  }, [type]);
 
   const loadAccounts = async () => {
     try {

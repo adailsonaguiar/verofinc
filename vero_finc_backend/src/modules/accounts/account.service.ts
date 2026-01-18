@@ -15,7 +15,8 @@ export class AccountService {
   ) {}
 
   async create(data: Partial<Account>) {
-    return this.accountRepository.create(data);
+        const accountValues = {initialBalance: data.initialBalance * 100 || 0, creditLimit: data.creditLimit * 100 || 0};
+    return this.accountRepository.create({...data, ...accountValues});
   }
 
   async findAll() {
@@ -28,8 +29,12 @@ export class AccountService {
     return account;
   }
 
-  async update(id: string, data: Partial<Account>) {
-    const account = await this.accountRepository.update(id, data);
+  async update(id: string, data: Partial<Account>, scapeMultiplyValues = false) {
+    let accountValues = {};
+    if (scapeMultiplyValues) {
+      accountValues = {initialBalance: data.initialBalance * 100 || 0, creditLimit: data.creditLimit * 100 || 0};
+    }
+    const account = await this.accountRepository.update(id, {...data, ...accountValues});
     if (!account) throw new NotFoundException(`Account with ID ${id} not found`);
     return account;
   }

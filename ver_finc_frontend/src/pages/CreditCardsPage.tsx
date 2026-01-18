@@ -328,10 +328,10 @@ export const CreditCardsPage: React.FC = () => {
                   <div>
                     <p className="font-bold text-lg mb-1">{card.name}</p>
                     <p className="text-sm opacity-90">
-                      Fatura: R$ {((card.creditLimit || 0) - (card.initialBalance || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      Fatura: R$ {((card.creditLimit || 0) - (card.initialBalance || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                     <p className="text-xs opacity-75 mt-0.5">
-                      Limite: R$ {(card.creditLimit || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      Limite: R$ {(card.creditLimit/100 || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
                 </div>

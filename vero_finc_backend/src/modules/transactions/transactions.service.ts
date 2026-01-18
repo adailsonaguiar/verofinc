@@ -48,6 +48,8 @@ export class TransactionsService {
     }
 
     async create(createTransactionDto: CreateTransactionDto, byPassCreditInvoiceCheck = false): Promise<Transaction> {
+        createTransactionDto.amount = createTransactionDto.amount * 100;
+
         // Buscar conta para validar tipo
         const account = await this.accountRepository.findById(createTransactionDto.account.toString());
         if (!account) {
@@ -101,6 +103,8 @@ export class TransactionsService {
     }
 
     async update(id: string, updateTransactionDto: UpdateTransactionDto): Promise<Transaction> {
+        updateTransactionDto.amount = updateTransactionDto.amount * 100;
+
         const original = await this.transactionRepository.findById(id);
         if (!original) throw new NotFoundException(`Transaction with ID ${id} not found`);
 
