@@ -92,7 +92,7 @@ export const CreditCardsPage: React.FC = () => {
           .replace(/[^\d,]/g, '')
           .replace(/\./g, '')
           .replace(',', '.')
-      );
+      ) * 100;
 
       if(transactions.length > 0 && editing) {
         alert('Não é possível editar o limite de um cartão com transações associadas.');
@@ -117,7 +117,7 @@ export const CreditCardsPage: React.FC = () => {
   const handleEdit = (card: any) => {
     setEditing(card);
     setName(card.name);
-    setLimit(formatCurrencyInput(Math.round((card.creditLimit || 0) * 100).toString()));
+    setLimit(formatCurrencyInput(Math.round((card.creditLimit || 0)).toString()));
     setShowForm(true);
   };
 
