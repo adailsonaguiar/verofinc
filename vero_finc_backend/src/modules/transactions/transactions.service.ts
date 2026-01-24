@@ -30,7 +30,6 @@ export class TransactionsService {
 
     async findWithFilters(filters: any): Promise<Transaction[]> {
         const transactions = await this.transactionRepository.findWithFilters(filters);
-       console.log('filters', filters);
         if(filters?.withCreditCardFilter) {
             return transactions;
         }
@@ -102,6 +101,59 @@ export class TransactionsService {
         return transaction;
     }
 
+    private async handleLedgerUpdatesOnTransactionUpdate(
+        original: Transaction,
+        updateData: any,
+    ): Promise<void> {
+        const originalId = (original as any)._id.toString();
+        const originalAccount = JSON.parse(JSON.stringify(original.account));
+
+        // Caso 1: PAID -> UNPAID (reverter lançamento)
+        if (original.status === TransactionStatus.PAID && updateData.status === TransactionStatus.UNPAID) {
+            await this.ledgerService.logOperation(
+                LedgerOperationType.UPDATE,
+                original.type === TransactionType.EXPENSE ? original.amount : -original.amount,
+                originalAccount,
+                `Transação atualizada para unpaid: ${updateData.description}`,
+                originalId,
+            );
+            return;
+        }
+
+        // Caso 2: PAID -> PAID (atualizar valores)
+        if (original.status === TransactionStatus.PAID && updateData.status === TransactionStatus.PAID) {
+            // Reverter o valor original
+            await this.ledgerService.logOperation(
+                LedgerOperationType.UPDATE,
+                original.type === TransactionType.EXPENSE ? original.amount : -original.amount,
+                originalAccount,
+                `Transação atualizada de (-): ${updateData.description}`,
+                originalId,
+            );
+
+            // Aplicar o novo valor
+            await this.ledgerService.logOperation(
+                LedgerOperationType.UPDATE,
+                original.type === TransactionType.EXPENSE ? -updateData.amount : updateData.amount,
+                originalAccount,
+                `Transação atualizada de (+): ${updateData.description}`,
+                originalId,
+            );
+            return;
+        }
+
+        // Caso 3: UNPAID -> PAID (criar lançamento)
+        if (original.status === TransactionStatus.UNPAID && updateData.status === TransactionStatus.PAID) {
+            await this.ledgerService.logOperation(
+                LedgerOperationType.UPDATE,
+                original.type === TransactionType.EXPENSE ? -updateData.amount : updateData.amount,
+                originalAccount,
+                `Transação atualizada para PAID: ${updateData.description}`,
+                originalId,
+            );
+        }
+    }
+
     async update(id: string, updateTransactionDto: UpdateTransactionDto): Promise<Transaction> {
         updateTransactionDto.amount = updateTransactionDto.amount * 100;
 
@@ -134,52 +186,12 @@ export class TransactionsService {
             }
         }
 
-        if (original.status === TransactionStatus.PAID && updateData.status === TransactionStatus.UNPAID) {
-            await this.ledgerService.logOperation(
-                LedgerOperationType.UPDATE,
-                -original.amount,
-                JSON.parse(JSON.stringify(original.account)),
-                `Transação atualizada para unpaid: ${updateData.description}`,
-                (original as any)._id.toString(),
-            );
-
-            return updateData;
-        }
-
-        if (original.status === TransactionStatus.PAID && updateData.status === TransactionStatus.PAID) {
-            await this.ledgerService.logOperation(
-                LedgerOperationType.UPDATE,
-                -original.amount,
-                JSON.parse(JSON.stringify(original.account)),
-                `Transação atualizada de (-): ${updateData.description}`,
-                (original as any)._id.toString(),
-            );
-
-            await this.ledgerService.logOperation(
-                LedgerOperationType.UPDATE,
-                updateData.amount,
-                JSON.parse(JSON.stringify(original.account)),
-                `Transação atualizada de (+): ${updateData.description}`,
-                (original as any)._id.toString(),
-            );
-
-            return updateData;
-        }
-
-        if (original.status === TransactionStatus.UNPAID && updateData.status === TransactionStatus.PAID) {
-            await this.ledgerService.logOperation(
-                LedgerOperationType.UPDATE,
-                updateData.amount,
-                JSON.parse(JSON.stringify(original.account)),
-                `Transação atualizada para PAID: ${updateData.description}`,
-                (original as any)._id.toString(),
-            );
-        }
+        // Atualizar livro caixa baseado nas mudanças de status
+        await this.handleLedgerUpdatesOnTransactionUpdate(original, updateData);
 
         const updated = await this.transactionRepository.update(id, updateData);
 
         return updated;
-
     }
 
     async remove(id: string): Promise<void> {
