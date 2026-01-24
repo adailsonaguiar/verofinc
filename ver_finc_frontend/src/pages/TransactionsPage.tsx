@@ -7,6 +7,7 @@ import { TransactionCard } from '../components/TransactionCard';
 import { TransactionModal } from '../components/TransactionModal';
 import { Loader2, DollarSign, TrendingUp, TrendingDown, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
+import api from '../services/api';
 
 export const TransactionsPage: React.FC = () => {
     // Filtros avançados
@@ -21,9 +22,8 @@ export const TransactionsPage: React.FC = () => {
 
     const loadCategories = async () => {
       try {
-        const res = await fetch('/api/categories');
-        const data = await res.json();
-        setCategories(data);
+        const res = await api.get('/categories');
+        setCategories(res?.data);
       } catch (err) {
         console.error('Erro ao carregar categorias:', err);
       }
@@ -89,9 +89,8 @@ export const TransactionsPage: React.FC = () => {
       const query = Object.entries(params)
         .map(([k, v]) => `${k}=${encodeURIComponent(v as string | number)}`)
         .join('&');
-      const res = await fetch(`/api/transactions?${query}`);
-      const data = await res.json();
-      setTransactions(data);
+      const res = await api.get(`/transactions?${query}`);
+      setTransactions(res?.data);
     } catch (err) {
       setError('Failed to load transactions. Please make sure the backend is running.');
       console.error('Error loading transactions:', err);

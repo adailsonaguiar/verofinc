@@ -4,7 +4,7 @@ import { Chart, ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearSc
 import { categoryService } from '../services/categoryService';
 import { transactionService } from '../services/transactionService';
 import { Category, Transaction } from '../types';
-import { Loader2 } from 'lucide-react';
+import { Loader2, BarChart } from 'lucide-react';
 
 // Registrar elementos necessários do Chart.js
 Chart.register(ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
@@ -126,61 +126,47 @@ export const DashboardPage: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 overflow-auto bg-gray-50 text-gray-900">
-      <div className="max-w-2xl mx-auto px-4 py-8 space-y-8">
-        <h1 className="text-2xl font-bold mb-6">Dashboard de Despesas</h1>
-
-        {/* Card: Evolução de Receitas e Despesas */}
-        <div className="bg-white rounded-xl shadow p-6 h-[420px] md:h-[480px] flex flex-col">
-          <h2 className="text-lg font-semibold mb-4">Evolução de Receitas e Despesas (últimos meses)</h2>
-          <div className="flex-1 flex items-center justify-center">
-            <Bar
-              data={barData}
-              options={{
-                plugins: {
-                  legend: { display: true, position: 'top' },
-                },
-                scales: {
-                  x: {
-                    grid: { display: false },
-                    title: { display: false },
-                  },
-                  y: {
-                    beginAtZero: true,
-                    grid: { color: '#e5e7eb' },
-                    title: { display: false },
-                  },
-                },
-                maintainAspectRatio: false,
-                responsive: true,
-              }}
-              style={{ width: '100%', height: '100%' }}
-              redraw={true}
-            />
-          </div>
+    <div className="flex-1 overflow-auto bg-gradient-to-br from-gray-50 via-white to-gray-50 text-gray-900">
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Header Section */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
+          <p className="text-gray-500 font-medium">Visão geral das suas finanças</p>
         </div>
 
-        {/* Card: Despesas por Categoria */}
-        <div className="bg-white rounded-xl shadow p-6 h-[420px] md:h-[480px] flex flex-col">
-          <h2 className="text-lg font-semibold mb-4">Despesas por Categoria</h2>
-          {chartData.length > 0 ? (
+        {/* Charts Grid */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+          {/* Card: Evolução de Receitas e Despesas */}
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 p-8 h-[480px] flex flex-col">
+            <div className="mb-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-1">Evolução Mensal</h2>
+              <p className="text-sm text-gray-500 font-medium">Receitas e despesas dos últimos meses</p>
+            </div>
             <div className="flex-1 flex items-center justify-center">
-              <Pie
-                data={{
-                  labels: chartLabels,
-                  datasets: [
-                    {
-                      data: chartData,
-                      backgroundColor: chartColors,
-                      borderWidth: 1,
-                    },
-                  ],
-                }}
+              <Bar
+                data={barData}
                 options={{
                   plugins: {
-                    legend: {
-                      display: true,
-                      position: 'bottom' as const,
+                    legend: { 
+                      display: true, 
+                      position: 'top',
+                      labels: {
+                        font: { size: 13, weight: 'bold' },
+                        padding: 16,
+                        usePointStyle: true,
+                        pointStyle: 'circle'
+                      }
+                    },
+                  },
+                  scales: {
+                    x: {
+                      grid: { display: false },
+                      ticks: { font: { size: 12, weight: 'normal' } },
+                    },
+                    y: {
+                      beginAtZero: true,
+                      grid: { color: '#f3f4f6' },
+                      ticks: { font: { size: 12, weight: 'normal' } },
                     },
                   },
                   maintainAspectRatio: false,
@@ -190,11 +176,59 @@ export const DashboardPage: React.FC = () => {
                 redraw={true}
               />
             </div>
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-gray-500">Nenhuma despesa encontrada para exibir o gráfico.</p>
+          </div>
+
+          {/* Card: Despesas por Categoria */}
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 p-8 h-[480px] flex flex-col">
+            <div className="mb-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-1">Despesas por Categoria</h2>
+              <p className="text-sm text-gray-500 font-medium">Distribuição das suas despesas</p>
             </div>
-          )}
+            {chartData.length > 0 ? (
+              <div className="flex-1 flex items-center justify-center">
+                <Pie
+                  data={{
+                    labels: chartLabels,
+                    datasets: [
+                      {
+                        data: chartData,
+                        backgroundColor: chartColors,
+                        borderWidth: 0,
+                      },
+                    ],
+                  }}
+                  options={{
+                    plugins: {
+                      legend: {
+                        display: true,
+                        position: 'bottom' as const,
+                        labels: {
+                          font: { size: 12, weight: 'bold' },
+                          padding: 16,
+                          usePointStyle: true,
+                          pointStyle: 'circle'
+                        }
+                      },
+                    },
+                    maintainAspectRatio: false,
+                    responsive: true,
+                  }}
+                  style={{ width: '100%', height: '100%' }}
+                  redraw={true}
+                />
+              </div>
+            ) : (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <BarChart className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <p className="text-gray-500 font-medium">Nenhuma despesa encontrada</p>
+                  <p className="text-sm text-gray-400 mt-1">Adicione transações para visualizar os dados</p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
