@@ -69,8 +69,8 @@ export class AccountService {
     }
 
     // Calcular valor da fatura: creditLimit - saldo atual
-    const invoiceAmount = creditCard.creditLimit - creditCard.initialBalance;
-    
+    const invoiceAmount = (creditCard.creditLimit - creditCard.initialBalance) / 100;
+
     if (invoiceAmount <= 0) {
       throw new BadRequestException('No invoice to pay');
     }
@@ -112,10 +112,6 @@ export class AccountService {
       account: creditCardId,
     }, true); // byPassCreditInvoiceCheck = true
 
-    // Resetar saldo do cartão para o limite
-    await this.accountRepository.update(creditCardId, {
-      initialBalance: creditCard.creditLimit
-    });
 
     return {
       creditCardId,

@@ -1,45 +1,60 @@
-import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { Transaction, TransactionDocument } from '../entities/transaction.entity';
+import { Injectable } from "@nestjs/common";
+import { InjectModel } from "@nestjs/mongoose";
+import { Model } from "mongoose";
+import {
+  Transaction,
+  TransactionDocument,
+} from "../entities/transaction.entity";
 
 @Injectable()
 export class TransactionRepository {
-        async findWithFilters(filters: any): Promise<Transaction[]> {
-          const query: any = {};
-          if (filters.type) query.type = filters.type;
-          if (filters.category) {
-            // Aceita tanto string quanto ObjectId
-            try {
-              const { Types } = require('mongoose');
-              query.category = Types.ObjectId.isValid(filters.category) ? filters.category : undefined;
-            } catch {
-              query.category = filters.category;
-            }
-          }
-          if (filters.account) query.account = filters.account;
-          if (filters.status) query.status = filters.status;
-          if (filters.description) query.description = { $regex: filters.description, $options: 'i' };
-          if (filters.year && filters.month) {
-            const startDate = new Date(filters.year, filters.month - 1, 1);
-            const endDate = new Date(filters.year, filters.month, 0, 23, 59, 59, 999);
-            query.date = { $gte: startDate, $lte: endDate };
-          }
-          if (filters.startDate && filters.endDate) {
-            query.date = {
-              $gte: new Date(filters.startDate),
-              $lte: new Date(filters.endDate),
-            };
-          }
-          return this.transactionModel.find(query).populate('category').exec();
-        }
-      async findByDescription(description: string): Promise<Transaction[]> {
-        // Busca por descrição (case-insensitive, parcial)
-        return this.transactionModel.find({ description: { $regex: description, $options: 'i' } }).populate('category').exec();
+  async findWithFilters(filters: any): Promise<Transaction[]> {
+    const query: any = {};
+    if (filters.type) query.type = filters.type;
+    if (filters.category) {
+      // Aceita tanto string quanto ObjectId
+      try {
+        const { Types } = require("mongoose");
+        query.category = Types.ObjectId.isValid(filters.category)
+          ? filters.category
+          : undefined;
+      } catch {
+        query.category = filters.category;
       }
-    async findByAccount(accountId: string): Promise<Transaction[]> {
-      return this.transactionModel.find({ account: accountId }).populate('category').exec();
     }
+    if (filters.account) query.account = filters.account;
+    if (filters.status) query.status = filters.status;
+    if (filters.description)
+      query.description = { $regex: filters.description, $options: "i" };
+    if (filters.year && filters.month) {
+      const startDate = new Date(filters.year, filters.month - 1, 1);
+      const endDate = new Date(filters.year, filters.month, 0, 23, 59, 59, 999);
+      query.date = { $gte: startDate, $lte: endDate };
+    }
+    if (filters.startDate && filters.endDate) {
+      query.date = {
+        $gte: new Date(filters.startDate),
+        $lte: new Date(filters.endDate),
+      };
+    }
+    return this.transactionModel.find(query).populate("category").sort({ date: -1 }).exec();
+  }
+
+  async findByDescription(description: string): Promise<Transaction[]> {
+    // Busca por descrição (case-insensitive, parcial)
+    return this.transactionModel
+      .find({ description: { $regex: description, $options: "i" } })
+      .populate("category")
+      .exec();
+  }
+
+  async findByAccount(accountId: string): Promise<Transaction[]> {
+    return this.transactionModel
+      .find({ account: accountId })
+      .populate("category")
+      .exec();
+  }
+
   constructor(
     @InjectModel(Transaction.name)
     private transactionModel: Model<TransactionDocument>,
@@ -51,14 +66,17 @@ export class TransactionRepository {
   }
 
   async findAll(filter: any = {}): Promise<Transaction[]> {
-    return this.transactionModel.find(filter).populate('category').exec();
+    return this.transactionModel.find(filter).populate("category").exec();
   }
 
   async findById(id: string): Promise<Transaction> {
-    return this.transactionModel.findById(id).populate('category').exec();
+    return this.transactionModel.findById(id).populate("category").exec();
   }
 
-  async update(id: string, transaction: Partial<Transaction>): Promise<Transaction> {
+  async update(
+    id: string,
+    transaction: Partial<Transaction>,
+  ): Promise<Transaction> {
     return this.transactionModel
       .findByIdAndUpdate(id, transaction, { new: true })
       .exec();
@@ -80,7 +98,10 @@ export class TransactionRepository {
     return this.transactionModel.find({ status }).exec();
   }
 
-  async findByDateRange(startDate: Date, endDate: Date): Promise<Transaction[]> {
+  async findByDateRange(
+    startDate: Date,
+    endDate: Date,
+  ): Promise<Transaction[]> {
     return this.transactionModel
       .find({
         date: {
@@ -88,14 +109,14 @@ export class TransactionRepository {
           $lte: endDate,
         },
       })
-      .populate('category')
+      .populate("category")
       .exec();
   }
 
   async findByMonth(year: number, month: number): Promise<Transaction[]> {
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0, 23, 59, 59, 999);
-    
+
     return this.transactionModel
       .find({
         date: {
@@ -103,7 +124,7 @@ export class TransactionRepository {
           $lte: endDate,
         },
       })
-      .populate('category')
+      .populate("category")
       .sort({ date: -1 })
       .exec();
   }
@@ -111,21 +132,21 @@ export class TransactionRepository {
   async getAvailableMonths(): Promise<{ year: number; month: number }[]> {
     const transactions = await this.transactionModel
       .find()
-      .select('date')
+      .select("date")
       .sort({ date: -1 })
       .exec();
 
     const monthsSet = new Set<string>();
-    
-    transactions.forEach(transaction => {
+
+    transactions.forEach((transaction) => {
       const date = new Date(transaction.date);
       const key = `${date.getFullYear()}-${date.getMonth() + 1}`;
       monthsSet.add(key);
     });
 
     return Array.from(monthsSet)
-      .map(key => {
-        const [year, month] = key.split('-').map(Number);
+      .map((key) => {
+        const [year, month] = key.split("-").map(Number);
         return { year, month };
       })
       .sort((a, b) => {
