@@ -92,7 +92,7 @@ export const CreditCardsPage: React.FC = () => {
           .replace(/[^\d,]/g, '')
           .replace(/\./g, '')
           .replace(',', '.')
-      ) * 100;
+      ) ;
 
       if(transactions.length > 0 && editing) {
         alert('Não é possível editar o limite de um cartão com transações associadas.');
@@ -102,7 +102,7 @@ export const CreditCardsPage: React.FC = () => {
       if (editing) {
         await accountService.update(editing._id, { name, creditLimit: numericLimit });
       } else {
-        await accountService.create({ name, type: 'credit_card', creditLimit: numericLimit });
+        await accountService.create({ name, type: 'credit_card', creditLimit: numericLimit, initialBalance: numericLimit });
       }
       setName('');
       setLimit('');
@@ -208,16 +208,24 @@ export const CreditCardsPage: React.FC = () => {
     setShowPaymentModal(true);
   };
 
-  const handlePayInvoice = async () => {
+  const currentMonthLabel = availableMonths.find(m => m.year === currentYear && m.month === currentMonth)?.label || '';
+  const currentIndex = availableMonths.findIndex(m => m.year === currentYear && m.month === currentMonth);
+  const hasPrevious = currentIndex < availableMonths.length - 1;
+  const hasNext = currentIndex > 0;
+
+  const selectedCardLimit = selectedCard ? (selectedCard.creditLimit || 0) : 0;
+  const selectedCardBalance = selectedCard ? (selectedCard.initialBalance || 0) : 0;
+  const selectedCardAvailableLimit = (selectedCardLimit - selectedCardBalance) / 100;
+
+    const handlePayInvoice = async () => {
     if (!selectedCard || !selectedCheckingAccount) return;
     
-    const invoiceAmount = selectedCard.creditLimit - (selectedCard.initialBalance || 0);
-    if (invoiceAmount <= 0) {
+    if (selectedCardAvailableLimit <= 0) {
       alert('Não há fatura para pagar.');
       return;
     }
 
-    if (!window.confirm(`Pagar fatura de R$ ${invoiceAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}?`)) {
+    if (!window.confirm(`Pagar fatura de R$ ${selectedCardAvailableLimit.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}?`)) {
       return;
     }
 
@@ -239,15 +247,7 @@ export const CreditCardsPage: React.FC = () => {
       setPayingInvoice(false);
     }
   };
-
-  const currentMonthLabel = availableMonths.find(m => m.year === currentYear && m.month === currentMonth)?.label || '';
-  const currentIndex = availableMonths.findIndex(m => m.year === currentYear && m.month === currentMonth);
-  const hasPrevious = currentIndex < availableMonths.length - 1;
-  const hasNext = currentIndex > 0;
-
-  const selectedCardLimit = selectedCard ? (selectedCard.creditLimit || 0) / 100 : 0;
-  const selectedCardBalance = selectedCard ? (selectedCard.initialBalance || 0) / 100 : 0;
-
+  
   return (
     <div className="flex-1 overflow-auto bg-mac-bg text-mac-text">
       <div className="mx-auto px-4 py-6 max-w-7xl">
@@ -331,10 +331,10 @@ export const CreditCardsPage: React.FC = () => {
                   <div>
                     <p className="font-bold text-lg mb-1">{card.name}</p>
                     <p className="text-sm opacity-90">
-                      Fatura: R$ {(selectedCardBalance).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      Fatura: R$ {(selectedCardAvailableLimit).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                     <p className="text-xs opacity-75 mt-0.5">
-                      Limite: R$ {selectedCardLimit.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      Limite: R$ {(selectedCardLimit / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
                 </div>
@@ -440,7 +440,7 @@ export const CreditCardsPage: React.FC = () => {
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Valor da Fatura</p>
                   <p className="text-2xl font-bold text-purple-600">
-                    R$ {(selectedCard.creditLimit - selectedCard?.initialBalance ).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    R$ {(selectedCardAvailableLimit).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
 
@@ -460,7 +460,7 @@ export const CreditCardsPage: React.FC = () => {
                     ) : (
                       checkingAccounts.map(acc => (
                         <option key={acc._id} value={acc._id}>
-                          {acc.name} - R$ {(acc.initialBalance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {acc.name} - R$ {(acc.initialBalance / 100 || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </option>
                       ))
                     )}
