@@ -52,7 +52,7 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction, o
           </div>
 
           <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-semibold text-gray-900 truncate mb-2">
+            <h3 className="text-sm font-semibold text-gray-900 line-clamp-1 mb-2">
               {transaction.description}
             </h3>
             

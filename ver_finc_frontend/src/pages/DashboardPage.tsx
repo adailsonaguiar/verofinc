@@ -5,7 +5,7 @@ import { categoryService } from '../services/categoryService';
 import { transactionService } from '../services/transactionService';
 import { accountService } from '../services/accountService';
 import { Category, Transaction } from '../types';
-import { Loader2, BarChart } from 'lucide-react';
+import { Loader2, BarChart, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 
 // Registrar elementos necessários do Chart.js
 Chart.register(ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
@@ -108,6 +108,17 @@ export const DashboardPage: React.FC = () => {
     0
   );
 
+  // Calcular totais de receitas e despesas
+  const totalIncome = transactions
+    .filter(t => t.type === 'income')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const totalExpense = transactions
+    .filter(t => t.type === 'expense')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const balance = totalIncome - totalExpense;
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -141,6 +152,55 @@ export const DashboardPage: React.FC = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
           <p className="text-gray-500 font-medium">Visão geral das suas finanças</p>
+        </div>
+
+        {/* Overall Statistics */}
+        <div className="mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Entradas */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-600">Entradas</span>
+                <TrendingUp className="w-4 h-4 text-green-600" />
+              </div>
+              <p className="text-2xl font-bold text-gray-900">
+                {(totalIncome / 100).toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL',
+                })}
+              </p>
+            </div>
+
+            {/* Saídas */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-600">Saídas</span>
+                <TrendingDown className="w-4 h-4 text-red-600" />
+              </div>
+              <p className="text-2xl font-bold text-gray-900">
+                {(totalExpense / 100).toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL',
+                })}
+              </p>
+            </div>
+
+            {/* Saldo */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-600">Saldo</span>
+                <DollarSign className="w-4 h-4 text-blue-600" />
+              </div>
+              <p className={`text-2xl font-bold ${
+                balance >= 0 ? 'text-gray-900' : 'text-red-600'
+              }`}>
+                {(balance / 100).toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL',
+                })}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Total Balance Section */}

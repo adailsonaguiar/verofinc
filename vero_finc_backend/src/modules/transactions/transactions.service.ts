@@ -28,14 +28,23 @@ export class TransactionsService {
         })
     }
 
+    private sortTransactionsByDate(transactions: Transaction[]): Transaction[] {
+        return transactions.sort((a, b) => {
+            const dateA = new Date(a.date).getTime();
+            const dateB = new Date(b.date).getTime();
+            return dateB - dateA; // Decrescente (mais recentes primeiro)
+        });
+    }
+
     async findWithFilters(filters: any): Promise<Transaction[]> {
         const transactions = await this.transactionRepository.findWithFilters(filters);
-        if(filters?.withCreditCardFilter) {
-            return transactions;
+        let filtered = transactions;
+
+        if(!filters?.withCreditCardFilter) {
+            filtered = await this.filterIncomeCreditCardTransactionsToShow(transactions);
         }
 
-        return this.filterIncomeCreditCardTransactionsToShow(transactions);
-
+        return this.sortTransactionsByDate(filtered);
     }
 
     async findByDescription(description: string): Promise<Transaction[]> {
