@@ -157,6 +157,19 @@ export const DashboardPage: React.FC = () => {
                         pointStyle: 'circle'
                       }
                     },
+                    tooltip: {
+                      callbacks: {
+                        label: function(context) {
+                          const label = context.dataset.label || '';
+                          const value = context.parsed.y || 0;
+                          const formatted = (value / 100).toLocaleString('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL'
+                          });
+                          return `${label}: ${formatted}`;
+                        }
+                      }
+                    }
                   },
                   scales: {
                     x: {
@@ -166,7 +179,15 @@ export const DashboardPage: React.FC = () => {
                     y: {
                       beginAtZero: true,
                       grid: { color: '#f3f4f6' },
-                      ticks: { font: { size: 12, weight: 'normal' } },
+                      ticks: { 
+                        font: { size: 12, weight: 'normal' },
+                        callback: function(value) {
+                          return (Number(value) / 100).toLocaleString('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL'
+                          });
+                        }
+                      },
                     },
                   },
                   maintainAspectRatio: false,
@@ -209,6 +230,19 @@ export const DashboardPage: React.FC = () => {
                           pointStyle: 'circle'
                         }
                       },
+                      tooltip: {
+                        callbacks: {
+                          label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed || 0;
+                            const formatted = (value / 100).toLocaleString('pt-BR', {
+                              style: 'currency',
+                              currency: 'BRL'
+                            });
+                            return `${label}: ${formatted}`;
+                          }
+                        }
+                      }
                     },
                     maintainAspectRatio: false,
                     responsive: true,

@@ -50,20 +50,30 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      if (initialData) {
-        setDescription(initialData.description);
-        setAmount(formatCurrencyInput(Math.round(initialData.amount).toString()));
-        setDate(initialData.date.split('T')[0]);
-        setType(initialData.type);
-        setCategoryId(initialData.category._id);
-        setStatus(initialData.status);
-        setAccountId(initialData.account || '');
-      } else {
-        setAmount('');
-        setAccountId('');
-      }
-      loadCategories();
-      loadAccounts();
+      const initializeForm = async () => {
+        // Carregar contas primeiro
+        await loadAccounts();
+        
+        if (initialData) {
+          setDescription(initialData.description);
+          setAmount(formatCurrencyInput(Math.round(initialData.amount).toString()));
+          setDate(initialData.date.split('T')[0]);
+          setType(initialData.type);
+          setCategoryId(initialData.category._id);
+          setStatus(initialData.status);
+          setAccountId(initialData.account || '');
+        } else {
+          setAmount('');
+          setDescription('');
+          setDate(new Date().toISOString().split('T')[0]);
+          setType(TransactionType.EXPENSE);
+          setStatus(TransactionStatus.UNPAID);
+        }
+        
+        loadCategories();
+      };
+      
+      initializeForm();
     }
   }, [isOpen, initialData]);
 
@@ -114,8 +124,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         return;
       }
       
-      // Se não houver conta selecionada, seleciona a primeira
-      if (!accountId && (checking.length > 0 || cards.length > 0)) {
+      // Se não estamos editando e não houver conta selecionada, seleciona a primeira
+      if (!initialData && !accountId && (checking.length > 0 || cards.length > 0)) {
         setAccountId((checking[0]?._id || cards[0]?._id) ?? '');
       }
     } catch (err) {
