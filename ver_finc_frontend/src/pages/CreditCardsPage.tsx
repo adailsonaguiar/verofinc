@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2, ChevronLeft, ChevronRight, CreditCard, Wallet, X } from 'lucide-react';
 import { accountService } from '../services/accountService';
 import { transactionService } from '../services/transactionService';
-import { Transaction } from '../types';
+import { Transaction, CreateTransactionDto, UpdateTransactionDto } from '../types';
 import { TransactionCard } from '../components/TransactionCard';
+import { TransactionModal } from '../components/TransactionModal';
 import { format } from 'date-fns';
+import api from '../services/api';
 
 export const CreditCardsPage: React.FC = () => {
   const [cards, setCards] = useState([]);
@@ -40,6 +42,8 @@ export const CreditCardsPage: React.FC = () => {
   const [checkingAccounts, setCheckingAccounts] = useState<any[]>([]);
   const [selectedCheckingAccount, setSelectedCheckingAccount] = useState('');
   const [payingInvoice, setPayingInvoice] = useState(false);
+  const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   useEffect(() => {
     loadCards();
@@ -161,9 +165,8 @@ export const CreditCardsPage: React.FC = () => {
       const query = Object.entries(params)
         .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
         .join('&');
-      const res = await fetch(`/api/transactions?${query}`);
-      const data = await res.json();
-      setTransactions(data);
+      const res = await api.get(`transactions?${query}`);
+      setTransactions(res.data);
     } catch (err) {
       console.error('Error loading card transactions:', err);
     } finally {
@@ -246,6 +249,29 @@ export const CreditCardsPage: React.FC = () => {
     } finally {
       setPayingInvoice(false);
     }
+  };
+
+  const handleCreateTransaction = async (data: CreateTransactionDto) => {
+    await transactionService.create(data);
+    await loadCardTransactions();
+    await loadCards();
+  };
+
+  const handleUpdateTransaction = async (data: UpdateTransactionDto) => {
+    if (!editingTransaction) return;
+    await transactionService.update(editingTransaction._id, data);
+    await loadCardTransactions();
+    await loadCards();
+  };
+
+  const handleEditTransaction = (transaction: Transaction) => {
+    setEditingTransaction(transaction);
+    setIsTransactionModalOpen(true);
+  };
+
+  const handleCloseTransactionModal = () => {
+    setIsTransactionModalOpen(false);
+    setEditingTransaction(null);
   };
   
   return (
@@ -350,13 +376,25 @@ export const CreditCardsPage: React.FC = () => {
               <h3 className="text-xl font-bold text-gray-900">
                 Transações - {selectedCard.name}
               </h3>
-              <button
-                onClick={handleOpenPaymentModal}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              >
-                <Wallet className="w-4 h-4" />
-                Pagar Fatura
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setEditingTransaction(null);
+                    setIsTransactionModalOpen(true);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Nova Transação
+                </button>
+                <button
+                  onClick={handleOpenPaymentModal}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  <Wallet className="w-4 h-4" />
+                  Pagar Fatura
+                </button>
+              </div>
             </div>
 
             {/* Navegação de mês */}
@@ -402,7 +440,7 @@ export const CreditCardsPage: React.FC = () => {
                   <TransactionCard
                     key={transaction._id}
                     transaction={transaction}
-                    onEdit={() => {}}
+                    onEdit={() => handleEditTransaction(transaction)}
                     onDelete={async () => {
                       await transactionService.delete(transaction._id);
                       loadCardTransactions();
@@ -489,6 +527,15 @@ export const CreditCardsPage: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Transaction Modal */}
+        <TransactionModal
+          isOpen={isTransactionModalOpen}
+          onClose={handleCloseTransactionModal}
+          onSubmit={(data) => editingTransaction ? handleUpdateTransaction(data as UpdateTransactionDto) : handleCreateTransaction(data as CreateTransactionDto)}
+          initialData={editingTransaction || undefined}
+          isEditing={!!editingTransaction}
+        />
       </div>
     </div>
   );
