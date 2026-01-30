@@ -5,6 +5,7 @@ import { transactionService } from '../services/transactionService';
 import { Transaction } from '../types';
 import { TransactionCard } from '../components/TransactionCard';
 import { format } from 'date-fns';
+import api from '../services/api';
 
 export const AccountsPage: React.FC = () => {
   const [accounts, setAccounts] = useState([]);
@@ -112,9 +113,8 @@ export const AccountsPage: React.FC = () => {
       const query = Object.entries(params)
         .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
         .join('&');
-      const res = await fetch(`/api/transactions?${query}`);
-      const data = await res.json();
-      setTransactions(data);
+      const res = await api.get(`/transactions?${query}`);
+      setTransactions(res.data);
     } catch (err) {
       console.error('Error loading account transactions:', err);
     } finally {

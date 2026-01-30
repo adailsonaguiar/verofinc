@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { CreateTransactionDto, UpdateTransactionDto, TransactionType, TransactionStatus, Category, Transaction } from '../types';
 import { categoryService } from '../services/categoryService';
+import api from '../services/api';
 import { X, Save } from 'lucide-react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -107,8 +108,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const loadAccounts = async () => {
     try {
       // Busca contas correntes e cartões de crédito
-      const checking = await (await fetch('/api/accounts?type=checking')).json();
-      const cards = await (await fetch('/api/accounts?type=credit_card')).json();
+      const [checkingRes, cardsRes] = await Promise.all([
+        api.get('/accounts?type=checking'),
+        api.get('/accounts?type=credit_card'),
+      ]);
+      const checking = checkingRes.data;
+      const cards = cardsRes.data;
       setAccounts([...checking, ...cards]);
       
       // Verifica se não há contas cadastradas
