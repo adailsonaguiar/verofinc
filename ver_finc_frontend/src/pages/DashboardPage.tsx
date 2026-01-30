@@ -3,6 +3,7 @@ import { Pie, Bar } from 'react-chartjs-2';
 import { Chart, ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from 'chart.js';
 import { categoryService } from '../services/categoryService';
 import { transactionService } from '../services/transactionService';
+import { accountService } from '../services/accountService';
 import { Category, Transaction } from '../types';
 import { Loader2, BarChart } from 'lucide-react';
 
@@ -14,6 +15,7 @@ export const DashboardPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [checkingAccounts, setCheckingAccounts] = useState<any[]>([]);
 
   // Agrupar transações por mês e calcular receitas e despesas mensais
   const monthlyMap: { [key: string]: { income: number; expense: number } } = {};
@@ -64,12 +66,14 @@ export const DashboardPage: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const [catData, txData] = await Promise.all([
+      const [catData, txData, checkingData] = await Promise.all([
         categoryService.getAll(),
         transactionService.getAll(),
+        accountService.getByType('checking'),
       ]);
       setCategories(catData);
       setTransactions(txData);
+      setCheckingAccounts(checkingData);
     } catch (err) {
       setError('Erro ao carregar dados do dashboard.');
     } finally {
@@ -98,6 +102,11 @@ export const DashboardPage: React.FC = () => {
   const chartColors = [
     '#2563eb', '#1d4ed8', '#0ea5e9', '#f59e42', '#f43f5e', '#10b981', '#a21caf', '#fbbf24', '#6366f1', '#e11d48',
   ];
+
+  const totalCheckingBalance = checkingAccounts.reduce(
+    (sum, acc) => sum + (acc.initialBalance || 0),
+    0
+  );
 
   if (loading) {
     return (
@@ -132,6 +141,22 @@ export const DashboardPage: React.FC = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
           <p className="text-gray-500 font-medium">Visão geral das suas finanças</p>
+        </div>
+
+        {/* Total Balance Section */}
+        <div className="mb-8">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500 font-medium">Saldo total em contas correntes</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">
+                {(totalCheckingBalance / 100).toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL',
+                })}
+              </p>
+            </div>
+            <div className="text-xs text-gray-400">{checkingAccounts.length} conta(s)</div>
+          </div>
         </div>
 
         {/* Charts Grid */}
