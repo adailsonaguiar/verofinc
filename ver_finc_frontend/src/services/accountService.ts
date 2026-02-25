@@ -1,30 +1,28 @@
-import axios from 'axios';
-
-const API_URL = `${import.meta.env.VITE_API_URL || '/api'}/accounts`;
+import api from './api';
 
 export const accountService = {
   async getAll() {
-    const res = await axios.get(API_URL);
+    const res = await api.get('/accounts');
     return res.data;
   },
   async getByType(type: string) {
-    const res = await axios.get(`${API_URL}?type=${type}`);
+    const res = await api.get(`/accounts?type=${type}`);
     return res.data;
   },
   async create(data: { name: string; type: string; initialBalance?: number, creditLimit?: number }) {
-    const res = await axios.post(API_URL, data);
+    const res = await api.post('/accounts', data);
     return res.data;
   },
   async update(id: string, data: { name: string, initialBalance?: number, creditLimit?: number }) {
-    const res = await axios.patch(`${API_URL}/${id}`, data);
+    const res = await api.patch(`/accounts/${id}`, data);
     return res.data;
   },
   async delete(id: string) {
-    const res = await axios.delete(`${API_URL}/${id}`);
+    const res = await api.delete(`/accounts/${id}`);
     return res.data;
   },
   async payInvoice(creditCardId: string, checkingAccountId: string) {
-    const res = await axios.post(`${API_URL}/pay-invoice`, {
+    const res = await api.post('/accounts/pay-invoice', {
       creditCardId,
       checkingAccountId
     });
