@@ -162,12 +162,18 @@ export const TransactionsPage: React.FC = () => {
   const hasPrevious = currentIndex < availableMonths.length - 1;
   const hasNext = currentIndex > 0;
 
+  // Ignora transações de pagamento de cartão de crédito nos totais (já contabilizadas separadamente)
+  const CREDIT_CARD_PAYMENT_CATEGORY_ID = '699f0d49c0a92c8334e60765';
+  const transactionsForTotals = transactions.filter(
+    t => t.category?._id !== CREDIT_CARD_PAYMENT_CATEGORY_ID
+  );
+
   // Calculate monthly statistics
-  const totalIncome = transactions
+  const totalIncome = transactionsForTotals
     .filter(t => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalExpense = transactions
+  const totalExpense = transactionsForTotals
     .filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0);
 

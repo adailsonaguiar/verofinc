@@ -5,7 +5,10 @@ import { categoryService } from '../services/categoryService';
 import { transactionService } from '../services/transactionService';
 import { accountService } from '../services/accountService';
 import { Category, Transaction } from '../types';
-import { Loader2, BarChart, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { Loader2, BarChart, TrendingUp, TrendingDown, DollarSign, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CategoryEvolutionChart } from '../components/CategoryEvolutionChart';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 // Registrar elementos necessários do Chart.js
 Chart.register(ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
@@ -14,12 +17,23 @@ export const DashboardPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  // Transações do mês selecionado (stats + pizza)
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  // Todas as transações (gráfico de barras)
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [checkingAccounts, setCheckingAccounts] = useState<any[]>([]);
 
-  // Agrupar transações por mês e calcular receitas e despesas mensais
+  // Seletor de mês
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
+  const [availableMonths, setAvailableMonths] = useState<{ year: number; month: number; label: string }[]>([]);
+
+  // Agrupar TODAS as transações por mês (para o gráfico de barras), ignorando pagamento de cartão
+  const CREDIT_CARD_PAYMENT_CATEGORY_ID = '699f0d49c0a92c8334e60765';
   const monthlyMap: { [key: string]: { income: number; expense: number } } = {};
-  transactions.forEach((t) => {
+  allTransactions
+    .filter((t) => t.category?._id !== CREDIT_CARD_PAYMENT_CATEGORY_ID)
+    .forEach((t) => {
     const date = new Date(t.date);
     const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
     if (!monthlyMap[key]) {
@@ -59,21 +73,68 @@ export const DashboardPage: React.FC = () => {
   };
 
   useEffect(() => {
-    loadData();
+    loadAvailableMonths();
+    loadCheckingAccounts();
+    loadCategories();
+    loadAllTransactions();
   }, []);
 
-  const loadData = async () => {
+  useEffect(() => {
+    if (currentYear && currentMonth) {
+      loadMonthTransactions();
+    }
+  }, [currentYear, currentMonth]);
+
+  // Carrega todos os meses disponíveis para navegação
+  const loadAvailableMonths = async () => {
+    try {
+      const months = await transactionService.getAvailableMonths();
+      const formatted = months.map((m) => ({
+        year: m.year,
+        month: m.month,
+        label: format(new Date(m.year, m.month - 1), 'MMMM yyyy', { locale: ptBR }),
+      }));
+      setAvailableMonths(formatted);
+    } catch (err) {
+      console.error('Erro ao carregar meses disponíveis:', err);
+    }
+  };
+
+  const loadCategories = async () => {
+    try {
+      const catData = await categoryService.getAll();
+      setCategories(catData);
+    } catch (err) {
+      console.error('Erro ao carregar categorias:', err);
+    }
+  };
+
+  const loadCheckingAccounts = async () => {
+    try {
+      const checkingData = await accountService.getByType('checking');
+      setCheckingAccounts(checkingData);
+    } catch (err) {
+      console.error('Erro ao carregar contas correntes:', err);
+    }
+  };
+
+  // Carrega todas as transações para o gráfico de barras
+  const loadAllTransactions = async () => {
+    try {
+      const all = await transactionService.getAll();
+      setAllTransactions(all);
+    } catch (err) {
+      console.error('Erro ao carregar todas as transações:', err);
+    }
+  };
+
+  // Carrega transações do mês selecionado
+  const loadMonthTransactions = async () => {
     try {
       setLoading(true);
       setError(null);
-      const [catData, txData, checkingData] = await Promise.all([
-        categoryService.getAll(),
-        transactionService.getAll(),
-        accountService.getByType('checking'),
-      ]);
-      setCategories(catData);
+      const txData = await transactionService.getByMonth(currentYear, currentMonth);
       setTransactions(txData);
-      setCheckingAccounts(checkingData);
     } catch (err) {
       setError('Erro ao carregar dados do dashboard.');
     } finally {
@@ -81,11 +142,44 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
+  const loadData = () => loadMonthTransactions();
+
+  // Navegação de meses
+  const currentIndex = availableMonths.findIndex(
+    (m) => m.year === currentYear && m.month === currentMonth,
+  );
+  const hasPrevious = currentIndex < availableMonths.length - 1;
+  const hasNext = currentIndex > 0;
+  const currentMonthLabel =
+    availableMonths.find((m) => m.year === currentYear && m.month === currentMonth)?.label ||
+    format(new Date(currentYear, currentMonth - 1), 'MMMM yyyy', { locale: ptBR });
+
+  const handlePreviousMonth = () => {
+    if (hasPrevious) {
+      const prev = availableMonths[currentIndex + 1];
+      setCurrentYear(prev.year);
+      setCurrentMonth(prev.month);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (hasNext) {
+      const next = availableMonths[currentIndex - 1];
+      setCurrentYear(next.year);
+      setCurrentMonth(next.month);
+    }
+  };
+
+  // Ignora transações de pagamento de cartão de crédito nos totais e no gráfico (já contabilizadas separadamente)
+  const transactionsForTotals = transactions.filter(
+    t => t.category?._id !== CREDIT_CARD_PAYMENT_CATEGORY_ID
+  );
+
   // Filtra apenas categorias de despesa
-  const expenseCategories = categories.filter(c => c.type === 'expense');
-  // Filtra apenas despesas
-  const expenseTx = transactions.filter(t => t.type === 'expense');
-  // Soma por categoria de despesa
+  const expenseCategories = categories.filter(c => c.type === 'expense' && c._id !== CREDIT_CARD_PAYMENT_CATEGORY_ID);
+  // Filtra despesas do mês selecionado (excluindo pagamento de cartão)
+  const expenseTx = transactionsForTotals.filter(t => t.type === 'expense');
+  // Soma por categoria de despesa (mês selecionado)
   const dataByCategory: { [catId: string]: number } = {};
   expenseTx.forEach(t => {
     if (t.category && t.category._id) {
@@ -108,12 +202,12 @@ export const DashboardPage: React.FC = () => {
     0
   );
 
-  // Calcular totais de receitas e despesas
-  const totalIncome = transactions
+  // Calcular totais do mês selecionado (excluindo pagamento de cartão)
+  const totalIncome = transactionsForTotals
     .filter(t => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalExpense = transactions
+  const totalExpense = transactionsForTotals
     .filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0);
 
@@ -149,9 +243,34 @@ export const DashboardPage: React.FC = () => {
     <div className="flex-1 overflow-auto bg-gradient-to-br from-gray-50 via-white to-gray-50 text-gray-900">
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Header Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
-          <p className="text-gray-500 font-medium">Visão geral das suas finanças</p>
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
+            <p className="text-gray-500 font-medium">Visão geral das suas finanças</p>
+          </div>
+
+          {/* Seletor de mês */}
+          <div className="inline-flex items-center gap-1 bg-white border border-gray-200 rounded-2xl shadow-sm px-2 py-1">
+            <button
+              onClick={handlePreviousMonth}
+              disabled={!hasPrevious}
+              className="p-2 rounded-xl hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              title="Mês anterior"
+            >
+              <ChevronLeft className="w-4 h-4 text-gray-600" />
+            </button>
+            <span className="min-w-[140px] text-center text-sm font-semibold text-gray-800 capitalize px-2">
+              {currentMonthLabel}
+            </span>
+            <button
+              onClick={handleNextMonth}
+              disabled={!hasNext}
+              className="p-2 rounded-xl hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              title="Próximo mês"
+            >
+              <ChevronRight className="w-4 h-4 text-gray-600" />
+            </button>
+          </div>
         </div>
 
         {/* Overall Statistics */}
@@ -163,12 +282,13 @@ export const DashboardPage: React.FC = () => {
                 <span className="text-sm font-medium text-gray-600">Entradas</span>
                 <TrendingUp className="w-4 h-4 text-green-600" />
               </div>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-2xl font-bold text-green-600">
                 {(totalIncome / 100).toLocaleString('pt-BR', {
                   style: 'currency',
                   currency: 'BRL',
                 })}
               </p>
+              <p className="text-xs text-gray-400 mt-1 capitalize">{currentMonthLabel}</p>
             </div>
 
             {/* Saídas */}
@@ -177,18 +297,19 @@ export const DashboardPage: React.FC = () => {
                 <span className="text-sm font-medium text-gray-600">Saídas</span>
                 <TrendingDown className="w-4 h-4 text-red-600" />
               </div>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-2xl font-bold text-red-500">
                 {(totalExpense / 100).toLocaleString('pt-BR', {
                   style: 'currency',
                   currency: 'BRL',
                 })}
               </p>
+              <p className="text-xs text-gray-400 mt-1 capitalize">{currentMonthLabel}</p>
             </div>
 
             {/* Saldo */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-600">Saldo</span>
+                <span className="text-sm font-medium text-gray-600">Saldo do mês</span>
                 <DollarSign className="w-4 h-4 text-blue-600" />
               </div>
               <p className={`text-2xl font-bold ${
@@ -199,6 +320,7 @@ export const DashboardPage: React.FC = () => {
                   currency: 'BRL',
                 })}
               </p>
+              <p className="text-xs text-gray-400 mt-1 capitalize">{currentMonthLabel}</p>
             </div>
           </div>
         </div>
@@ -288,7 +410,9 @@ export const DashboardPage: React.FC = () => {
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 p-8 h-[480px] flex flex-col">
             <div className="mb-6">
               <h2 className="text-xl font-bold text-gray-900 mb-1">Despesas por Categoria</h2>
-              <p className="text-sm text-gray-500 font-medium">Distribuição das suas despesas</p>
+              <p className="text-sm text-gray-500 font-medium capitalize">
+                {currentMonthLabel} — distribuição por categoria
+              </p>
             </div>
             {chartData.length > 0 ? (
               <div className="flex-1 flex items-center justify-center">
@@ -348,6 +472,14 @@ export const DashboardPage: React.FC = () => {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Category Evolution Chart */}
+        <div className="mt-8">
+          <CategoryEvolutionChart
+            allTransactions={allTransactions}
+            categories={categories}
+          />
         </div>
       </div>
     </div>
