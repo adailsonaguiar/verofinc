@@ -7,6 +7,7 @@ import { accountService } from '../services/accountService';
 import { Category, Transaction } from '../types';
 import { Loader2, BarChart, TrendingUp, TrendingDown, DollarSign, ChevronLeft, ChevronRight } from 'lucide-react';
 import { CategoryEvolutionChart } from '../components/CategoryEvolutionChart';
+import { CategoryComparisonChart } from '../components/CategoryComparisonChart';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -477,6 +478,14 @@ export const DashboardPage: React.FC = () => {
         {/* Category Evolution Chart */}
         <div className="mt-8">
           <CategoryEvolutionChart
+            allTransactions={allTransactions}
+            categories={categories}
+          />
+        </div>
+
+        {/* Category Comparison Chart */}
+        <div className="mt-8">
+          <CategoryComparisonChart
             allTransactions={allTransactions}
             categories={categories}
           />

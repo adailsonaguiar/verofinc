@@ -38,6 +38,9 @@ export class Transaction {
 
   @Prop({ default: false })
   isReversal: boolean;
+
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export const TransactionSchema = SchemaFactory.createForClass(Transaction);
