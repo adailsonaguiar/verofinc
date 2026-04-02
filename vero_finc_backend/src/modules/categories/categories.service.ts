@@ -22,12 +22,18 @@ export class CategoriesService {
     return this.categoryRepository.create(createCategoryDto);
   }
 
+  sortCategories(categories: Category[]): Category[] {
+    return categories.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
   async findAll(): Promise<Category[]> {
-    return this.categoryRepository.findAll();
+    const categories = await this.categoryRepository.findAll();
+    return this.sortCategories(categories);
   }
 
   async findActive(): Promise<Category[]> {
-    return this.categoryRepository.findActive();
+    const categories = await this.categoryRepository.findActive();
+    return this.sortCategories(categories);
   }
 
   async findOne(id: string): Promise<Category> {
@@ -67,6 +73,7 @@ export class CategoriesService {
   }
 
   async findByType(type: string): Promise<Category[]> {
-    return this.categoryRepository.findByType(type);
+    const categories = await this.categoryRepository.findByType(type);
+    return this.sortCategories(categories);
   }
 }
