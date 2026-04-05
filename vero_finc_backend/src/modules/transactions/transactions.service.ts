@@ -115,38 +115,39 @@ export class TransactionsService {
         updateData: any,
     ): Promise<void> {
         const originalId = (original as any)._id.toString();
-        const originalAccount = JSON.parse(JSON.stringify(original.account));
+        const originalAccountId = original.account.toString();
+        const newAccountId = updateData.account ? updateData.account.toString() : originalAccountId;
 
         // Caso 1: PAID -> UNPAID (reverter lançamento)
         if (original.status === TransactionStatus.PAID && updateData.status === TransactionStatus.UNPAID) {
             await this.ledgerService.logOperation(
                 LedgerOperationType.UPDATE,
                 original.type === TransactionType.EXPENSE ? original.amount : -original.amount,
-                originalAccount,
+                new Types.ObjectId(originalAccountId),
                 `Transação atualizada para unpaid: ${updateData.description}`,
-                originalId,
+                new Types.ObjectId(originalId),
             );
             return;
         }
 
         // Caso 2: PAID -> PAID (atualizar valores)
         if (original.status === TransactionStatus.PAID && updateData.status === TransactionStatus.PAID) {
-            // Reverter o valor original
+            // Reverter o valor original na conta ORIGINAL
             await this.ledgerService.logOperation(
                 LedgerOperationType.UPDATE,
                 original.type === TransactionType.EXPENSE ? original.amount : -original.amount,
-                originalAccount,
+                new Types.ObjectId(originalAccountId),
                 `Transação atualizada de (-): ${updateData.description}`,
-                originalId,
+                new Types.ObjectId(originalId),
             );
 
-            // Aplicar o novo valor
+            // Aplicar o novo valor na conta NOVA
             await this.ledgerService.logOperation(
                 LedgerOperationType.UPDATE,
-                original.type === TransactionType.EXPENSE ? -updateData.amount : updateData.amount,
-                originalAccount,
+                updateData.type === TransactionType.EXPENSE ? -updateData.amount : updateData.amount,
+                new Types.ObjectId(newAccountId),
                 `Transação atualizada de (+): ${updateData.description}`,
-                originalId,
+                new Types.ObjectId(originalId),
             );
             return;
         }
@@ -155,10 +156,10 @@ export class TransactionsService {
         if (original.status === TransactionStatus.UNPAID && updateData.status === TransactionStatus.PAID) {
             await this.ledgerService.logOperation(
                 LedgerOperationType.UPDATE,
-                original.type === TransactionType.EXPENSE ? -updateData.amount : updateData.amount,
-                originalAccount,
+                updateData.type === TransactionType.EXPENSE ? -updateData.amount : updateData.amount,
+                new Types.ObjectId(newAccountId),
                 `Transação atualizada para PAID: ${updateData.description}`,
-                originalId,
+                new Types.ObjectId(originalId),
             );
         }
     }
