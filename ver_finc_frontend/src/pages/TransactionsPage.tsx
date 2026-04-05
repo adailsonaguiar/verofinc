@@ -5,412 +5,354 @@ import { Transaction, CreateTransactionDto, UpdateTransactionDto } from '../type
 import { formatCurrency } from '../utils/transactions';
 import { TransactionCard } from '../components/TransactionCard';
 import { TransactionModal } from '../components/TransactionModal';
-import { Loader2, DollarSign, TrendingUp, TrendingDown, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, TrendingUp, TrendingDown, Plus, ChevronLeft, ChevronRight, Filter, Search, Activity } from 'lucide-react';
 import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import api from '../services/api';
 
 export const TransactionsPage: React.FC = () => {
-    // Filtros avançados
-    // const [filterDescription, setFilterDescription] = useState('');
     const [filterCategory, setFilterCategory] = useState('all');
     const [filterStatus, setFilterStatus] = useState('all');
     const [categories, setCategories] = useState<any[]>([]);
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [accounts, setAccounts] = useState<any[]>([]);
+    const [selectedAccount, setSelectedAccount] = useState<string>('all');
+    const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+    const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
+    const [availableMonths, setAvailableMonths] = useState<{year: number, month: number, label: string}[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
     useEffect(() => {
-      loadCategories();
+        loadCategories();
+        loadAvailableMonths();
+        loadAccounts();
     }, []);
 
-    const loadCategories = async () => {
-      try {
-        const res = await api.get('/categories');
-        setCategories(res?.data);
-      } catch (err) {
-        console.error('Erro ao carregar categorias:', err);
-      }
+    const loadAccounts = async () => {
+        try {
+            const data = await accountService.getByType('checking');
+            setAccounts(data);
+        } catch (err) {
+            console.error('Erro ao carregar contas correntes:', err);
+        }
     };
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [accounts, setAccounts] = useState<any[]>([]);
-  const [selectedAccount, setSelectedAccount] = useState<string>('all');
-  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
-  const [availableMonths, setAvailableMonths] = useState<{year: number, month: number, label: string}[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
-  useEffect(() => {
-    loadAvailableMonths();
-    loadAccounts();
-  }, []);
-  const loadAccounts = async () => {
-    try {
-      const data = await accountService.getByType('checking');
-      setAccounts(data);
-    } catch (err) {
-      console.error('Erro ao carregar contas correntes:', err);
-    }
-  };
+    const loadCategories = async () => {
+        try {
+            const res = await api.get('/categories');
+            setCategories(res?.data);
+        } catch (err) {
+            console.error('Erro ao carregar categorias:', err);
+        }
+    };
 
-  useEffect(() => {
-    if (currentYear && currentMonth) {
-      loadMonthTransactions();
-    }
-  }, [currentYear, currentMonth, selectedAccount, filterCategory, filterStatus]);
+    useEffect(() => {
+        if (currentYear && currentMonth) {
+            loadMonthTransactions();
+        }
+    }, [currentYear, currentMonth, selectedAccount, filterCategory, filterStatus]);
 
-  const loadAvailableMonths = async () => {
-    try {
-      const months = await transactionService.getAvailableMonths();
-      const formattedMonths = months.map(m => ({
-        year: m.year,
-        month: m.month,
-        label: format(new Date(m.year, m.month - 1), 'MMMM yyyy')
-      }));
-      setAvailableMonths(formattedMonths);
-    } catch (err) {
-      console.error('Error loading available months:', err);
-    }
-  };
+    const loadAvailableMonths = async () => {
+        try {
+            const months = await transactionService.getAvailableMonths();
+            const formattedMonths = months.map(m => ({
+                year: m.year,
+                month: m.month,
+                label: format(new Date(m.year, m.month - 1), 'MMMM yyyy', { locale: ptBR })
+            }));
+            setAvailableMonths(formattedMonths);
+        } catch (err) {
+            console.error('Error loading available months:', err);
+        }
+    };
 
-  const loadMonthTransactions = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      let params: any = {
-        year: currentYear,
-        month: currentMonth
-      };
-      if (selectedAccount !== 'all') params.account = selectedAccount;
-    //   if (filterDescription.trim()) params.description = filterDescription.trim();
-      if (filterCategory !== 'all') params.category = filterCategory;
-      if (filterStatus !== 'all') params.status = filterStatus;
+    const loadMonthTransactions = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            let params: any = {
+                year: currentYear,
+                month: currentMonth
+            };
+            if (selectedAccount !== 'all') params.account = selectedAccount;
+            if (filterCategory !== 'all') params.category = filterCategory;
+            if (filterStatus !== 'all') params.status = filterStatus;
 
-      // Monta query string
-      const query = Object.entries(params)
-        .map(([k, v]) => `${k}=${encodeURIComponent(v as string | number)}`)
-        .join('&');
-      const res = await api.get(`/transactions?${query}`);
-      setTransactions(res?.data);
-    } catch (err) {
-      setError('Failed to load transactions. Please make sure the backend is running.');
-      console.error('Error loading transactions:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-  // Adiciona método ao transactionService para buscar por mês e conta
-  // transactionService.getByMonthAndAccount(year, month, accountId)
+            const query = Object.entries(params)
+                .map(([k, v]) => `${k}=${encodeURIComponent(v as string | number)}`)
+                .join('&');
+            const res = await api.get(`/transactions?${query}`);
+            setTransactions(res?.data);
+        } catch (err) {
+            setError('Falha ao carregar transações. Verifique se o backend está rodando.');
+            console.error('Error loading transactions:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  const handleCreateTransaction = async (data: CreateTransactionDto) => {
-    await transactionService.create(data);
-    await loadAvailableMonths();
-    await loadMonthTransactions();
-  };
+    const handleCreateTransaction = async (data: CreateTransactionDto) => {
+        await transactionService.create(data);
+        await loadAvailableMonths();
+        await loadMonthTransactions();
+    };
 
-  const handleUpdateTransaction = async (data: UpdateTransactionDto) => {
-    if (!editingTransaction) return;
-    await transactionService.update(editingTransaction._id, data);
-    await loadAvailableMonths();
-    await loadMonthTransactions();
-  };
+    const handleUpdateTransaction = async (data: UpdateTransactionDto) => {
+        if (!editingTransaction) return;
+        await transactionService.update(editingTransaction._id, data);
+        await loadAvailableMonths();
+        await loadMonthTransactions();
+    };
 
-  const handleEditTransaction = (transaction: Transaction) => {
-    setEditingTransaction(transaction);
-    setIsModalOpen(true);
-  };
+    const handleEditTransaction = (transaction: Transaction) => {
+        setEditingTransaction(transaction);
+        setIsModalOpen(true);
+    };
 
-  const handleDeleteTransaction = async (transaction: Transaction) => {
-    if (!confirm(`Are you sure you want to delete "${transaction.description}"?`)) {
-      return;
-    }
+    const handleDeleteTransaction = async (transaction: Transaction) => {
+        if (!confirm(`Deseja realmente excluir "${transaction.description}"?`)) {
+            return;
+        }
 
-    try {
-      await transactionService.delete(transaction._id);
-      await loadAvailableMonths();
-      await loadMonthTransactions();
-    } catch (error) {
-      console.error('Error deleting transaction:', error);
-      alert('Failed to delete transaction. Please try again.');
-    }
-  };
+        try {
+            await transactionService.delete(transaction._id);
+            await loadAvailableMonths();
+            await loadMonthTransactions();
+        } catch (error) {
+            console.error('Error deleting transaction:', error);
+            alert('Falha ao excluir transação.');
+        }
+    };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setEditingTransaction(null);
-  };
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setEditingTransaction(null);
+    };
 
-  const handlePreviousMonth = () => {
-    const currentIndex = availableMonths.findIndex(m => m.year === currentYear && m.month === currentMonth);
-    if (currentIndex < availableMonths.length - 1) {
-      const prevMonth = availableMonths[currentIndex + 1];
-      setCurrentYear(prevMonth.year);
-      setCurrentMonth(prevMonth.month);
-    }
-  };
+    const handlePreviousMonth = () => {
+        const currentIndex = availableMonths.findIndex(m => m.year === currentYear && m.month === currentMonth);
+        if (currentIndex < availableMonths.length - 1) {
+            const prevMonth = availableMonths[currentIndex + 1];
+            setCurrentYear(prevMonth.year);
+            setCurrentMonth(prevMonth.month);
+        }
+    };
 
-  const handleNextMonth = () => {
-    const currentIndex = availableMonths.findIndex(m => m.year === currentYear && m.month === currentMonth);
-    if (currentIndex > 0) {
-      const nextMonth = availableMonths[currentIndex - 1];
-      setCurrentYear(nextMonth.year);
-      setCurrentMonth(nextMonth.month);
-    }
-  };
+    const handleNextMonth = () => {
+        const currentIndex = availableMonths.findIndex(m => m.year === currentYear && m.month === currentMonth);
+        if (currentIndex > 0) {
+            const nextMonth = availableMonths[currentIndex - 1];
+            setCurrentYear(nextMonth.year);
+            setCurrentMonth(nextMonth.month);
+        }
+    };
 
-  const currentMonthLabel = availableMonths.find(m => m.year === currentYear && m.month === currentMonth)?.label || '';
-  const currentIndex = availableMonths.findIndex(m => m.year === currentYear && m.month === currentMonth);
-  const hasPrevious = currentIndex < availableMonths.length - 1;
-  const hasNext = currentIndex > 0;
+    const currentMonthLabel = availableMonths.find(m => m.year === currentYear && m.month === currentMonth)?.label || '';
+    const currentIndexMonth = availableMonths.findIndex(m => m.year === currentYear && m.month === currentMonth);
+    const hasPrevious = currentIndexMonth < availableMonths.length - 1;
+    const hasNext = currentIndexMonth > 0;
 
-  // Ignora transações de pagamento de cartão de crédito nos totais (já contabilizadas separadamente)
-  const CREDIT_CARD_PAYMENT_CATEGORY_ID = '699f0d49c0a92c8334e60765';
-  const transactionsForTotals = transactions.filter(
-    t => t.category?._id !== CREDIT_CARD_PAYMENT_CATEGORY_ID
-  );
-
-  // Calculate monthly statistics
-  const totalIncome = transactionsForTotals
-    .filter(t => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const totalExpense = transactionsForTotals
-    .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const balance = totalIncome - totalExpense;
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-primary-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading transactions...</p>
-        </div>
-      </div>
+    const CREDIT_CARD_PAYMENT_CATEGORY_ID = '699f0d49c0a92c8334e60765';
+    const transactionsForTotals = transactions.filter(
+        t => t.category?._id !== CREDIT_CARD_PAYMENT_CATEGORY_ID
     );
-  }
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
-          <h3 className="text-red-800 font-semibold mb-2">Error</h3>
-          <p className="text-red-600">{error}</p>
-          <button
-            onClick={loadMonthTransactions}
-            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
+    const totalIncome = transactionsForTotals
+        .filter(t => t.type === 'income')
+        .reduce((sum, t) => sum + t.amount, 0);
 
-  return (
-    <div className="flex-1 overflow-auto bg-mac-bg text-mac-text">
-    
-      {/* New Transaction Button - Mobile */}
-      <div className="lg:hidden fixed bottom-6 right-6 z-40">
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center justify-center w-12 h-12 bg-gradient-to-b from-blue-600 to-blue-800 text-white rounded-full shadow-lg hover:shadow-xl transition-all border border-blue-700"
-          aria-label="Nova transação"
-        >
-          <Plus className="w-5 h-5" />
-        </button>
-      </div>
+    const totalExpense = transactionsForTotals
+        .filter(t => t.type === 'expense')
+        .reduce((sum, t) => sum + t.amount, 0);
 
-      {/* New Transaction Button - Desktop */}
-      <div className="hidden lg:block sticky top-0 z-30 bg-mac-bg border-b border-mac-border">
-        <div className="mx-auto px-4 py-3 flex justify-end">
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-b from-blue-600 to-blue-800 text-white rounded-lg shadow-lg hover:shadow-xl transition-all border border-blue-700"
-          >
-            <Plus className="w-5 h-5" />
-            <span className="font-medium">Nova transação</span>
-          </button>
-        </div>
-      </div>
+    const balance = totalIncome - totalExpense;
 
-      {/* Transaction Modal */}
-      <TransactionModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        onSubmit={(data) => editingTransaction ? handleUpdateTransaction(data as UpdateTransactionDto) : handleCreateTransaction(data as CreateTransactionDto)}
-        initialData={editingTransaction || undefined}
-        isEditing={!!editingTransaction}
-      />
-
-        {/* Card de filtros avançados */}
-      <div className="w-full px-4 pt-6">
-        <div className="mb-6">
-          <div className="bg-white rounded-2xl shadow-lg border border-mac-border p-6 flex flex-col sm:flex-row sm:items-center gap-4">
-            {/* Conta */}
-            <div className="flex flex-col">
-              <label htmlFor="account-select" className="text-sm font-medium text-mac-title mb-1">Conta</label>
-              <select
-                id="account-select"
-                value={selectedAccount}
-                onChange={e => setSelectedAccount(e.target.value)}
-                className="px-4 py-2 rounded-xl border border-mac-border bg-gray-50 text-mac-text shadow focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition-all"
-              >
-                <option value="all" className="font-medium">Todas</option>
-                {accounts.map(acc => (
-                  <option key={acc._id} value={acc._id} className="font-medium">
-                    {acc.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {/* Descrição */}
-            {/* <div className="flex flex-col flex-1">
-              <label htmlFor="desc-filter" className="text-sm font-medium text-mac-title mb-1">Descrição</label>
-              <input
-                id="desc-filter"
-                type="text"
-                value={filterDescription}
-                onChange={e => setFilterDescription(e.target.value)}
-                placeholder="Buscar por descrição..."
-                className="px-4 py-2 rounded-xl border border-mac-border bg-gray-50 text-mac-text shadow focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition-all"
-              />
-            </div> */}
-            {/* Categoria */}
-            <div className="flex flex-col">
-              <label htmlFor="cat-filter" className="text-sm font-medium text-mac-title mb-1">Categoria</label>
-              <select
-                id="cat-filter"
-                value={filterCategory}
-                onChange={e => setFilterCategory(e.target.value)}
-                className="px-4 py-2 rounded-xl border border-mac-border bg-gray-50 text-mac-text shadow focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition-all"
-              >
-                <option value="all">Todas</option>
-                {categories.map(cat => (
-                  <option key={cat._id} value={cat._id}>{cat.name}</option>
-                ))}
-              </select>
-            </div>
-            {/* Status */}
-            <div className="flex flex-col">
-              <label htmlFor="status-filter" className="text-sm font-medium text-mac-title mb-1">Status</label>
-              <select
-                id="status-filter"
-                value={filterStatus}
-                onChange={e => setFilterStatus(e.target.value)}
-                className="px-4 py-2 rounded-xl border border-mac-border bg-gray-50 text-mac-text shadow focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition-all"
-              >
-                <option value="all">Todos</option>
-                <option value="paid">Pago</option>
-                <option value="unpaid">Pendente</option>
-              </select>
+    if (loading && transactions.length === 0) {
+        return (
+          <div className="flex-1 flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+            <div className="flex flex-col items-center">
+              <Loader2 className="w-10 h-10 animate-spin text-indigo-600 mb-4" />
+              <p className="text-slate-500 dark:text-slate-400 font-medium">Carregando transações...</p>
             </div>
           </div>
+        );
+    }
+
+    return (
+        <div className="flex-1 overflow-auto bg-[#F8FAFC] dark:bg-[#0F172A] transition-colors duration-300">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+                
+                {/* Header Page */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div>
+                        <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Transações</h1>
+                        <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Controle detalhado de cada movimentação.</p>
+                    </div>
+
+                    <button
+                        onClick={() => setIsModalOpen(true)}
+                        className="flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold shadow-lg shadow-indigo-500/20 transition-all active:scale-95"
+                    >
+                        <Plus className="w-5 h-5" strokeWidth={3} />
+                        <span>Nova Transação</span>
+                    </button>
+                </div>
+
+                {/* Filters & Statistics Summary */}
+                <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+                    
+                    {/* Filter Card */}
+                    <div className="xl:col-span-3 bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-100 dark:border-slate-700/60 shadow-sm space-y-6">
+                        <div className="flex items-center gap-2 mb-4">
+                            <Filter className="w-4 h-4 text-indigo-500" />
+                            <span className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">Filtros</span>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                            <div className="space-y-2">
+                                <label className="text-[13px] font-bold text-slate-500 dark:text-slate-400 ml-1">Conta Corrente</label>
+                                <select
+                                    value={selectedAccount}
+                                    onChange={e => setSelectedAccount(e.target.value)}
+                                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none font-semibold text-sm appearance-none"
+                                >
+                                    <option value="all">Todas as Contas</option>
+                                    {accounts.map(acc => (
+                                        <option key={acc._id} value={acc._id}>{acc.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[13px] font-bold text-slate-500 dark:text-slate-400 ml-1">Categoria</label>
+                                <select
+                                    value={filterCategory}
+                                    onChange={e => setFilterCategory(e.target.value)}
+                                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none font-semibold text-sm appearance-none"
+                                >
+                                    <option value="all">Todas Categorias</option>
+                                    {categories.map(cat => (
+                                        <option key={cat._id} value={cat._id}>{cat.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[13px] font-bold text-slate-500 dark:text-slate-400 ml-1">Status</label>
+                                <select
+                                    value={filterStatus}
+                                    onChange={e => setFilterStatus(e.target.value)}
+                                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none font-semibold text-sm appearance-none"
+                                >
+                                    <option value="all">Todos</option>
+                                    <option value="paid">Pago / Recebido</option>
+                                    <option value="unpaid">Pendente</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Month Selector Mini-Card */}
+                    <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-100 dark:border-slate-700/60 shadow-sm flex flex-col justify-center gap-4">
+                        <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-900/50 p-2 rounded-2xl border border-slate-100 dark:border-slate-700">
+                            <button
+                                onClick={handlePreviousMonth}
+                                disabled={!hasPrevious}
+                                className="p-2 hover:bg-white dark:hover:bg-slate-800 rounded-xl transition-all disabled:opacity-20 text-slate-600 dark:text-slate-300 shadow-sm"
+                            >
+                                <ChevronLeft className="w-5 h-5" />
+                            </button>
+                            <span className="text-sm font-extrabold text-slate-900 dark:text-white capitalize truncate px-2">
+                                {currentMonthLabel}
+                            </span>
+                            <button
+                                onClick={handleNextMonth}
+                                disabled={!hasNext}
+                                className="p-2 hover:bg-white dark:hover:bg-slate-800 rounded-xl transition-all disabled:opacity-20 text-slate-600 dark:text-slate-300 shadow-sm"
+                            >
+                                <ChevronRight className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="flex items-center justify-between px-2">
+                             <span className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">Total Itens</span>
+                             <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-md">{transactions.length}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Monthly Quick Stats */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                    <div className="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-slate-100 dark:border-slate-700/60 shadow-sm flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                             <TrendingUp className="w-6 h-6" />
+                        </div>
+                        <div>
+                             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Receitas</p>
+                             <p className="text-xl font-extrabold text-slate-900 dark:text-white">{formatCurrency(totalIncome)}</p>
+                        </div>
+                    </div>
+                    <div className="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-slate-100 dark:border-slate-700/60 shadow-sm flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-rose-600 dark:text-rose-400">
+                             <TrendingDown className="w-6 h-6" />
+                        </div>
+                        <div>
+                             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Despesas</p>
+                             <p className="text-xl font-extrabold text-slate-900 dark:text-white">{formatCurrency(totalExpense)}</p>
+                        </div>
+                    </div>
+                    <div className={`bg-white dark:bg-slate-800 rounded-3xl p-5 border border-slate-100 dark:border-slate-700/60 shadow-sm flex items-center gap-4 border-l-4 ${balance >= 0 ? 'border-l-indigo-500' : 'border-l-rose-500'}`}>
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${balance >= 0 ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
+                             <Activity className="w-6 h-6" />
+                        </div>
+                        <div>
+                             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Saldo</p>
+                             <p className={`text-xl font-extrabold ${balance >= 0 ? 'text-slate-900 dark:text-white' : 'text-rose-600 dark:text-rose-400'}`}>
+                                {formatCurrency(balance)}
+                             </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Transactions List */}
+                <div className="space-y-4">
+                    {transactions.length > 0 ? (
+                        <div className="grid grid-cols-1 gap-4">
+                            {transactions.map(transaction => (
+                                <TransactionCard
+                                    key={transaction._id}
+                                    transaction={transaction}
+                                    onEdit={handleEditTransaction}
+                                    onDelete={handleDeleteTransaction}
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] border border-slate-100 dark:border-slate-700/60 p-16 text-center shadow-sm">
+                            <div className="w-24 h-24 bg-slate-50 dark:bg-slate-900/50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <Search className="w-10 h-10 text-slate-300 dark:text-slate-600" />
+                            </div>
+                            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                                Nenhuma transação encontrada
+                            </h3>
+                            <p className="text-slate-500 dark:text-slate-400 max-w-sm mx-auto font-medium leading-relaxed">
+                                Tente ajustar seus filtros ou mude o mês selecionado para encontrar o que procura.
+                            </p>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Transaction Modal */}
+            <TransactionModal
+                isOpen={isModalOpen}
+                onClose={handleCloseModal}
+                onSubmit={(data) => editingTransaction ? handleUpdateTransaction(data as UpdateTransactionDto) : handleCreateTransaction(data as CreateTransactionDto)}
+                initialData={editingTransaction || undefined}
+                isEditing={!!editingTransaction}
+            />
         </div>
-      </div>
-
-      {/* Overall Statistics */}
-      <div className="mx-auto px-4 py-6">
-        {/* Month Navigation Header */}
-        {availableMonths.length > 0 && (
-          <div className="bg-mac-card rounded-2xl border border-mac-border mb-6">
-            <div className="flex items-center justify-between px-4 py-3">
-              <button
-                onClick={handlePreviousMonth}
-                disabled={!hasPrevious}
-                className="p-1 hover:bg-mac-hover rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                title="Mês anterior"
-              >
-                <ChevronLeft className="w-5 h-5 text-mac-icon" />
-              </button>
-
-              <div className="text-center">
-                <h2 className="text-lg font-semibold text-mac-title">
-                  {currentMonthLabel}
-                </h2>
-                <p className="text-xs text-mac-muted mt-0.5">
-                  {transactions.length} transação(ões)
-                </p>
-              </div>
-
-              <button
-                onClick={handleNextMonth}
-                disabled={!hasNext}
-                className="p-1 hover:bg-mac-hover rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                title="Próximo mês"
-              >
-                <ChevronRight className="w-5 h-5 text-mac-icon" />
-              </button>
-            </div>
-
-            {/* Monthly Summary */}
-            <div className="grid grid-cols-3 gap-2 px-4 pb-4">
-              <div className="text-center p-2 bg-mac-green rounded-lg">
-                <div className="flex items-center justify-center gap-1 mb-1">
-                  <TrendingUp className="w-4 h-4 text-green-700" />
-                  <span className="text-xs font-medium text-green-800">Receitas</span>
-                </div>
-                <p className="text-base font-semibold text-green-800">
-                  {formatCurrency(totalIncome)}
-                </p>
-              </div>
-
-              <div className="text-center p-2 bg-mac-red rounded-lg">
-                <div className="flex items-center justify-center gap-1 mb-1">
-                  <TrendingDown className="w-4 h-4 text-red-700" />
-                  <span className="text-xs font-medium text-red-800">Despesas</span>
-                </div>
-                <p className="text-base font-semibold text-red-800">
-                  {formatCurrency(totalExpense)}
-                </p>
-              </div>
-
-              <div className="text-center p-2 bg-mac-blue rounded-lg">
-                <div className="flex items-center justify-center gap-1 mb-1">
-                  <DollarSign className="w-4 h-4 text-blue-700" />
-                  <span className="text-xs font-medium text-blue-800">Saldo</span>
-                </div>
-                <p className={`text-base font-semibold ${
-                  balance >= 0 ? 'text-blue-800' : 'text-orange-600'
-                }`}>
-                  {formatCurrency(balance)}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Monthly Transactions */}
-        <div className="space-y-2">
-          {transactions.length > 0 ? (
-            transactions.map(transaction => (
-              <TransactionCard
-                key={transaction._id}
-                transaction={transaction}
-                onEdit={handleEditTransaction}
-                onDelete={handleDeleteTransaction}
-              />
-            ))
-          ) : availableMonths.length === 0 ? (
-            <div className="bg-mac-card rounded-2xl border border-mac-border p-10 text-center">
-              <DollarSign className="w-12 h-12 text-mac-icon mx-auto mb-2" />
-              <h3 className="text-lg font-semibold text-mac-title mb-1">
-                Nenhuma transação ainda
-              </h3>
-              <p className="text-mac-muted">
-                Comece adicionando transações para vê-las organizadas por mês
-              </p>
-            </div>
-          ) : (
-            <div className="bg-mac-card rounded-2xl border border-mac-border p-10 text-center">
-              <DollarSign className="w-12 h-12 text-mac-icon mx-auto mb-2" />
-              <p className="text-mac-muted">
-                Nenhuma transação para este mês
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+    );
 };

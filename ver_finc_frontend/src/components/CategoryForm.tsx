@@ -24,7 +24,6 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!name.trim()) return;
 
     setLoading(true);
@@ -52,39 +51,47 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
-      <h3 className="text-2xl font-bold text-gray-900 mb-6">
-        {isEditing ? 'Editar Categoria' : 'Nova Categoria'}
-      </h3>
-
-      <div className="space-y-5">
+    <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-800 rounded-[2.5rem] border border-slate-100 dark:border-slate-700/60 shadow-xl shadow-indigo-500/5 p-8 sm:p-10">
+      <div className="flex items-center gap-4 mb-8">
+        <div className={`p-3 rounded-2xl ${isEditing ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-600' : 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600'}`}>
+          <Save className="w-6 h-6" strokeWidth={2.5} />
+        </div>
         <div>
-          <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-2">
-            Nome *
+          <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            {isEditing ? 'Editar Categoria' : 'Nova Categoria'}
+          </h3>
+          <p className="text-sm font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">Defina as propriedades</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="md:col-span-2 space-y-2">
+          <label htmlFor="name" className="text-[13px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">
+            Nome da Categoria *
           </label>
           <input
             type="text"
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 hover:border-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors outline-none font-medium"
-            placeholder="Ex: Alimentação, Transporte, Lazer"
+            className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-[1.25rem] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold placeholder:text-slate-300 dark:placeholder:text-slate-700"
+            placeholder="Ex: Alimentação, Transporte, Lazer..."
             required
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-3">
-            Tipo *
+        <div className="md:col-span-2 space-y-3">
+          <label className="text-[13px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">
+            Tipo de Categoria *
           </label>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <button
               type="button"
               onClick={() => setType(CategoryType.INCOME)}
-              className={`px-5 py-3.5 rounded-xl font-semibold transition-all duration-200 border text-sm ${
+              className={`py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 border ${
                 type === CategoryType.INCOME
-                  ? 'bg-gradient-to-b from-emerald-600 to-emerald-700 text-white shadow-sm border-emerald-700/20'
-                  : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border-gray-200'
+                  ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-500/30 shadow-lg shadow-emerald-500/5'
+                  : 'bg-slate-50 dark:bg-slate-900/50 text-slate-400 dark:text-slate-500 border-transparent hover:text-slate-600'
               }`}
             >
               💰 Receita
@@ -92,10 +99,10 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
             <button
               type="button"
               onClick={() => setType(CategoryType.EXPENSE)}
-              className={`px-5 py-3.5 rounded-xl font-semibold transition-all duration-200 border text-sm ${
+              className={`py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 border ${
                 type === CategoryType.EXPENSE
-                  ? 'bg-gradient-to-b from-rose-600 to-rose-700 text-white shadow-sm border-rose-700/20'
-                  : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border-gray-200'
+                  ? 'bg-white dark:bg-slate-700 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-500/30 shadow-lg shadow-rose-500/5'
+                  : 'bg-slate-50 dark:bg-slate-900/50 text-slate-400 dark:text-slate-500 border-transparent hover:text-slate-600'
               }`}
             >
               💸 Despesa
@@ -103,66 +110,65 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
           </div>
         </div>
 
-        <div>
-          <label htmlFor="description" className="block text-sm font-semibold text-gray-700 mb-2">
-            Descrição
-          </label>
-          <textarea
-            id="description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={3}
-            className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 hover:border-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors outline-none resize-none font-medium"
-            placeholder="Descrição opcional..."
-          />
-        </div>
-
-        <div>
-          <label htmlFor="icon" className="block text-sm font-semibold text-gray-700 mb-2">
-            Ícone (emoji)
+        <div className="space-y-2">
+          <label htmlFor="icon" className="text-[13px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">
+            Ícone (Emoji)
           </label>
           <input
             type="text"
             id="icon"
             value={icon}
             onChange={(e) => setIcon(e.target.value)}
-            className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 hover:border-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors outline-none font-medium"
-            placeholder="🍔 ou 🚗"
-            maxLength={10}
+            className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-[1.25rem] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-center text-2xl"
+            placeholder="🍔"
+            maxLength={5}
           />
         </div>
 
-        <div className="flex items-center pt-2">
-          <input
-            type="checkbox"
-            id="active"
-            checked={active}
-            onChange={(e) => setActive(e.target.checked)}
-            className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
-          />
-          <label htmlFor="active" className="ml-3 text-sm font-medium text-gray-700 cursor-pointer">
-            Categoria ativa
+        <div className="flex items-end pb-4 pl-2">
+          <label className="relative flex items-center cursor-pointer group">
+            <input
+              type="checkbox"
+              checked={active}
+              onChange={(e) => setActive(e.target.checked)}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+            <span className="ml-3 text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest">Categoria Ativa</span>
           </label>
+        </div>
+
+        <div className="md:col-span-2 space-y-2">
+          <label htmlFor="description" className="text-[13px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">
+            Descrição (Opcional)
+          </label>
+          <textarea
+            id="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={2}
+            className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-[1.25rem] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-medium resize-none"
+            placeholder="Algum comentário extra..."
+          />
         </div>
       </div>
 
-      <div className="flex gap-3 mt-8">
+      <div className="flex flex-col sm:flex-row gap-4 mt-10">
         <button
           type="submit"
           disabled={loading || !name.trim()}
-          className="flex-1 flex items-center justify-center gap-2 px-5 py-3.5 bg-gradient-to-b from-indigo-600 to-indigo-700 text-white rounded-xl hover:from-indigo-700 hover:to-indigo-800 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all duration-200 font-semibold shadow-sm border border-indigo-700/20 disabled:border-gray-500/20"
+          className="flex-1 order-2 sm:order-1 py-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 dark:disabled:bg-slate-800 text-white rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-xl shadow-indigo-500/20 transition-all active:scale-95 flex items-center justify-center gap-3"
         >
-          <Save className="w-5 h-5" strokeWidth={2} />
-          {loading ? 'Salvando...' : isEditing ? 'Atualizar' : 'Criar'}
+          {loading ? 'Salvando...' : isEditing ? 'Atualizar Categoria' : 'Criar Categoria'}
         </button>
 
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
-            className="px-5 py-3.5 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-semibold flex items-center justify-center gap-2"
+            className="flex-1 order-1 sm:order-2 py-4 px-6 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 rounded-2xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
           >
-            <X className="w-5 h-5" strokeWidth={2} />
+            <X className="w-5 h-5" />
             Cancelar
           </button>
         )}
