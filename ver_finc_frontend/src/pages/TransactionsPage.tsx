@@ -19,9 +19,9 @@ export const TransactionsPage: React.FC = () => {
     const [selectedAccount, setSelectedAccount] = useState<string>('all');
     const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
     const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
-    const [availableMonths, setAvailableMonths] = useState<{year: number, month: number, label: string}[]>([]);
+    const [availableMonths, setAvailableMonths] = useState<{ year: number, month: number, label: string }[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    // const [error, setError] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
@@ -72,7 +72,7 @@ export const TransactionsPage: React.FC = () => {
     const loadMonthTransactions = async () => {
         try {
             setLoading(true);
-            setError(null);
+            // setError(null);
             let params: any = {
                 year: currentYear,
                 month: currentMonth
@@ -87,7 +87,7 @@ export const TransactionsPage: React.FC = () => {
             const res = await api.get(`/transactions?${query}`);
             setTransactions(res?.data);
         } catch (err) {
-            setError('Falha ao carregar transações. Verifique se o backend está rodando.');
+            // setError('Falha ao carregar transações. Verifique se o backend está rodando.');
             console.error('Error loading transactions:', err);
         } finally {
             setLoading(false);
@@ -172,19 +172,19 @@ export const TransactionsPage: React.FC = () => {
 
     if (loading && transactions.length === 0) {
         return (
-          <div className="flex-1 flex items-center justify-center bg-slate-50 dark:bg-slate-900">
-            <div className="flex flex-col items-center">
-              <Loader2 className="w-10 h-10 animate-spin text-indigo-600 mb-4" />
-              <p className="text-slate-500 dark:text-slate-400 font-medium">Carregando transações...</p>
+            <div className="flex-1 flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+                <div className="flex flex-col items-center">
+                    <Loader2 className="w-10 h-10 animate-spin text-indigo-600 mb-4" />
+                    <p className="text-slate-500 dark:text-slate-400 font-medium">Carregando transações...</p>
+                </div>
             </div>
-          </div>
         );
     }
 
     return (
         <div className="flex-1 overflow-auto bg-[#F8FAFC] dark:bg-[#0F172A] transition-colors duration-300">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-                
+
                 {/* Header Page */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div>
@@ -203,14 +203,14 @@ export const TransactionsPage: React.FC = () => {
 
                 {/* Filters & Statistics Summary */}
                 <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-                    
+
                     {/* Filter Card */}
                     <div className="xl:col-span-3 bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-100 dark:border-slate-700/60 shadow-sm space-y-6">
                         <div className="flex items-center gap-2 mb-4">
                             <Filter className="w-4 h-4 text-indigo-500" />
                             <span className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">Filtros</span>
                         </div>
-                        
+
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                             <div className="space-y-2">
                                 <label className="text-[13px] font-bold text-slate-500 dark:text-slate-400 ml-1">Conta Corrente</label>
@@ -277,8 +277,8 @@ export const TransactionsPage: React.FC = () => {
                             </button>
                         </div>
                         <div className="flex items-center justify-between px-2">
-                             <span className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">Total Itens</span>
-                             <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-md">{transactions.length}</span>
+                            <span className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">Total Itens</span>
+                            <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-md">{transactions.length}</span>
                         </div>
                     </div>
                 </div>
@@ -287,31 +287,31 @@ export const TransactionsPage: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                     <div className="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-slate-100 dark:border-slate-700/60 shadow-sm flex items-center gap-4">
                         <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                             <TrendingUp className="w-6 h-6" />
+                            <TrendingUp className="w-6 h-6" />
                         </div>
                         <div>
-                             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Receitas</p>
-                             <p className="text-xl font-extrabold text-slate-900 dark:text-white">{formatCurrency(totalIncome)}</p>
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Receitas</p>
+                            <p className="text-xl font-extrabold text-slate-900 dark:text-white">{formatCurrency(totalIncome)}</p>
                         </div>
                     </div>
                     <div className="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-slate-100 dark:border-slate-700/60 shadow-sm flex items-center gap-4">
                         <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-rose-600 dark:text-rose-400">
-                             <TrendingDown className="w-6 h-6" />
+                            <TrendingDown className="w-6 h-6" />
                         </div>
                         <div>
-                             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Despesas</p>
-                             <p className="text-xl font-extrabold text-slate-900 dark:text-white">{formatCurrency(totalExpense)}</p>
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Despesas</p>
+                            <p className="text-xl font-extrabold text-slate-900 dark:text-white">{formatCurrency(totalExpense)}</p>
                         </div>
                     </div>
                     <div className={`bg-white dark:bg-slate-800 rounded-3xl p-5 border border-slate-100 dark:border-slate-700/60 shadow-sm flex items-center gap-4 border-l-4 ${balance >= 0 ? 'border-l-indigo-500' : 'border-l-rose-500'}`}>
                         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${balance >= 0 ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
-                             <Activity className="w-6 h-6" />
+                            <Activity className="w-6 h-6" />
                         </div>
                         <div>
-                             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Saldo</p>
-                             <p className={`text-xl font-extrabold ${balance >= 0 ? 'text-slate-900 dark:text-white' : 'text-rose-600 dark:text-rose-400'}`}>
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Saldo</p>
+                            <p className={`text-xl font-extrabold ${balance >= 0 ? 'text-slate-900 dark:text-white' : 'text-rose-600 dark:text-rose-400'}`}>
                                 {formatCurrency(balance)}
-                             </p>
+                            </p>
                         </div>
                     </div>
                 </div>
