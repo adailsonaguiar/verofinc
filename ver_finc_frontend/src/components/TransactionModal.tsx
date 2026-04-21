@@ -123,7 +123,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       selectedAccount?.type === 'credit_card'
     ) {
       const firstValidAccount = accounts.find(
-        (acc) => acc.type !== 'credit_card'
+        (acc) => acc.type === 'credit_card'
       );
       if (firstValidAccount) {
         setAccountId(firstValidAccount._id);

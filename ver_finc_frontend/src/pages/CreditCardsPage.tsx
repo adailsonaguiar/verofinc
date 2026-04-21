@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
   Plus,
   Pencil,
@@ -8,42 +8,42 @@ import {
   CreditCard,
   Wallet,
   X,
-} from 'lucide-react';
-import { accountService } from '../services/accountService';
-import { transactionService } from '../services/transactionService';
+} from "lucide-react";
+import { accountService } from "../services/accountService";
+import { transactionService } from "../services/transactionService";
 import {
   Transaction,
   CreateTransactionDto,
   UpdateTransactionDto,
-} from '../types';
-import { TransactionCard } from '../components/TransactionCard';
-import { TransactionModal } from '../components/TransactionModal';
-import { format } from 'date-fns';
-import api from '../services/api';
+} from "../types";
+import { TransactionCard } from "../components/TransactionCard";
+import { TransactionModal } from "../components/TransactionModal";
+import { format } from "date-fns";
+import api from "../services/api";
 
 export const CreditCardsPage: React.FC = () => {
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [name, setName] = useState('');
-  const [limit, setLimit] = useState('');
+  const [name, setName] = useState("");
+  const [limit, setLimit] = useState("");
   const [editing, setEditing] = useState<any>(null);
 
   // Função de máscara para valor monetário (R$00,00)
   function formatCurrencyInput(value: string) {
-    const digits = value.replace(/\D/g, '');
+    const digits = value.replace(/\D/g, "");
     const number = Number(digits) / 100;
-    return number.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
+    return number.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
     });
   }
 
   // Handler para input de valor
   const handleLimitChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
-    const digits = raw.replace(/\D/g, '');
+    const digits = raw.replace(/\D/g, "");
     const limited = digits.slice(0, 12);
     const formatted = formatCurrencyInput(limited);
     setLimit(formatted);
@@ -58,7 +58,7 @@ export const CreditCardsPage: React.FC = () => {
   const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [checkingAccounts, setCheckingAccounts] = useState<any[]>([]);
-  const [selectedCheckingAccount, setSelectedCheckingAccount] = useState('');
+  const [selectedCheckingAccount, setSelectedCheckingAccount] = useState("");
   const [payingInvoice, setPayingInvoice] = useState(false);
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] =
@@ -85,10 +85,10 @@ export const CreditCardsPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await accountService.getByType('credit_card');
+      const data = await accountService.getByType("credit_card");
       setCards(data);
     } catch (err) {
-      setError('Erro ao carregar cartões.');
+      setError("Erro ao carregar cartões.");
     } finally {
       setLoading(false);
     }
@@ -96,13 +96,13 @@ export const CreditCardsPage: React.FC = () => {
 
   const loadCheckingAccounts = async () => {
     try {
-      const data = await accountService.getByType('checking');
+      const data = await accountService.getByType("checking");
       setCheckingAccounts(data);
       if (data.length > 0) {
         setSelectedCheckingAccount(data[0]._id);
       }
     } catch (err) {
-      console.error('Erro ao carregar contas correntes:', err);
+      console.error("Erro ao carregar contas correntes:", err);
     }
   };
 
@@ -112,14 +112,14 @@ export const CreditCardsPage: React.FC = () => {
       // Extrai valor numérico do campo formatado (R$ 1.234,56)
       const numericLimit = Number(
         limit
-          .replace(/[^\d,]/g, '')
-          .replace(/\./g, '')
-          .replace(',', '.')
+          .replace(/[^\d,]/g, "")
+          .replace(/\./g, "")
+          .replace(",", "."),
       );
 
       if (transactions.length > 0 && editing) {
         alert(
-          'Não é possível editar o limite de um cartão com transações associadas.'
+          "Não é possível editar o limite de um cartão com transações associadas.",
         );
         return;
       }
@@ -132,18 +132,18 @@ export const CreditCardsPage: React.FC = () => {
       } else {
         await accountService.create({
           name,
-          type: 'credit_card',
+          type: "credit_card",
           creditLimit: numericLimit,
           initialBalance: numericLimit,
         });
       }
-      setName('');
-      setLimit('');
+      setName("");
+      setLimit("");
       setEditing(null);
       setShowForm(false);
       await loadCards();
     } catch {
-      alert('Erro ao salvar cartão.');
+      alert("Erro ao salvar cartão.");
     }
   };
 
@@ -155,7 +155,7 @@ export const CreditCardsPage: React.FC = () => {
   };
 
   const handleDelete = async (card: any) => {
-    if (!window.confirm('Remover este cartão?')) return;
+    if (!window.confirm("Remover este cartão?")) return;
     try {
       await accountService.delete(card._id);
       if (selectedCard?._id === card._id) {
@@ -163,7 +163,7 @@ export const CreditCardsPage: React.FC = () => {
       }
       await loadCards();
     } catch {
-      alert('Erro ao remover cartão.');
+      alert("Erro ao remover cartão.");
     }
   };
 
@@ -173,11 +173,11 @@ export const CreditCardsPage: React.FC = () => {
       const formattedMonths = months.map((m) => ({
         year: m.year,
         month: m.month,
-        label: format(new Date(m.year, m.month - 1), 'MMMM yyyy'),
+        label: format(new Date(m.year, m.month - 1), "MMMM yyyy"),
       }));
       setAvailableMonths(formattedMonths);
     } catch (err) {
-      console.error('Error loading available months:', err);
+      console.error("Error loading available months:", err);
     }
   };
 
@@ -193,11 +193,11 @@ export const CreditCardsPage: React.FC = () => {
       };
       const query = Object.entries(params)
         .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
-        .join('&');
+        .join("&");
       const res = await api.get(`transactions?${query}`);
       setTransactions(res.data);
     } catch (err) {
-      console.error('Error loading card transactions:', err);
+      console.error("Error loading card transactions:", err);
     } finally {
       setLoadingTransactions(false);
     }
@@ -205,7 +205,7 @@ export const CreditCardsPage: React.FC = () => {
 
   const handlePreviousMonth = () => {
     const currentIndex = availableMonths.findIndex(
-      (m) => m.year === currentYear && m.month === currentMonth
+      (m) => m.year === currentYear && m.month === currentMonth,
     );
     if (currentIndex < availableMonths.length - 1) {
       const prevMonth = availableMonths[currentIndex + 1];
@@ -216,7 +216,7 @@ export const CreditCardsPage: React.FC = () => {
 
   const handleNextMonth = () => {
     const currentIndex = availableMonths.findIndex(
-      (m) => m.year === currentYear && m.month === currentMonth
+      (m) => m.year === currentYear && m.month === currentMonth,
     );
     if (currentIndex > 0) {
       const nextMonth = availableMonths[currentIndex - 1];
@@ -246,10 +246,10 @@ export const CreditCardsPage: React.FC = () => {
 
   const currentMonthLabel =
     availableMonths.find(
-      (m) => m.year === currentYear && m.month === currentMonth
-    )?.label || '';
+      (m) => m.year === currentYear && m.month === currentMonth,
+    )?.label || "";
   const currentIndex = availableMonths.findIndex(
-    (m) => m.year === currentYear && m.month === currentMonth
+    (m) => m.year === currentYear && m.month === currentMonth,
   );
   const hasPrevious = currentIndex < availableMonths.length - 1;
   const hasNext = currentIndex > 0;
@@ -265,13 +265,13 @@ export const CreditCardsPage: React.FC = () => {
     if (!selectedCard || !selectedCheckingAccount) return;
 
     if (selectedCardAvailableLimit <= 0) {
-      alert('Não há fatura para pagar.');
+      alert("Não há fatura para pagar.");
       return;
     }
 
     if (
       !window.confirm(
-        `Pagar fatura de R$ ${selectedCardAvailableLimit.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}?`
+        `Pagar fatura de R$ ${selectedCardAvailableLimit.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}?`,
       )
     ) {
       return;
@@ -283,17 +283,17 @@ export const CreditCardsPage: React.FC = () => {
       // Chamar rota de pagamento de fatura
       await accountService.payInvoice(
         selectedCard._id,
-        selectedCheckingAccount
+        selectedCheckingAccount,
       );
 
-      alert('Fatura paga com sucesso!');
+      alert("Fatura paga com sucesso!");
       setShowPaymentModal(false);
       await loadCards();
       await loadCardTransactions();
     } catch (err: any) {
-      console.error('Erro ao pagar fatura:', err);
+      console.error("Erro ao pagar fatura:", err);
       const errorMessage =
-        err.response?.data?.message || 'Erro ao pagar fatura. Tente novamente.';
+        err.response?.data?.message || "Erro ao pagar fatura. Tente novamente.";
       alert(errorMessage);
     } finally {
       setPayingInvoice(false);
@@ -301,6 +301,8 @@ export const CreditCardsPage: React.FC = () => {
   };
 
   const handleCreateTransaction = async (data: CreateTransactionDto) => {
+    console.log("data", data);
+    return;
     await transactionService.create(data);
     await loadCardTransactions();
     await loadCards();
@@ -335,8 +337,8 @@ export const CreditCardsPage: React.FC = () => {
             onClick={() => {
               setShowForm(true);
               setEditing(null);
-              setName('');
-              setLimit('');
+              setName("");
+              setLimit("");
             }}
           >
             <Plus className="w-4 h-4" /> Novo Cartão
@@ -373,7 +375,7 @@ export const CreditCardsPage: React.FC = () => {
                 type="submit"
                 className="flex-1 bg-purple-600 text-white rounded-lg px-4 py-2 hover:bg-purple-700"
               >
-                {editing ? 'Salvar' : 'Criar'}
+                {editing ? "Salvar" : "Criar"}
               </button>
               <button
                 type="button"
@@ -381,8 +383,8 @@ export const CreditCardsPage: React.FC = () => {
                 onClick={() => {
                   setShowForm(false);
                   setEditing(null);
-                  setName('');
-                  setLimit('');
+                  setName("");
+                  setLimit("");
                 }}
               >
                 Cancelar
@@ -407,8 +409,8 @@ export const CreditCardsPage: React.FC = () => {
                 onClick={() => handleCardClick(card)}
                 className={`aspect-square bg-gradient-to-br from-purple-500 to-purple-700 rounded-2xl shadow-lg p-4 cursor-pointer transition-all transform hover:scale-105 ${
                   selectedCard?._id === card._id
-                    ? 'ring-4 ring-purple-400 scale-105'
-                    : ''
+                    ? "ring-4 ring-purple-400 scale-105"
+                    : ""
                 }`}
               >
                 <div className="h-full flex flex-col justify-between text-white">
@@ -432,15 +434,15 @@ export const CreditCardsPage: React.FC = () => {
                   <div>
                     <p className="font-bold text-lg mb-1">{card.name}</p>
                     <p className="text-sm opacity-90">
-                      Fatura: R${' '}
-                      {selectedCardAvailableLimit.toLocaleString('pt-BR', {
+                      Fatura: R${" "}
+                      {selectedCardAvailableLimit.toLocaleString("pt-BR", {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })}
                     </p>
                     <p className="text-xs opacity-75 mt-0.5">
-                      Limite: R${' '}
-                      {(selectedCardLimit / 100).toLocaleString('pt-BR', {
+                      Limite: R${" "}
+                      {(selectedCardLimit / 100).toLocaleString("pt-BR", {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })}
@@ -572,8 +574,8 @@ export const CreditCardsPage: React.FC = () => {
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Valor da Fatura</p>
                   <p className="text-2xl font-bold text-purple-600">
-                    R${' '}
-                    {selectedCardAvailableLimit.toLocaleString('pt-BR', {
+                    R${" "}
+                    {selectedCardAvailableLimit.toLocaleString("pt-BR", {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}
@@ -601,13 +603,13 @@ export const CreditCardsPage: React.FC = () => {
                     ) : (
                       checkingAccounts.map((acc) => (
                         <option key={acc._id} value={acc._id}>
-                          {acc.name} - R${' '}
+                          {acc.name} - R${" "}
                           {(acc.initialBalance / 100 || 0).toLocaleString(
-                            'pt-BR',
+                            "pt-BR",
                             {
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2,
-                            }
+                            },
                           )}
                         </option>
                       ))
@@ -634,7 +636,7 @@ export const CreditCardsPage: React.FC = () => {
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-semibold shadow-md"
                   >
                     <Wallet className="w-5 h-5" />
-                    {payingInvoice ? 'Pagando...' : 'Pagar Fatura'}
+                    {payingInvoice ? "Pagando..." : "Pagar Fatura"}
                   </button>
                 </div>
               </div>
