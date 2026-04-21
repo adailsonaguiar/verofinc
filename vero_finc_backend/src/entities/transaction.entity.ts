@@ -30,7 +30,11 @@ export class Transaction {
   @Prop({ type: Types.ObjectId, ref: 'Category', required: true })
   category: Types.ObjectId;
 
-  @Prop({ required: true, enum: TransactionStatus, default: TransactionStatus.UNPAID })
+  @Prop({
+    required: true,
+    enum: TransactionStatus,
+    default: TransactionStatus.UNPAID,
+  })
   status: TransactionStatus;
 
   @Prop({ type: Types.ObjectId, ref: 'Account', required: true })

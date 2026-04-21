@@ -7,7 +7,7 @@ import { Category, CategoryDocument } from '../entities/category.entity';
 export class CategoryRepository {
   constructor(
     @InjectModel(Category.name)
-    private categoryModel: Model<CategoryDocument>,
+    private categoryModel: Model<CategoryDocument>
   ) {}
 
   async create(category: Partial<Category>): Promise<Category> {

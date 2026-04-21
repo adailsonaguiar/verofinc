@@ -7,7 +7,7 @@ import { User, UserDocument } from '../entities/user.entity';
 export class UserRepository {
   constructor(
     @InjectModel(User.name)
-    private userModel: Model<UserDocument>,
+    private userModel: Model<UserDocument>
   ) {}
 
   async create(user: Partial<User>): Promise<User> {

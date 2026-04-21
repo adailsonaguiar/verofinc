@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { CategoryRepository } from '../../repositories/category.repository';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
@@ -10,12 +14,12 @@ export class CategoriesService {
 
   async create(createCategoryDto: CreateCategoryDto): Promise<Category> {
     const existingCategory = await this.categoryRepository.findByName(
-      createCategoryDto.name,
+      createCategoryDto.name
     );
 
     if (existingCategory) {
       throw new ConflictException(
-        `Category with name "${createCategoryDto.name}" already exists`,
+        `Category with name "${createCategoryDto.name}" already exists`
       );
     }
 
@@ -44,20 +48,26 @@ export class CategoriesService {
     return category;
   }
 
-  async update(id: string, updateCategoryDto: UpdateCategoryDto): Promise<Category> {
+  async update(
+    id: string,
+    updateCategoryDto: UpdateCategoryDto
+  ): Promise<Category> {
     if (updateCategoryDto.name) {
       const existingCategory = await this.categoryRepository.findByName(
-        updateCategoryDto.name,
+        updateCategoryDto.name
       );
 
       if (existingCategory && (existingCategory as any)._id.toString() !== id) {
         throw new ConflictException(
-          `Category with name "${updateCategoryDto.name}" already exists`,
+          `Category with name "${updateCategoryDto.name}" already exists`
         );
       }
     }
 
-    const category = await this.categoryRepository.update(id, updateCategoryDto);
+    const category = await this.categoryRepository.update(
+      id,
+      updateCategoryDto
+    );
     if (!category) {
       throw new NotFoundException(`Category with ID ${id} not found`);
     }

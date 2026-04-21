@@ -9,11 +9,19 @@ export const accountService = {
     const res = await api.get(`/accounts?type=${type}`);
     return res.data;
   },
-  async create(data: { name: string; type: string; initialBalance?: number, creditLimit?: number }) {
+  async create(data: {
+    name: string;
+    type: string;
+    initialBalance?: number;
+    creditLimit?: number;
+  }) {
     const res = await api.post('/accounts', data);
     return res.data;
   },
-  async update(id: string, data: { name: string, initialBalance?: number, creditLimit?: number }) {
+  async update(
+    id: string,
+    data: { name: string; initialBalance?: number; creditLimit?: number }
+  ) {
     const res = await api.patch(`/accounts/${id}`, data);
     return res.data;
   },
@@ -24,7 +32,7 @@ export const accountService = {
   async payInvoice(creditCardId: string, checkingAccountId: string) {
     const res = await api.post('/accounts/pay-invoice', {
       creditCardId,
-      checkingAccountId
+      checkingAccountId,
     });
     return res.data;
   },

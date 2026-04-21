@@ -1,11 +1,21 @@
 import api from './api';
-import { Transaction, CreateTransactionDto, UpdateTransactionDto } from '../types';
+import {
+  Transaction,
+  CreateTransactionDto,
+  UpdateTransactionDto,
+} from '../types';
 
 export const transactionService = {
-    async getByMonthAndAccount(year: number, month: number, accountId: string): Promise<Transaction[]> {
-      const response = await api.get<Transaction[]>(`/transactions?year=${year}&month=${month}&account=${accountId}`);
-      return response.data;
-    },
+  async getByMonthAndAccount(
+    year: number,
+    month: number,
+    accountId: string
+  ): Promise<Transaction[]> {
+    const response = await api.get<Transaction[]>(
+      `/transactions?year=${year}&month=${month}&account=${accountId}`
+    );
+    return response.data;
+  },
   async getAll(): Promise<Transaction[]> {
     const response = await api.get<Transaction[]>('/transactions');
     return response.data;
@@ -35,7 +45,10 @@ export const transactionService = {
     return response.data;
   },
 
-  async getByDateRange(startDate: string, endDate: string): Promise<Transaction[]> {
+  async getByDateRange(
+    startDate: string,
+    endDate: string
+  ): Promise<Transaction[]> {
     const response = await api.get<Transaction[]>(
       `/transactions?startDate=${startDate}&endDate=${endDate}`
     );
@@ -43,12 +56,16 @@ export const transactionService = {
   },
 
   async getByMonth(year: number, month: number): Promise<Transaction[]> {
-    const response = await api.get<Transaction[]>(`/transactions?year=${year}&month=${month}`);
+    const response = await api.get<Transaction[]>(
+      `/transactions?year=${year}&month=${month}`
+    );
     return response.data;
   },
 
   async getAvailableMonths(): Promise<{ year: number; month: number }[]> {
-    const response = await api.get<{ year: number; month: number }[]>('/transactions/available-months');
+    const response = await api.get<{ year: number; month: number }[]>(
+      '/transactions/available-months'
+    );
     return response.data;
   },
 };

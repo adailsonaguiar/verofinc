@@ -1,9 +1,4 @@
-import {
-  Controller,
-  Get,
-  Param,
-  Query,
-} from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { LedgerService } from './ledger.service';
 
 @Controller('ledger')
@@ -14,7 +9,7 @@ export class LedgerController {
   findAll(
     @Query('operationType') operationType?: string,
     @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
+    @Query('endDate') endDate?: string
   ) {
     if (operationType) {
       return this.ledgerService.findByOperationType(operationType);

@@ -3,7 +3,13 @@ import { Category, CategoryType } from '../types';
 import { Save, X } from 'lucide-react';
 
 interface CategoryFormProps {
-  onSubmit: (data: { name: string; description?: string; icon?: string; type: CategoryType; active?: boolean }) => Promise<void>;
+  onSubmit: (data: {
+    name: string;
+    description?: string;
+    icon?: string;
+    type: CategoryType;
+    active?: boolean;
+  }) => Promise<void>;
   onCancel?: () => void;
   initialData?: Category;
   isEditing?: boolean;
@@ -16,9 +22,13 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
   isEditing = false,
 }) => {
   const [name, setName] = useState(initialData?.name || '');
-  const [description, setDescription] = useState(initialData?.description || '');
+  const [description, setDescription] = useState(
+    initialData?.description || ''
+  );
   const [icon, setIcon] = useState(initialData?.icon || '');
-  const [type, setType] = useState<CategoryType>(initialData?.type || CategoryType.EXPENSE);
+  const [type, setType] = useState<CategoryType>(
+    initialData?.type || CategoryType.EXPENSE
+  );
   const [active, setActive] = useState(initialData?.active ?? true);
   const [loading, setLoading] = useState(false);
 
@@ -35,7 +45,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
         type,
         active,
       });
-      
+
       if (!isEditing) {
         setName('');
         setDescription('');
@@ -51,22 +61,32 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-800 rounded-[2.5rem] border border-slate-100 dark:border-slate-700/60 shadow-xl shadow-indigo-500/5 p-8 sm:p-10">
+    <form
+      onSubmit={handleSubmit}
+      className="bg-white dark:bg-slate-800 rounded-[2.5rem] border border-slate-100 dark:border-slate-700/60 shadow-xl shadow-indigo-500/5 p-8 sm:p-10"
+    >
       <div className="flex items-center gap-4 mb-8">
-        <div className={`p-3 rounded-2xl ${isEditing ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-600' : 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600'}`}>
+        <div
+          className={`p-3 rounded-2xl ${isEditing ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-600' : 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600'}`}
+        >
           <Save className="w-6 h-6" strokeWidth={2.5} />
         </div>
         <div>
           <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             {isEditing ? 'Editar Categoria' : 'Nova Categoria'}
           </h3>
-          <p className="text-sm font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">Defina as propriedades</p>
+          <p className="text-sm font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">
+            Defina as propriedades
+          </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="md:col-span-2 space-y-2">
-          <label htmlFor="name" className="text-[13px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">
+          <label
+            htmlFor="name"
+            className="text-[13px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1"
+          >
             Nome da Categoria *
           </label>
           <input
@@ -111,7 +131,10 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="icon" className="text-[13px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">
+          <label
+            htmlFor="icon"
+            className="text-[13px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1"
+          >
             Ícone (Emoji)
           </label>
           <input
@@ -134,12 +157,17 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
               className="sr-only peer"
             />
             <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-            <span className="ml-3 text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest">Categoria Ativa</span>
+            <span className="ml-3 text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest">
+              Categoria Ativa
+            </span>
           </label>
         </div>
 
         <div className="md:col-span-2 space-y-2">
-          <label htmlFor="description" className="text-[13px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">
+          <label
+            htmlFor="description"
+            className="text-[13px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1"
+          >
             Descrição (Opcional)
           </label>
           <textarea
@@ -159,7 +187,11 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
           disabled={loading || !name.trim()}
           className="flex-1 order-2 sm:order-1 py-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 dark:disabled:bg-slate-800 text-white rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-xl shadow-indigo-500/20 transition-all active:scale-95 flex items-center justify-center gap-3"
         >
-          {loading ? 'Salvando...' : isEditing ? 'Atualizar Categoria' : 'Criar Categoria'}
+          {loading
+            ? 'Salvando...'
+            : isEditing
+              ? 'Atualizar Categoria'
+              : 'Criar Categoria'}
         </button>
 
         {onCancel && (

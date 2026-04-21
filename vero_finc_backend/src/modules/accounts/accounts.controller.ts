@@ -1,23 +1,20 @@
-
-  import {
-    Controller,
-    Get,
-    Post,
-    Body,
-    Patch,
-    Param,
-    Delete,
-    Query,
-    ValidationPipe,
-  } from '@nestjs/common';
-  import { Account } from '../../entities/account.entity';
-  import { AccountService } from './account.service';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  ValidationPipe,
+} from '@nestjs/common';
+import { Account } from '../../entities/account.entity';
+import { AccountService } from './account.service';
 
 @Controller('accounts')
 export class AccountsController {
-  constructor(
-    private readonly accountService: AccountService,
-  ) {}
+  constructor(private readonly accountService: AccountService) {}
   @Post()
   create(@Body(ValidationPipe) body: Partial<Account>) {
     return this.accountService.create(body);
@@ -39,7 +36,7 @@ export class AccountsController {
   @Patch(':id')
   update(
     @Param('id') id: string,
-    @Body(ValidationPipe) body: Partial<Account>,
+    @Body(ValidationPipe) body: Partial<Account>
   ) {
     return this.accountService.update(id, body);
   }
@@ -52,7 +49,7 @@ export class AccountsController {
   @Post('pay-invoice')
   payInvoice(
     @Body('creditCardId') creditCardId: string,
-    @Body('checkingAccountId') checkingAccountId: string,
+    @Body('checkingAccountId') checkingAccountId: string
   ) {
     return this.accountService.payInvoice(creditCardId, checkingAccountId);
   }

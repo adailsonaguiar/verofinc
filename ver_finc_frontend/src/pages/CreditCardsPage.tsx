@@ -1,8 +1,21 @@
 import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, ChevronLeft, ChevronRight, CreditCard, Wallet, X } from 'lucide-react';
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  CreditCard,
+  Wallet,
+  X,
+} from 'lucide-react';
 import { accountService } from '../services/accountService';
 import { transactionService } from '../services/transactionService';
-import { Transaction, CreateTransactionDto, UpdateTransactionDto } from '../types';
+import {
+  Transaction,
+  CreateTransactionDto,
+  UpdateTransactionDto,
+} from '../types';
 import { TransactionCard } from '../components/TransactionCard';
 import { TransactionModal } from '../components/TransactionModal';
 import { format } from 'date-fns';
@@ -21,7 +34,10 @@ export const CreditCardsPage: React.FC = () => {
   function formatCurrencyInput(value: string) {
     const digits = value.replace(/\D/g, '');
     const number = Number(digits) / 100;
-    return number.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    return number.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    });
   }
 
   // Handler para input de valor
@@ -36,14 +52,17 @@ export const CreditCardsPage: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
-  const [availableMonths, setAvailableMonths] = useState<{year: number, month: number, label: string}[]>([]);
+  const [availableMonths, setAvailableMonths] = useState<
+    { year: number; month: number; label: string }[]
+  >([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [checkingAccounts, setCheckingAccounts] = useState<any[]>([]);
   const [selectedCheckingAccount, setSelectedCheckingAccount] = useState('');
   const [payingInvoice, setPayingInvoice] = useState(false);
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
-  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [editingTransaction, setEditingTransaction] =
+    useState<Transaction | null>(null);
 
   useEffect(() => {
     loadCards();
@@ -96,17 +115,27 @@ export const CreditCardsPage: React.FC = () => {
           .replace(/[^\d,]/g, '')
           .replace(/\./g, '')
           .replace(',', '.')
-      ) ;
+      );
 
-      if(transactions.length > 0 && editing) {
-        alert('Não é possível editar o limite de um cartão com transações associadas.');
+      if (transactions.length > 0 && editing) {
+        alert(
+          'Não é possível editar o limite de um cartão com transações associadas.'
+        );
         return;
       }
 
       if (editing) {
-        await accountService.update(editing._id, { name, creditLimit: numericLimit });
+        await accountService.update(editing._id, {
+          name,
+          creditLimit: numericLimit,
+        });
       } else {
-        await accountService.create({ name, type: 'credit_card', creditLimit: numericLimit, initialBalance: numericLimit });
+        await accountService.create({
+          name,
+          type: 'credit_card',
+          creditLimit: numericLimit,
+          initialBalance: numericLimit,
+        });
       }
       setName('');
       setLimit('');
@@ -121,7 +150,7 @@ export const CreditCardsPage: React.FC = () => {
   const handleEdit = (card: any) => {
     setEditing(card);
     setName(card.name);
-    setLimit(formatCurrencyInput(Math.round((card.creditLimit || 0)).toString()));
+    setLimit(formatCurrencyInput(Math.round(card.creditLimit || 0).toString()));
     setShowForm(true);
   };
 
@@ -141,10 +170,10 @@ export const CreditCardsPage: React.FC = () => {
   const loadAvailableMonths = async () => {
     try {
       const months = await transactionService.getAvailableMonths();
-      const formattedMonths = months.map(m => ({
+      const formattedMonths = months.map((m) => ({
         year: m.year,
         month: m.month,
-        label: format(new Date(m.year, m.month - 1), 'MMMM yyyy')
+        label: format(new Date(m.year, m.month - 1), 'MMMM yyyy'),
       }));
       setAvailableMonths(formattedMonths);
     } catch (err) {
@@ -160,7 +189,7 @@ export const CreditCardsPage: React.FC = () => {
         year: currentYear,
         month: currentMonth,
         account: selectedCard._id,
-        withCreditCardFilter: true
+        withCreditCardFilter: true,
       };
       const query = Object.entries(params)
         .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
@@ -175,7 +204,9 @@ export const CreditCardsPage: React.FC = () => {
   };
 
   const handlePreviousMonth = () => {
-    const currentIndex = availableMonths.findIndex(m => m.year === currentYear && m.month === currentMonth);
+    const currentIndex = availableMonths.findIndex(
+      (m) => m.year === currentYear && m.month === currentMonth
+    );
     if (currentIndex < availableMonths.length - 1) {
       const prevMonth = availableMonths[currentIndex + 1];
       setCurrentYear(prevMonth.year);
@@ -184,7 +215,9 @@ export const CreditCardsPage: React.FC = () => {
   };
 
   const handleNextMonth = () => {
-    const currentIndex = availableMonths.findIndex(m => m.year === currentYear && m.month === currentMonth);
+    const currentIndex = availableMonths.findIndex(
+      (m) => m.year === currentYear && m.month === currentMonth
+    );
     if (currentIndex > 0) {
       const nextMonth = availableMonths[currentIndex - 1];
       setCurrentYear(nextMonth.year);
@@ -211,32 +244,47 @@ export const CreditCardsPage: React.FC = () => {
     setShowPaymentModal(true);
   };
 
-  const currentMonthLabel = availableMonths.find(m => m.year === currentYear && m.month === currentMonth)?.label || '';
-  const currentIndex = availableMonths.findIndex(m => m.year === currentYear && m.month === currentMonth);
+  const currentMonthLabel =
+    availableMonths.find(
+      (m) => m.year === currentYear && m.month === currentMonth
+    )?.label || '';
+  const currentIndex = availableMonths.findIndex(
+    (m) => m.year === currentYear && m.month === currentMonth
+  );
   const hasPrevious = currentIndex < availableMonths.length - 1;
   const hasNext = currentIndex > 0;
 
-  const selectedCardLimit = selectedCard ? (selectedCard.creditLimit || 0) : 0;
-  const selectedCardBalance = selectedCard ? (selectedCard.initialBalance || 0) : 0;
-  const selectedCardAvailableLimit = (selectedCardLimit - selectedCardBalance) / 100;
+  const selectedCardLimit = selectedCard ? selectedCard.creditLimit || 0 : 0;
+  const selectedCardBalance = selectedCard
+    ? selectedCard.initialBalance || 0
+    : 0;
+  const selectedCardAvailableLimit =
+    (selectedCardLimit - selectedCardBalance) / 100;
 
-    const handlePayInvoice = async () => {
+  const handlePayInvoice = async () => {
     if (!selectedCard || !selectedCheckingAccount) return;
-    
+
     if (selectedCardAvailableLimit <= 0) {
       alert('Não há fatura para pagar.');
       return;
     }
 
-    if (!window.confirm(`Pagar fatura de R$ ${selectedCardAvailableLimit.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}?`)) {
+    if (
+      !window.confirm(
+        `Pagar fatura de R$ ${selectedCardAvailableLimit.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}?`
+      )
+    ) {
       return;
     }
 
     try {
       setPayingInvoice(true);
-      
+
       // Chamar rota de pagamento de fatura
-      await accountService.payInvoice(selectedCard._id, selectedCheckingAccount);
+      await accountService.payInvoice(
+        selectedCard._id,
+        selectedCheckingAccount
+      );
 
       alert('Fatura paga com sucesso!');
       setShowPaymentModal(false);
@@ -244,7 +292,8 @@ export const CreditCardsPage: React.FC = () => {
       await loadCardTransactions();
     } catch (err: any) {
       console.error('Erro ao pagar fatura:', err);
-      const errorMessage = err.response?.data?.message || 'Erro ao pagar fatura. Tente novamente.';
+      const errorMessage =
+        err.response?.data?.message || 'Erro ao pagar fatura. Tente novamente.';
       alert(errorMessage);
     } finally {
       setPayingInvoice(false);
@@ -273,27 +322,37 @@ export const CreditCardsPage: React.FC = () => {
     setIsTransactionModalOpen(false);
     setEditingTransaction(null);
   };
-  
+
   return (
     <div className="flex-1 overflow-auto bg-mac-bg text-mac-text">
       <div className="mx-auto px-4 py-6 max-w-7xl">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Cartões de Crédito</h2>
+          <h2 className="text-2xl font-bold text-gray-900">
+            Cartões de Crédito
+          </h2>
           <button
             className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-            onClick={() => { setShowForm(true); setEditing(null); setName(''); setLimit(''); }}
+            onClick={() => {
+              setShowForm(true);
+              setEditing(null);
+              setName('');
+              setLimit('');
+            }}
           >
             <Plus className="w-4 h-4" /> Novo Cartão
           </button>
         </div>
 
         {showForm && (
-          <form onSubmit={handleCreate} className="bg-white rounded-xl shadow p-6 mb-6 flex flex-col gap-4">
+          <form
+            onSubmit={handleCreate}
+            className="bg-white rounded-xl shadow p-6 mb-6 flex flex-col gap-4"
+          >
             <label className="font-medium text-gray-700">Nome do Cartão</label>
             <input
               className="px-4 py-2 border border-gray-300 rounded-lg outline-none"
               value={name}
-              onChange={e => setName(e.target.value)}
+              onChange={(e) => setName(e.target.value)}
               required
               placeholder="Ex: Nubank, Visa XPTO"
             />
@@ -310,10 +369,22 @@ export const CreditCardsPage: React.FC = () => {
               maxLength={20}
             />
             <div className="flex gap-3 mt-2">
-              <button type="submit" className="flex-1 bg-purple-600 text-white rounded-lg px-4 py-2 hover:bg-purple-700">
+              <button
+                type="submit"
+                className="flex-1 bg-purple-600 text-white rounded-lg px-4 py-2 hover:bg-purple-700"
+              >
                 {editing ? 'Salvar' : 'Criar'}
               </button>
-              <button type="button" className="flex-1 bg-gray-200 text-gray-700 rounded-lg px-4 py-2 hover:bg-gray-300" onClick={() => { setShowForm(false); setEditing(null); setName(''); setLimit(''); }}>
+              <button
+                type="button"
+                className="flex-1 bg-gray-200 text-gray-700 rounded-lg px-4 py-2 hover:bg-gray-300"
+                onClick={() => {
+                  setShowForm(false);
+                  setEditing(null);
+                  setName('');
+                  setLimit('');
+                }}
+              >
                 Cancelar
               </button>
             </div>
@@ -325,29 +396,33 @@ export const CreditCardsPage: React.FC = () => {
         ) : error ? (
           <div className="text-center py-12 text-red-500">{error}</div>
         ) : cards.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">Nenhum cartão cadastrado.</div>
+          <div className="text-center py-12 text-gray-500">
+            Nenhum cartão cadastrado.
+          </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {cards.map((card: any) => (
-              <div 
-                key={card._id} 
+              <div
+                key={card._id}
                 onClick={() => handleCardClick(card)}
                 className={`aspect-square bg-gradient-to-br from-purple-500 to-purple-700 rounded-2xl shadow-lg p-4 cursor-pointer transition-all transform hover:scale-105 ${
-                  selectedCard?._id === card._id ? 'ring-4 ring-purple-400 scale-105' : ''
+                  selectedCard?._id === card._id
+                    ? 'ring-4 ring-purple-400 scale-105'
+                    : ''
                 }`}
               >
                 <div className="h-full flex flex-col justify-between text-white">
                   <div className="flex justify-between items-start">
                     <CreditCard className="w-8 h-8" />
                     <div className="flex gap-1">
-                      <button 
-                        className="p-1.5 hover:bg-white/20 rounded-lg transition-colors" 
+                      <button
+                        className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
                         onClick={(e) => handleEditClick(e, card)}
                       >
                         <Pencil className="w-4 h-4" />
                       </button>
-                      <button 
-                        className="p-1.5 hover:bg-white/20 rounded-lg transition-colors" 
+                      <button
+                        className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
                         onClick={(e) => handleDeleteClick(e, card)}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -357,10 +432,18 @@ export const CreditCardsPage: React.FC = () => {
                   <div>
                     <p className="font-bold text-lg mb-1">{card.name}</p>
                     <p className="text-sm opacity-90">
-                      Fatura: R$ {(selectedCardAvailableLimit).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      Fatura: R${' '}
+                      {selectedCardAvailableLimit.toLocaleString('pt-BR', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </p>
                     <p className="text-xs opacity-75 mt-0.5">
-                      Limite: R$ {(selectedCardLimit / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      Limite: R${' '}
+                      {(selectedCardLimit / 100).toLocaleString('pt-BR', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </p>
                   </div>
                 </div>
@@ -410,7 +493,9 @@ export const CreditCardsPage: React.FC = () => {
                   </button>
 
                   <div className="text-center">
-                    <h4 className="text-base font-semibold text-gray-900">{currentMonthLabel}</h4>
+                    <h4 className="text-base font-semibold text-gray-900">
+                      {currentMonthLabel}
+                    </h4>
                     <p className="text-xs text-gray-500 mt-0.5">
                       {transactions.length} transação(ões)
                     </p>
@@ -429,14 +514,16 @@ export const CreditCardsPage: React.FC = () => {
 
             {/* Lista de transações */}
             {loadingTransactions ? (
-              <div className="text-center py-8 text-gray-500">Carregando transações...</div>
+              <div className="text-center py-8 text-gray-500">
+                Carregando transações...
+              </div>
             ) : transactions.length === 0 ? (
               <div className="bg-white rounded-xl shadow border border-gray-200 p-8 text-center">
                 <p className="text-gray-500">Nenhuma transação neste mês</p>
               </div>
             ) : (
               <div className="space-y-2">
-                {transactions.map(transaction => (
+                {transactions.map((transaction) => (
                   <TransactionCard
                     key={transaction._id}
                     transaction={transaction}
@@ -456,11 +543,16 @@ export const CreditCardsPage: React.FC = () => {
         {/* Modal de Pagamento de Fatura */}
         {showPaymentModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center overflow-auto">
-            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => setShowPaymentModal(false)} />
-            
+            <div
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
+              onClick={() => setShowPaymentModal(false)}
+            />
+
             <div className="relative z-10 w-full max-w-md mx-4 rounded-2xl shadow-2xl border border-gray-200 bg-white">
               <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-                <h3 className="text-xl font-bold text-gray-900">Pagar Fatura</h3>
+                <h3 className="text-xl font-bold text-gray-900">
+                  Pagar Fatura
+                </h3>
                 <button
                   onClick={() => setShowPaymentModal(false)}
                   className="p-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -472,33 +564,51 @@ export const CreditCardsPage: React.FC = () => {
               <div className="px-6 py-5 space-y-4">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Cartão</p>
-                  <p className="text-lg font-semibold text-gray-900">{selectedCard?.name}</p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {selectedCard?.name}
+                  </p>
                 </div>
 
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Valor da Fatura</p>
                   <p className="text-2xl font-bold text-purple-600">
-                    R$ {(selectedCardAvailableLimit).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    R${' '}
+                    {selectedCardAvailableLimit.toLocaleString('pt-BR', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
                   </p>
                 </div>
 
                 <div>
-                  <label htmlFor="checking-account" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="checking-account"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
                     Pagar com a conta *
                   </label>
                   <select
                     id="checking-account"
                     value={selectedCheckingAccount}
-                    onChange={e => setSelectedCheckingAccount(e.target.value)}
+                    onChange={(e) => setSelectedCheckingAccount(e.target.value)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none bg-white"
                     required
                   >
                     {checkingAccounts.length === 0 ? (
-                      <option value="" disabled>Nenhuma conta disponível</option>
+                      <option value="" disabled>
+                        Nenhuma conta disponível
+                      </option>
                     ) : (
-                      checkingAccounts.map(acc => (
+                      checkingAccounts.map((acc) => (
                         <option key={acc._id} value={acc._id}>
-                          {acc.name} - R$ {(acc.initialBalance / 100 || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {acc.name} - R${' '}
+                          {(acc.initialBalance / 100 || 0).toLocaleString(
+                            'pt-BR',
+                            {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            }
+                          )}
                         </option>
                       ))
                     )}
@@ -516,7 +626,11 @@ export const CreditCardsPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={handlePayInvoice}
-                    disabled={payingInvoice || !selectedCheckingAccount || checkingAccounts.length === 0}
+                    disabled={
+                      payingInvoice ||
+                      !selectedCheckingAccount ||
+                      checkingAccounts.length === 0
+                    }
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-semibold shadow-md"
                   >
                     <Wallet className="w-5 h-5" />
@@ -532,9 +646,16 @@ export const CreditCardsPage: React.FC = () => {
         <TransactionModal
           isOpen={isTransactionModalOpen}
           onClose={handleCloseTransactionModal}
-          onSubmit={(data) => editingTransaction ? handleUpdateTransaction(data as UpdateTransactionDto) : handleCreateTransaction(data as CreateTransactionDto)}
+          onSubmit={(data) =>
+            editingTransaction
+              ? handleUpdateTransaction(data as UpdateTransactionDto)
+              : handleCreateTransaction(data as CreateTransactionDto)
+          }
           initialData={editingTransaction || undefined}
           isEditing={!!editingTransaction}
+          expenseOnly={true}
+          creditCardOnly={true}
+          hideStatus={true}
         />
       </div>
     </div>

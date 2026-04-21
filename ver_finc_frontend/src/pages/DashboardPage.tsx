@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Pie, Bar } from "react-chartjs-2";
+import React, { useEffect, useState } from 'react';
+import { Pie, Bar } from 'react-chartjs-2';
 import {
   Chart,
   ArcElement,
@@ -8,11 +8,11 @@ import {
   BarElement,
   CategoryScale,
   LinearScale,
-} from "chart.js";
-import { categoryService } from "../services/categoryService";
-import { transactionService } from "../services/transactionService";
-import { accountService } from "../services/accountService";
-import { Category, Transaction } from "../types";
+} from 'chart.js';
+import { categoryService } from '../services/categoryService';
+import { transactionService } from '../services/transactionService';
+import { accountService } from '../services/accountService';
+import { Category, Transaction } from '../types';
 import {
   Loader2,
   TrendingUp,
@@ -24,11 +24,11 @@ import {
   ArrowDownRight,
   Calendar,
   Activity,
-} from "lucide-react";
-import { CategoryEvolutionChart } from "../components/CategoryEvolutionChart";
-import { CategoryComparisonChart } from "../components/CategoryComparisonChart";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+} from 'lucide-react';
+import { CategoryEvolutionChart } from '../components/CategoryEvolutionChart';
+import { CategoryComparisonChart } from '../components/CategoryComparisonChart';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 // Registrar elementos necessários do Chart.js
 Chart.register(
@@ -37,10 +37,10 @@ Chart.register(
   Legend,
   BarElement,
   CategoryScale,
-  LinearScale,
+  LinearScale
 );
 
-const CREDIT_CARD_PAYMENT_CATEGORY_ID = "699f0d49c0a92c8334e60765";
+const CREDIT_CARD_PAYMENT_CATEGORY_ID = '699f0d49c0a92c8334e60765';
 
 export const DashboardPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -76,13 +76,13 @@ export const DashboardPage: React.FC = () => {
       const formatted = months.map((m) => ({
         year: m.year,
         month: m.month,
-        label: format(new Date(m.year, m.month - 1), "MMMM yyyy", {
+        label: format(new Date(m.year, m.month - 1), 'MMMM yyyy', {
           locale: ptBR,
         }),
       }));
       setAvailableMonths(formatted);
     } catch (err) {
-      console.error("Erro ao carregar meses disponíveis:", err);
+      console.error('Erro ao carregar meses disponíveis:', err);
     }
   };
 
@@ -91,16 +91,16 @@ export const DashboardPage: React.FC = () => {
       const catData = await categoryService.getAll();
       setCategories(catData);
     } catch (err) {
-      console.error("Erro ao carregar categorias:", err);
+      console.error('Erro ao carregar categorias:', err);
     }
   };
 
   const loadCheckingAccounts = async () => {
     try {
-      const checkingData = await accountService.getByType("checking");
+      const checkingData = await accountService.getByType('checking');
       setCheckingAccounts(checkingData);
     } catch (err) {
-      console.error("Erro ao carregar contas correntes:", err);
+      console.error('Erro ao carregar contas correntes:', err);
     }
   };
 
@@ -110,11 +110,11 @@ export const DashboardPage: React.FC = () => {
       // O backend pode não retorná-las ordenadas exatamente como queremos para a UI
       const sorted = [...all].sort(
         (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
       setAllTransactions(sorted);
     } catch (err) {
-      console.error("Erro ao carregar todas as transações:", err);
+      console.error('Erro ao carregar todas as transações:', err);
     }
   };
 
@@ -124,11 +124,11 @@ export const DashboardPage: React.FC = () => {
       setError(null);
       const txData = await transactionService.getByMonth(
         currentYear,
-        currentMonth,
+        currentMonth
       );
       setTransactions(txData);
     } catch (err) {
-      setError("Erro ao carregar dados do dashboard.");
+      setError('Erro ao carregar dados do dashboard.');
     } finally {
       setLoading(false);
     }
@@ -138,15 +138,15 @@ export const DashboardPage: React.FC = () => {
 
   // Navegação de meses
   const currentIndex = availableMonths.findIndex(
-    (m) => m.year === currentYear && m.month === currentMonth,
+    (m) => m.year === currentYear && m.month === currentMonth
   );
   const hasPrevious = currentIndex < availableMonths.length - 1;
   const hasNext = currentIndex > 0;
   const currentMonthLabel =
     availableMonths.find(
-      (m) => m.year === currentYear && m.month === currentMonth,
+      (m) => m.year === currentYear && m.month === currentMonth
     )?.label ||
-    format(new Date(currentYear, currentMonth - 1), "MMMM yyyy", {
+    format(new Date(currentYear, currentMonth - 1), 'MMMM yyyy', {
       locale: ptBR,
     });
 
@@ -172,11 +172,11 @@ export const DashboardPage: React.FC = () => {
     .filter((t) => t.category?._id !== CREDIT_CARD_PAYMENT_CATEGORY_ID)
     .forEach((t) => {
       // Divide a string da data UTC "YYYY-MM-DD" e usa diretamente o ano e mês para evitar recuo no fuso horário
-      const [year, month] = t.date.split("T")[0].split("-");
+      const [year, month] = t.date.split('T')[0].split('-');
       const key = `${year}-${month}`;
       if (!monthlyMap[key]) monthlyMap[key] = { income: 0, expense: 0 };
-      if (t.type === "income") monthlyMap[key].income += t.amount;
-      if (t.type === "expense") monthlyMap[key].expense += t.amount;
+      if (t.type === 'income') monthlyMap[key].income += t.amount;
+      if (t.type === 'expense') monthlyMap[key].expense += t.amount;
     });
 
   const sortedMonths = Object.keys(monthlyMap).sort();
@@ -184,22 +184,22 @@ export const DashboardPage: React.FC = () => {
 
   const barData = {
     labels: lastMonths.map((key) => {
-      const [year, month] = key.split("-");
+      const [year, month] = key.split('-');
       return `${month}/${year.slice(2)}`;
     }),
     datasets: [
       {
-        label: "Receitas",
+        label: 'Receitas',
         data: lastMonths.map((key) => monthlyMap[key].income),
-        backgroundColor: "#10b981", // emerald-500
+        backgroundColor: '#10b981', // emerald-500
         borderRadius: 6,
         barPercentage: 0.6,
         categoryPercentage: 0.6,
       },
       {
-        label: "Despesas",
+        label: 'Despesas',
         data: lastMonths.map((key) => monthlyMap[key].expense),
-        backgroundColor: "#f43f5e", // rose-500
+        backgroundColor: '#f43f5e', // rose-500
         borderRadius: 6,
         barPercentage: 0.6,
         categoryPercentage: 0.6,
@@ -208,13 +208,13 @@ export const DashboardPage: React.FC = () => {
   };
 
   const transactionsForTotals = transactions.filter(
-    (t) => t.category?._id !== CREDIT_CARD_PAYMENT_CATEGORY_ID,
+    (t) => t.category?._id !== CREDIT_CARD_PAYMENT_CATEGORY_ID
   );
 
   const expenseCategories = categories.filter(
-    (c) => c.type === "expense" && c._id !== CREDIT_CARD_PAYMENT_CATEGORY_ID,
+    (c) => c.type === 'expense' && c._id !== CREDIT_CARD_PAYMENT_CATEGORY_ID
   );
-  const expenseTx = transactionsForTotals.filter((t) => t.type === "expense");
+  const expenseTx = transactionsForTotals.filter((t) => t.type === 'expense');
 
   const dataByCategory: { [catId: string]: number } = {};
   expenseTx.forEach((t) => {
@@ -231,36 +231,36 @@ export const DashboardPage: React.FC = () => {
   const chartLabels = orderedCategories.map((c) => c.name);
   const chartData = orderedCategories.map((c) => dataByCategory[c._id]);
   const chartColors = [
-    "#6366f1",
-    "#8b5cf6",
-    "#ec4899",
-    "#f43f5e",
-    "#f97316",
-    "#eab308",
-    "#84cc16",
-    "#10b981",
-    "#14b8a6",
-    "#06b6d4",
+    '#6366f1',
+    '#8b5cf6',
+    '#ec4899',
+    '#f43f5e',
+    '#f97316',
+    '#eab308',
+    '#84cc16',
+    '#10b981',
+    '#14b8a6',
+    '#06b6d4',
   ];
 
   const totalCheckingBalance = checkingAccounts.reduce(
     (sum, acc) => sum + (acc.initialBalance || 0),
-    0,
+    0
   );
   const totalIncome = transactionsForTotals
-    .filter((t) => t.type === "income")
+    .filter((t) => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0);
   const totalExpense = transactionsForTotals
-    .filter((t) => t.type === "expense")
+    .filter((t) => t.type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0);
   const balance = totalIncome - totalExpense;
 
   // Transações mais recentes globais (últimas 5)
   const recentGlobalTransactions = allTransactions.slice(0, 5);
 
-  const CurrencyFormatter = new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
+  const CurrencyFormatter = new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
   });
 
   if (loading && allTransactions.length === 0) {
@@ -438,18 +438,18 @@ export const DashboardPage: React.FC = () => {
                   plugins: {
                     legend: {
                       display: true,
-                      position: "top",
+                      position: 'top',
                       labels: {
-                        font: { family: "inherit", size: 13, weight: 600 },
-                        color: "#64748b", // slate-500
+                        font: { family: 'inherit', size: 13, weight: 600 },
+                        color: '#64748b', // slate-500
                         usePointStyle: true,
                         boxWidth: 8,
                       },
                     },
                     tooltip: {
-                      backgroundColor: "#1e293b", // slate-800
-                      titleFont: { family: "inherit", size: 13 },
-                      bodyFont: { family: "inherit", size: 14, weight: "bold" },
+                      backgroundColor: '#1e293b', // slate-800
+                      titleFont: { family: 'inherit', size: 13 },
+                      bodyFont: { family: 'inherit', size: 14, weight: 'bold' },
                       padding: 12,
                       cornerRadius: 12,
                       callbacks: {
@@ -465,17 +465,17 @@ export const DashboardPage: React.FC = () => {
                       grid: { display: false },
                       border: { display: false },
                       ticks: {
-                        font: { family: "inherit", size: 12 },
-                        color: "#94a3b8",
+                        font: { family: 'inherit', size: 12 },
+                        color: '#94a3b8',
                       },
                     },
                     y: {
                       beginAtZero: true,
-                      grid: { color: "#f1f5f9", tickColor: "transparent" }, // slate-100
+                      grid: { color: '#f1f5f9', tickColor: 'transparent' }, // slate-100
                       border: { display: false, dash: [4, 4] },
                       ticks: {
-                        font: { family: "inherit", size: 12 },
-                        color: "#94a3b8",
+                        font: { family: 'inherit', size: 12 },
+                        color: '#94a3b8',
                         padding: 12,
                         callback: function (value) {
                           const num = Number(value) / 100;
@@ -516,12 +516,12 @@ export const DashboardPage: React.FC = () => {
                     <div className="flex items-center gap-4">
                       <div
                         className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${
-                          tx.type === "income"
-                            ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                            : "bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                          tx.type === 'income'
+                            ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                            : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400'
                         }`}
                       >
-                        {tx.type === "income" ? (
+                        {tx.type === 'income' ? (
                           <ArrowUpRight className="w-5 h-5" />
                         ) : (
                           <ArrowDownRight className="w-5 h-5" />
@@ -532,23 +532,23 @@ export const DashboardPage: React.FC = () => {
                           {tx.description}
                         </p>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                          {tx.category?.name || "Sem categoria"} •{" "}
+                          {tx.category?.name || 'Sem categoria'} •{' '}
                           {format(
-                            new Date(tx.date.split("T")[0] + "T12:00:00"),
-                            "dd MMM",
-                            { locale: ptBR },
+                            new Date(tx.date.split('T')[0] + 'T12:00:00'),
+                            'dd MMM',
+                            { locale: ptBR }
                           )}
                         </p>
                       </div>
                     </div>
                     <div
                       className={`text-sm font-bold whitespace-nowrap ${
-                        tx.type === "income"
-                          ? "text-emerald-600 dark:text-emerald-400"
-                          : "text-slate-900 dark:text-white"
+                        tx.type === 'income'
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-slate-900 dark:text-white'
                       }`}
                     >
-                      {tx.type === "income" ? "+" : "-"}
+                      {tx.type === 'income' ? '+' : '-'}
                       {CurrencyFormatter.format(tx.amount / 100)}
                     </div>
                   </div>
@@ -596,16 +596,16 @@ export const DashboardPage: React.FC = () => {
                     ],
                   }}
                   options={{
-                    cutout: "75%", // Donut style
+                    cutout: '75%', // Donut style
                     plugins: {
                       legend: { display: false }, // we use a custom or just rely on tooltip for cleaner look
                       tooltip: {
-                        backgroundColor: "#1e293b",
-                        titleFont: { family: "inherit", size: 13 },
+                        backgroundColor: '#1e293b',
+                        titleFont: { family: 'inherit', size: 13 },
                         bodyFont: {
-                          family: "inherit",
+                          family: 'inherit',
                           size: 14,
-                          weight: "bold",
+                          weight: 'bold',
                         },
                         padding: 12,
                         cornerRadius: 12,

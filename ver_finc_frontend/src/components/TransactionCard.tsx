@@ -1,7 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Transaction } from '../types';
 import { formatCurrency, formatDate } from '../utils/transactions';
-import { ArrowUpCircle, ArrowDownCircle, Calendar, Tag, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import {
+  ArrowUpCircle,
+  ArrowDownCircle,
+  Calendar,
+  Tag,
+  MoreVertical,
+  Pencil,
+  Trash2,
+} from 'lucide-react';
 
 interface TransactionCardProps {
   transaction: Transaction;
@@ -9,7 +17,11 @@ interface TransactionCardProps {
   onDelete?: (transaction: Transaction) => void;
 }
 
-export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction, onEdit, onDelete }) => {
+export const TransactionCard: React.FC<TransactionCardProps> = ({
+  transaction,
+  onEdit,
+  onDelete,
+}) => {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const isIncome = transaction.type === 'income';
@@ -25,7 +37,8 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction, o
 
     if (showMenu) {
       document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      return () =>
+        document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [showMenu]);
 
@@ -39,8 +52,8 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction, o
         <div className="flex items-center gap-4 flex-1">
           <div
             className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm transition-transform group-hover:scale-105 duration-300 ${
-              isIncome 
-                ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
+              isIncome
+                ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                 : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400'
             }`}
           >
@@ -55,25 +68,25 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction, o
             <h3 className="text-[15px] font-bold text-slate-900 dark:text-white line-clamp-1 mb-1">
               {transaction.description}
             </h3>
-            
+
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
-               <div className="flex items-center gap-1.5">
-                 <Calendar className="w-3.5 h-3.5" />
-                 <span>{formatDate(transaction.date)}</span>
-               </div>
-               
-               {transaction.category && (
-                 <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 rounded-lg">
-                   <Tag className="w-3.5 h-3.5" />
-                   <span>{transaction.category.name}</span>
-                 </div>
-               )}
-               
-               {!isPaid && (
-                 <span className="px-2.5 py-1 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-lg uppercase tracking-wider text-[10px] font-extrabold">
-                   Pendente
-                 </span>
-               )}
+              <div className="flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5" />
+                <span>{formatDate(transaction.date)}</span>
+              </div>
+
+              {transaction.category && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 rounded-lg">
+                  <Tag className="w-3.5 h-3.5" />
+                  <span>{transaction.category.name}</span>
+                </div>
+              )}
+
+              {!isPaid && (
+                <span className="px-2.5 py-1 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-lg uppercase tracking-wider text-[10px] font-extrabold">
+                  Pendente
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -81,12 +94,15 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction, o
         <div className="text-right flex items-center gap-4">
           <p
             className={`text-lg font-extrabold tracking-tight ${
-              isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'
+              isIncome
+                ? 'text-emerald-600 dark:text-emerald-400'
+                : 'text-slate-900 dark:text-white'
             }`}
           >
-            {isIncome ? '+' : '-'}{formatCurrency(transaction.amount)}
+            {isIncome ? '+' : '-'}
+            {formatCurrency(transaction.amount)}
           </p>
-          
+
           {(onEdit || onDelete) && (
             <div className="relative" ref={menuRef}>
               <button

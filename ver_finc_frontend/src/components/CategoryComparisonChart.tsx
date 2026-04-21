@@ -1,6 +1,13 @@
 import React, { useMemo } from 'react';
 import { Bar } from 'react-chartjs-2';
-import { Chart, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js';
+import {
+  Chart,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend,
+} from 'chart.js';
 import { Category, Transaction } from '../types';
 import { BarChart2 } from 'lucide-react';
 
@@ -14,17 +21,17 @@ interface CategoryComparisonChartProps {
   categories: Category[];
 }
 
-export const CategoryComparisonChart: React.FC<CategoryComparisonChartProps> = ({
-  allTransactions,
-  categories,
-}) => {
+export const CategoryComparisonChart: React.FC<
+  CategoryComparisonChartProps
+> = ({ allTransactions, categories }) => {
   const { chartLabels, datasets } = useMemo(() => {
     // Collect the last 3 months that have expense data
     const monthSet = new Set<string>();
     allTransactions
       .filter(
         (t) =>
-          t.type === 'expense' && t.category?._id !== CREDIT_CARD_PAYMENT_CATEGORY_ID,
+          t.type === 'expense' &&
+          t.category?._id !== CREDIT_CARD_PAYMENT_CATEGORY_ID
       )
       .forEach((t) => {
         const date = new Date(t.date);
@@ -36,7 +43,7 @@ export const CategoryComparisonChart: React.FC<CategoryComparisonChartProps> = (
     if (sortedMonths.length === 0) return { chartLabels: [], datasets: [] };
 
     const expenseCategories = categories.filter(
-      (c) => c.type === 'expense' && c._id !== CREDIT_CARD_PAYMENT_CATEGORY_ID,
+      (c) => c.type === 'expense' && c._id !== CREDIT_CARD_PAYMENT_CATEGORY_ID
     );
 
     // Build totals per category per month
@@ -47,8 +54,8 @@ export const CategoryComparisonChart: React.FC<CategoryComparisonChartProps> = (
           t.type === 'expense' &&
           t.category?._id !== CREDIT_CARD_PAYMENT_CATEGORY_ID &&
           sortedMonths.includes(
-            `${new Date(t.date).getFullYear()}-${String(new Date(t.date).getMonth() + 1).padStart(2, '0')}`,
-          ),
+            `${new Date(t.date).getFullYear()}-${String(new Date(t.date).getMonth() + 1).padStart(2, '0')}`
+          )
       )
       .forEach((t) => {
         const date = new Date(t.date);
@@ -81,16 +88,24 @@ export const CategoryComparisonChart: React.FC<CategoryComparisonChartProps> = (
     return (
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 flex flex-col">
         <div className="mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-1">Comparativo de Categorias</h2>
-          <p className="text-sm text-gray-500 font-medium">Despesas por categoria nos últimos 3 meses</p>
+          <h2 className="text-xl font-bold text-gray-900 mb-1">
+            Comparativo de Categorias
+          </h2>
+          <p className="text-sm text-gray-500 font-medium">
+            Despesas por categoria nos últimos 3 meses
+          </p>
         </div>
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <BarChart2 className="w-8 h-8 text-gray-400" />
             </div>
-            <p className="text-gray-500 font-medium">Nenhuma despesa encontrada</p>
-            <p className="text-sm text-gray-400 mt-1">Adicione transações para visualizar os dados</p>
+            <p className="text-gray-500 font-medium">
+              Nenhuma despesa encontrada
+            </p>
+            <p className="text-sm text-gray-400 mt-1">
+              Adicione transações para visualizar os dados
+            </p>
           </div>
         </div>
       </div>
@@ -100,8 +115,12 @@ export const CategoryComparisonChart: React.FC<CategoryComparisonChartProps> = (
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 p-8 flex flex-col">
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-1">Comparativo de Categorias</h2>
-        <p className="text-sm text-gray-500 font-medium">Despesas por categoria nos últimos 3 meses</p>
+        <h2 className="text-xl font-bold text-gray-900 mb-1">
+          Comparativo de Categorias
+        </h2>
+        <p className="text-sm text-gray-500 font-medium">
+          Despesas por categoria nos últimos 3 meses
+        </p>
       </div>
       <div style={{ height: 380 }}>
         <Bar

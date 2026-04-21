@@ -13,7 +13,15 @@ import {
 import { Category, Transaction } from '../types';
 import { TrendingDown } from 'lucide-react';
 
-Chart.register(LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Legend, Filler);
+Chart.register(
+  LineElement,
+  PointElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend,
+  Filler
+);
 
 const CREDIT_CARD_PAYMENT_CATEGORY_ID = '699f0d49c0a92c8334e60765';
 
@@ -29,13 +37,13 @@ export const CategoryEvolutionChart: React.FC<CategoryEvolutionChartProps> = ({
   const expenseCategories = useMemo(
     () =>
       categories.filter(
-        (c) => c.type === 'expense' && c._id !== CREDIT_CARD_PAYMENT_CATEGORY_ID,
+        (c) => c.type === 'expense' && c._id !== CREDIT_CARD_PAYMENT_CATEGORY_ID
       ),
-    [categories],
+    [categories]
   );
 
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(
-    expenseCategories[0]?._id ?? '',
+    expenseCategories[0]?._id ?? ''
   );
 
   // Recalcula quando a categoria selecionada muda ou as transações mudam
@@ -46,9 +54,7 @@ export const CategoryEvolutionChart: React.FC<CategoryEvolutionChartProps> = ({
 
     allTransactions
       .filter(
-        (t) =>
-          t.type === 'expense' &&
-          t.category?._id === selectedCategoryId,
+        (t) => t.type === 'expense' && t.category?._id === selectedCategoryId
       )
       .forEach((t) => {
         const date = new Date(t.date);
@@ -66,7 +72,9 @@ export const CategoryEvolutionChart: React.FC<CategoryEvolutionChartProps> = ({
     return { chartLabels: labels, chartData: data };
   }, [allTransactions, selectedCategoryId]);
 
-  const selectedCategory = expenseCategories.find((c) => c._id === selectedCategoryId);
+  const selectedCategory = expenseCategories.find(
+    (c) => c._id === selectedCategoryId
+  );
 
   const lineData = {
     labels: chartLabels,
@@ -93,8 +101,12 @@ export const CategoryEvolutionChart: React.FC<CategoryEvolutionChartProps> = ({
       {/* Header */}
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 mb-1">Evolução por Categoria</h2>
-          <p className="text-sm text-gray-500 font-medium">Gastos mensais da categoria selecionada</p>
+          <h2 className="text-xl font-bold text-gray-900 mb-1">
+            Evolução por Categoria
+          </h2>
+          <p className="text-sm text-gray-500 font-medium">
+            Gastos mensais da categoria selecionada
+          </p>
         </div>
 
         {/* Category Selector */}

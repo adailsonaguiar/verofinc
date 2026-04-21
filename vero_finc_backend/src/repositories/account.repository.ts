@@ -7,7 +7,7 @@ import { Account, AccountDocument } from '../entities/account.entity';
 export class AccountRepository {
   constructor(
     @InjectModel(Account.name)
-    private accountModel: Model<AccountDocument>,
+    private accountModel: Model<AccountDocument>
   ) {}
 
   async create(account: Partial<Account>): Promise<Account> {

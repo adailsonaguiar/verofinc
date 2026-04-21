@@ -4,36 +4,36 @@ import {
   Inject,
   forwardRef,
   BadRequestException,
-} from "@nestjs/common";
-import { Types } from "mongoose";
-import { TransactionRepository } from "../../repositories/transaction.repository";
-import { CreateTransactionDto } from "./dto/create-transaction.dto";
-import { UpdateTransactionDto } from "./dto/update-transaction.dto";
+} from '@nestjs/common';
+import { Types } from 'mongoose';
+import { TransactionRepository } from '../../repositories/transaction.repository';
+import { CreateTransactionDto } from './dto/create-transaction.dto';
+import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import {
   Transaction,
   TransactionStatus,
   TransactionType,
-} from "../../entities/transaction.entity";
-import { LedgerService } from "../ledger/ledger.service";
-import { LedgerOperationType } from "../../entities/ledger.entity";
-import { AccountRepository } from "../../repositories/account.repository";
-import { AccountType } from "@/entities/account.entity";
+} from '../../entities/transaction.entity';
+import { LedgerService } from '../ledger/ledger.service';
+import { LedgerOperationType } from '../../entities/ledger.entity';
+import { AccountRepository } from '../../repositories/account.repository';
+import { AccountType } from '@/entities/account.entity';
 
 @Injectable()
 export class TransactionsService {
   constructor(
     private readonly transactionRepository: TransactionRepository,
     private readonly ledgerService: LedgerService,
-    private readonly accountRepository: AccountRepository,
+    private readonly accountRepository: AccountRepository
   ) {}
 
   private async filterIncomeCreditCardTransactionsToShow(
-    transactions: Transaction[],
+    transactions: Transaction[]
   ): Promise<Transaction[]> {
     const accounts = await this.accountRepository.findAll();
     return transactions.filter((tx) => {
       const account = accounts.find(
-        (acc) => (acc as any)._id.toString() === (tx.account as any).toString(),
+        (acc) => (acc as any)._id.toString() === (tx.account as any).toString()
       );
       if (!account) return false;
       if (
@@ -76,25 +76,25 @@ export class TransactionsService {
 
   async create(
     createTransactionDto: CreateTransactionDto,
-    byPassCreditInvoiceCheck = false,
+    byPassCreditInvoiceCheck = false
   ): Promise<Transaction> {
     createTransactionDto.amount = createTransactionDto.amount * 100;
 
     // Buscar conta para validar tipo
     const account = await this.accountRepository.findById(
-      createTransactionDto.account.toString(),
+      createTransactionDto.account.toString()
     );
     if (!account) {
       throw new NotFoundException(
-        `Account with ID ${createTransactionDto.account} not found`,
+        `Account with ID ${createTransactionDto.account} not found`
       );
     }
 
     // Validações para cartão de crédito
-    if (account.type === "credit_card") {
+    if (account.type === 'credit_card') {
       if (createTransactionDto.status === TransactionStatus.UNPAID) {
         throw new BadRequestException(
-          "Transações em cartão de crédito não podem ter status pendente",
+          'Transações em cartão de crédito não podem ter status pendente'
         );
       }
       if (
@@ -102,7 +102,7 @@ export class TransactionsService {
         !byPassCreditInvoiceCheck
       ) {
         throw new BadRequestException(
-          "Transações em cartão de crédito não podem ser do tipo receita",
+          'Transações em cartão de crédito não podem ser do tipo receita'
         );
       }
     }
@@ -113,7 +113,7 @@ export class TransactionsService {
       dateNow.getHours(),
       dateNow.getMinutes(),
       dateNow.getSeconds(),
-      dateNow.getMilliseconds(),
+      dateNow.getMilliseconds()
     );
 
     const transaction: any = {
@@ -133,7 +133,7 @@ export class TransactionsService {
           ? -transaction.amount
           : transaction.amount,
         JSON.parse(JSON.stringify(transaction.account)),
-        `Transação criada: ${transaction.description}`,
+        `Transação criada: ${transaction.description}`
       );
     }
 
@@ -156,7 +156,7 @@ export class TransactionsService {
 
   private async handleLedgerUpdatesOnTransactionUpdate(
     original: Transaction,
-    updateData: any,
+    updateData: any
   ): Promise<void> {
     const originalId = (original as any)._id.toString();
     const originalAccountId = original.account.toString();
@@ -176,7 +176,7 @@ export class TransactionsService {
           : -original.amount,
         new Types.ObjectId(originalAccountId),
         `Transação atualizada para unpaid: ${updateData.description}`,
-        new Types.ObjectId(originalId),
+        new Types.ObjectId(originalId)
       );
       return;
     }
@@ -194,7 +194,7 @@ export class TransactionsService {
           : -original.amount,
         new Types.ObjectId(originalAccountId),
         `Transação atualizada de (-): ${updateData.description}`,
-        new Types.ObjectId(originalId),
+        new Types.ObjectId(originalId)
       );
 
       // Aplicar o novo valor na conta NOVA
@@ -205,7 +205,7 @@ export class TransactionsService {
           : updateData.amount,
         new Types.ObjectId(newAccountId),
         `Transação atualizada de (+): ${updateData.description}`,
-        new Types.ObjectId(originalId),
+        new Types.ObjectId(originalId)
       );
       return;
     }
@@ -222,14 +222,14 @@ export class TransactionsService {
           : updateData.amount,
         new Types.ObjectId(newAccountId),
         `Transação atualizada para PAID: ${updateData.description}`,
-        new Types.ObjectId(originalId),
+        new Types.ObjectId(originalId)
       );
     }
   }
 
   async update(
     id: string,
-    updateTransactionDto: UpdateTransactionDto,
+    updateTransactionDto: UpdateTransactionDto
   ): Promise<Transaction> {
     updateTransactionDto.amount = updateTransactionDto.amount * 100;
 
@@ -256,24 +256,24 @@ export class TransactionsService {
 
     // Buscar conta para validar tipo
     const account = await this.accountRepository.findById(
-      updateData.account.toString(),
+      updateData.account.toString()
     );
     if (!account) {
       throw new NotFoundException(
-        `Account with ID ${updateData.account} not found`,
+        `Account with ID ${updateData.account} not found`
       );
     }
 
     // Validações para cartão de crédito
-    if (account.type === "credit_card") {
+    if (account.type === 'credit_card') {
       if (updateData.status === TransactionStatus.UNPAID) {
         throw new BadRequestException(
-          "Transações em cartão de crédito não podem ter status pendente",
+          'Transações em cartão de crédito não podem ter status pendente'
         );
       }
       if (updateData.type === TransactionType.INCOME) {
         throw new BadRequestException(
-          "Transações em cartão de crédito não podem ser do tipo receita",
+          'Transações em cartão de crédito não podem ser do tipo receita'
         );
       }
     }
@@ -299,7 +299,7 @@ export class TransactionsService {
           : -original.amount,
         JSON.parse(JSON.stringify(original.account)),
         `Transação removida: ${original.description}`,
-        (original as any)._id.toString(),
+        (original as any)._id.toString()
       );
     }
 
@@ -316,11 +316,11 @@ export class TransactionsService {
 
   async findByDateRange(
     startDate: string,
-    endDate: string,
+    endDate: string
   ): Promise<Transaction[]> {
     return this.transactionRepository.findByDateRange(
       new Date(startDate),
-      new Date(endDate),
+      new Date(endDate)
     );
   }
 

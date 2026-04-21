@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Outlet,
+} from 'react-router-dom';
 import { TransactionsPage } from './pages/TransactionsPage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -19,7 +24,10 @@ function App() {
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
       <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
-        <MobileHeader onMenuClick={() => setIsSidebarOpen(true)} title="Vero Finc" />
+        <MobileHeader
+          onMenuClick={() => setIsSidebarOpen(true)}
+          title="Vero Finc"
+        />
 
         <main className="flex-1 overflow-y-auto pt-14 lg:pt-0 bg-gradient-to-br from-gray-50 via-white to-gray-50">
           <Outlet />
@@ -47,4 +55,3 @@ function App() {
 }
 
 export default App;
-

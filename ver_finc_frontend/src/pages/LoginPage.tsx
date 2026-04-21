@@ -42,16 +42,25 @@ export const LoginPage: React.FC = () => {
                 Acesse sua plataforma financeira com segurança
               </h1>
               <p className="mt-4 text-lg text-gray-600 leading-relaxed">
-                Faça login para visualizar indicadores, controlar receitas e despesas e manter seu fluxo de caixa em dia.
+                Faça login para visualizar indicadores, controlar receitas e
+                despesas e manter seu fluxo de caixa em dia.
               </p>
               <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-600">
                 <div className="bg-white border border-gray-200 rounded-xl p-4">
-                  <p className="font-medium text-gray-900">Insights em tempo real</p>
-                  <p className="mt-1">Dashboards claros para decisões rápidas.</p>
+                  <p className="font-medium text-gray-900">
+                    Insights em tempo real
+                  </p>
+                  <p className="mt-1">
+                    Dashboards claros para decisões rápidas.
+                  </p>
                 </div>
                 <div className="bg-white border border-gray-200 rounded-xl p-4">
-                  <p className="font-medium text-gray-900">Controle centralizado</p>
-                  <p className="mt-1">Categorias, contas e cartões em um só lugar.</p>
+                  <p className="font-medium text-gray-900">
+                    Controle centralizado
+                  </p>
+                  <p className="mt-1">
+                    Categorias, contas e cartões em um só lugar.
+                  </p>
                 </div>
               </div>
             </div>
@@ -61,12 +70,16 @@ export const LoginPage: React.FC = () => {
             <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8">
               <div className="mb-6">
                 <h2 className="text-2xl font-semibold text-gray-900">Entrar</h2>
-                <p className="text-sm text-gray-500 mt-1">Use seu email e senha para continuar</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Use seu email e senha para continuar
+                </p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Email</label>
+                  <label className="text-sm font-medium text-gray-700">
+                    Email
+                  </label>
                   <div className="mt-2 flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
                     <Mail className="w-4 h-4 text-gray-400" />
                     <input
@@ -81,7 +94,9 @@ export const LoginPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Senha</label>
+                  <label className="text-sm font-medium text-gray-700">
+                    Senha
+                  </label>
                   <div className="mt-2 flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
                     <Lock className="w-4 h-4 text-gray-400" />
                     <input

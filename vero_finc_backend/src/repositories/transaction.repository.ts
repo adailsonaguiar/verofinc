@@ -1,10 +1,10 @@
-import { Injectable } from "@nestjs/common";
-import { InjectModel } from "@nestjs/mongoose";
-import { Model } from "mongoose";
+import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import {
   Transaction,
   TransactionDocument,
-} from "../entities/transaction.entity";
+} from '../entities/transaction.entity';
 
 @Injectable()
 export class TransactionRepository {
@@ -14,7 +14,7 @@ export class TransactionRepository {
     if (filters.category) {
       // Aceita tanto string quanto ObjectId
       try {
-        const { Types } = require("mongoose");
+        const { Types } = require('mongoose');
         query.category = Types.ObjectId.isValid(filters.category)
           ? filters.category
           : undefined;
@@ -25,13 +25,13 @@ export class TransactionRepository {
     if (filters.account) query.account = filters.account;
     if (filters.status) query.status = filters.status;
     if (filters.description)
-      query.description = { $regex: filters.description, $options: "i" };
+      query.description = { $regex: filters.description, $options: 'i' };
     if (filters.year && filters.month) {
       const startDate = new Date(
-        Date.UTC(filters.year, filters.month - 1, 1, 0, 0, 0, 0),
+        Date.UTC(filters.year, filters.month - 1, 1, 0, 0, 0, 0)
       );
       const endDate = new Date(
-        Date.UTC(filters.year, filters.month, 0, 23, 59, 59, 999),
+        Date.UTC(filters.year, filters.month, 0, 23, 59, 59, 999)
       );
       query.date = { $gte: startDate, $lte: endDate };
     }
@@ -43,7 +43,7 @@ export class TransactionRepository {
     }
     return this.transactionModel
       .find(query)
-      .populate("category")
+      .populate('category')
       .sort({ date: -1 })
       .exec();
   }
@@ -51,21 +51,21 @@ export class TransactionRepository {
   async findByDescription(description: string): Promise<Transaction[]> {
     // Busca por descrição (case-insensitive, parcial)
     return this.transactionModel
-      .find({ description: { $regex: description, $options: "i" } })
-      .populate("category")
+      .find({ description: { $regex: description, $options: 'i' } })
+      .populate('category')
       .exec();
   }
 
   async findByAccount(accountId: string): Promise<Transaction[]> {
     return this.transactionModel
       .find({ account: accountId })
-      .populate("category")
+      .populate('category')
       .exec();
   }
 
   constructor(
     @InjectModel(Transaction.name)
-    private transactionModel: Model<TransactionDocument>,
+    private transactionModel: Model<TransactionDocument>
   ) {}
 
   async create(transaction: Partial<Transaction>): Promise<Transaction> {
@@ -74,16 +74,16 @@ export class TransactionRepository {
   }
 
   async findAll(filter: any = {}): Promise<Transaction[]> {
-    return this.transactionModel.find(filter).populate("category").exec();
+    return this.transactionModel.find(filter).populate('category').exec();
   }
 
   async findById(id: string): Promise<Transaction> {
-    return this.transactionModel.findById(id).populate("category").exec();
+    return this.transactionModel.findById(id).populate('category').exec();
   }
 
   async update(
     id: string,
-    transaction: Partial<Transaction>,
+    transaction: Partial<Transaction>
   ): Promise<Transaction> {
     return this.transactionModel
       .findByIdAndUpdate(id, transaction, { new: true })
@@ -108,7 +108,7 @@ export class TransactionRepository {
 
   async findByDateRange(
     startDate: Date,
-    endDate: Date,
+    endDate: Date
   ): Promise<Transaction[]> {
     return this.transactionModel
       .find({
@@ -117,7 +117,7 @@ export class TransactionRepository {
           $lte: endDate,
         },
       })
-      .populate("category")
+      .populate('category')
       .exec();
   }
 
@@ -132,7 +132,7 @@ export class TransactionRepository {
           $lte: endDate,
         },
       })
-      .populate("category")
+      .populate('category')
       .sort({ date: -1 })
       .exec();
   }
@@ -140,7 +140,7 @@ export class TransactionRepository {
   async getAvailableMonths(): Promise<{ year: number; month: number }[]> {
     const transactions = await this.transactionModel
       .find()
-      .select("date")
+      .select('date')
       .sort({ date: -1 })
       .exec();
 
@@ -154,7 +154,7 @@ export class TransactionRepository {
 
     return Array.from(monthsSet)
       .map((key) => {
-        const [year, month] = key.split("-").map(Number);
+        const [year, month] = key.split('-').map(Number);
         return { year, month };
       })
       .sort((a, b) => {

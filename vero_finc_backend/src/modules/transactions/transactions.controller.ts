@@ -33,7 +33,7 @@ export class TransactionsController {
     @Query('month') month?: string,
     @Query('account') account?: string,
     @Query('description') description?: string,
-    @Query('withCreditCardFilter') withCreditCardFilter?: string,
+    @Query('withCreditCardFilter') withCreditCardFilter?: string
   ) {
     // Monta objeto de filtros
     const filters: any = {};
@@ -42,7 +42,8 @@ export class TransactionsController {
     if (account) filters.account = account;
     if (status) filters.status = status;
     if (description) filters.description = description;
-    if (withCreditCardFilter) filters.withCreditCardFilter = withCreditCardFilter === 'true';
+    if (withCreditCardFilter)
+      filters.withCreditCardFilter = withCreditCardFilter === 'true';
     if (year && month) {
       filters.year = parseInt(year);
       filters.month = parseInt(month);
@@ -67,7 +68,7 @@ export class TransactionsController {
   @Patch(':id')
   update(
     @Param('id') id: string,
-    @Body(ValidationPipe) updateTransactionDto: UpdateTransactionDto,
+    @Body(ValidationPipe) updateTransactionDto: UpdateTransactionDto
   ) {
     return this.transactionsService.update(id, updateTransactionDto);
   }

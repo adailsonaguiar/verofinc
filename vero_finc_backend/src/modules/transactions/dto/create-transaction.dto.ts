@@ -1,10 +1,22 @@
-import { TransactionStatus, TransactionType } from '@/entities/transaction.entity';
-import { IsNotEmpty, IsNumber, IsEnum, IsDateString, IsString, Min, IsMongoId, IsOptional } from 'class-validator';
+import {
+  TransactionStatus,
+  TransactionType,
+} from '@/entities/transaction.entity';
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsEnum,
+  IsDateString,
+  IsString,
+  Min,
+  IsMongoId,
+  IsOptional,
+} from 'class-validator';
 
 export class CreateTransactionDto {
-    @IsOptional()
-    @IsMongoId()
-    account?: string;
+  @IsOptional()
+  @IsMongoId()
+  account?: string;
   @IsNotEmpty()
   @IsString()
   description: string;

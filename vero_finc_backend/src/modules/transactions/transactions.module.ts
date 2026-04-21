@@ -2,7 +2,10 @@ import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { TransactionsService } from './transactions.service';
 import { TransactionsController } from './transactions.controller';
-import { Transaction, TransactionSchema } from '../../entities/transaction.entity';
+import {
+  Transaction,
+  TransactionSchema,
+} from '../../entities/transaction.entity';
 import { TransactionRepository } from '../../repositories/transaction.repository';
 import { AccountRepository } from '../../repositories/account.repository';
 import { Account, AccountSchema } from '../../entities/account.entity';

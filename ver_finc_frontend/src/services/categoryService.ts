@@ -22,7 +22,12 @@ export const categoryService = {
     return response.data;
   },
 
-  async create(data: { name: string; description?: string; icon?: string; type: string }): Promise<Category> {
+  async create(data: {
+    name: string;
+    description?: string;
+    icon?: string;
+    type: string;
+  }): Promise<Category> {
     const response = await api.post<Category>('/categories', data);
     return response.data;
   },
