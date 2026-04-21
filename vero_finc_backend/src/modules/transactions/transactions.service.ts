@@ -107,10 +107,19 @@ export class TransactionsService {
       }
     }
 
+    const dateNow = new Date();
+    const transactionDate = new Date(createTransactionDto.date);
+    transactionDate.setHours(
+      dateNow.getHours(),
+      dateNow.getMinutes(),
+      dateNow.getSeconds(),
+      dateNow.getMilliseconds(),
+    );
+
     const transaction: any = {
       description: createTransactionDto.description,
       amount: createTransactionDto.amount,
-      date: new Date(createTransactionDto.date),
+      date: transactionDate,
       type: createTransactionDto.type,
       category: new Types.ObjectId(createTransactionDto.categoryId),
       status: createTransactionDto.status,
