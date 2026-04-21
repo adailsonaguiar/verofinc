@@ -27,8 +27,12 @@ export class TransactionRepository {
     if (filters.description)
       query.description = { $regex: filters.description, $options: "i" };
     if (filters.year && filters.month) {
-      const startDate = new Date(filters.year, filters.month - 1, 1);
-      const endDate = new Date(filters.year, filters.month, 0, 23, 59, 59, 999);
+      const startDate = new Date(
+        Date.UTC(filters.year, filters.month - 1, 1, 0, 0, 0, 0),
+      );
+      const endDate = new Date(
+        Date.UTC(filters.year, filters.month, 0, 23, 59, 59, 999),
+      );
       query.date = { $gte: startDate, $lte: endDate };
     }
     if (filters.startDate && filters.endDate) {
@@ -37,7 +41,11 @@ export class TransactionRepository {
         $lte: new Date(filters.endDate),
       };
     }
-    return this.transactionModel.find(query).populate("category").sort({ date: -1 }).exec();
+    return this.transactionModel
+      .find(query)
+      .populate("category")
+      .sort({ date: -1 })
+      .exec();
   }
 
   async findByDescription(description: string): Promise<Transaction[]> {
@@ -114,8 +122,8 @@ export class TransactionRepository {
   }
 
   async findByMonth(year: number, month: number): Promise<Transaction[]> {
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+    const startDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
+    const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
 
     return this.transactionModel
       .find({

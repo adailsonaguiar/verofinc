@@ -109,7 +109,8 @@ export const DashboardPage: React.FC = () => {
       const all = await transactionService.getAll();
       // O backend pode não retorná-las ordenadas exatamente como queremos para a UI
       const sorted = [...all].sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       );
       setAllTransactions(sorted);
     } catch (err) {
