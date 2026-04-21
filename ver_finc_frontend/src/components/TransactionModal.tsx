@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { set } from 'date-fns';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -109,9 +110,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
   useEffect(() => {
     const selectedAccount = accounts.find((acc) => acc._id === accountId);
-    if (hideStatus) {
-      setStatus(TransactionStatus.UNPAID);
-    } else if (selectedAccount?.type === 'credit_card') {
+   if (selectedAccount?.type === 'credit_card') {
       setStatus(TransactionStatus.PAID);
     }
   }, [accountId, accounts, hideStatus]);
@@ -156,7 +155,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       }
 
       if (!initialData && !accountId && allAccounts.length > 0) {
-        setAccountId((checking[0]?._id || cards[0]?._id) ?? '');
+        if(creditCardOnly) setAccountId(cards[0]._id);
+        else setAccountId(allAccounts[0]._id);
       }
     } catch (err) {
       setAccounts([]);
