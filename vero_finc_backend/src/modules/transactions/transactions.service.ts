@@ -143,7 +143,13 @@ export class TransactionsService {
     if (createTransactionDto.isFixed) {
       for (let i = 1; i <= 11; i++) {
         const nextDate = new Date(transactionDate);
-        nextDate.setMonth(nextDate.getMonth() + i);
+        const targetMonth = nextDate.getMonth() + i;
+        nextDate.setMonth(targetMonth);
+
+        // Previne pular para o próximo mês se o dia for > 28-30 e o mês-alvo for mais curto
+        if (nextDate.getMonth() !== ((targetMonth % 12 + 12) % 12)) {
+          nextDate.setDate(0);
+        }
 
         const nextStatus =
           account.type === 'credit_card'
