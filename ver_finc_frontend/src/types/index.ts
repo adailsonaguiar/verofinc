@@ -36,6 +36,7 @@ export interface Transaction {
   updatedAt: string;
   account: string;
   isFixed?: boolean;
+  isPayment?: boolean;
 }
 
 export interface CreateTransactionDto {

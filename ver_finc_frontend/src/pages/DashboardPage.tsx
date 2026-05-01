@@ -40,7 +40,6 @@ Chart.register(
   LinearScale
 );
 
-const CREDIT_CARD_PAYMENT_CATEGORY_ID = '699f0d49c0a92c8334e60765';
 
 export const DashboardPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -169,7 +168,7 @@ export const DashboardPage: React.FC = () => {
   // Processamento de dados
   const monthlyMap: { [key: string]: { income: number; expense: number } } = {};
   allTransactions
-    .filter((t) => t.category?._id !== CREDIT_CARD_PAYMENT_CATEGORY_ID)
+    .filter((t) => !t.isPayment)
     .forEach((t) => {
       // Divide a string da data UTC "YYYY-MM-DD" e usa diretamente o ano e mês para evitar recuo no fuso horário
       const [year, month] = t.date.split('T')[0].split('-');
@@ -208,11 +207,11 @@ export const DashboardPage: React.FC = () => {
   };
 
   const transactionsForTotals = transactions.filter(
-    (t) => t.category?._id !== CREDIT_CARD_PAYMENT_CATEGORY_ID
+    (t) => !t.isPayment
   );
 
   const expenseCategories = categories.filter(
-    (c) => c.type === 'expense' && c._id !== CREDIT_CARD_PAYMENT_CATEGORY_ID
+    (c) => c.type === 'expense' && c.name !== 'Pagamento de Fatura'
   );
   const expenseTx = transactionsForTotals.filter((t) => t.type === 'expense');
 

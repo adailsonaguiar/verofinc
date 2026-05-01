@@ -38,7 +38,7 @@ export class AccountsController {
     @Param('id') id: string,
     @Body(ValidationPipe) body: Partial<Account>
   ) {
-    return this.accountService.update(id, body);
+    return this.accountService.update(id, body, true);
   }
 
   @Delete(':id')

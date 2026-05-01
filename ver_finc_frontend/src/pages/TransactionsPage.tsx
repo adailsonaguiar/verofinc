@@ -191,9 +191,8 @@ export const TransactionsPage: React.FC = () => {
   const hasPrevious = currentIndexMonth < availableMonths.length - 1;
   const hasNext = currentIndexMonth > 0;
 
-  const CREDIT_CARD_PAYMENT_CATEGORY_ID = '699f0d49c0a92c8334e60765';
   const transactionsForTotals = transactions.filter(
-    (t) => t.category?._id !== CREDIT_CARD_PAYMENT_CATEGORY_ID
+    (t) => !t.isPayment
   );
 
   const totalIncome = transactionsForTotals

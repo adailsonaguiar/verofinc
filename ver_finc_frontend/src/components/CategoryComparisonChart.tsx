@@ -13,7 +13,6 @@ import { BarChart2 } from 'lucide-react';
 
 Chart.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
-const CREDIT_CARD_PAYMENT_CATEGORY_ID = '699f0d49c0a92c8334e60765';
 const MONTH_COLORS = ['#6366f1', '#10b981', '#f59e42'];
 
 interface CategoryComparisonChartProps {
@@ -31,7 +30,7 @@ export const CategoryComparisonChart: React.FC<
       .filter(
         (t) =>
           t.type === 'expense' &&
-          t.category?._id !== CREDIT_CARD_PAYMENT_CATEGORY_ID
+          !t.isPayment
       )
       .forEach((t) => {
         const date = new Date(t.date);
@@ -43,7 +42,7 @@ export const CategoryComparisonChart: React.FC<
     if (sortedMonths.length === 0) return { chartLabels: [], datasets: [] };
 
     const expenseCategories = categories.filter(
-      (c) => c.type === 'expense' && c._id !== CREDIT_CARD_PAYMENT_CATEGORY_ID
+      (c) => c.type === 'expense' && c.name !== 'Pagamento de Fatura'
     );
 
     // Build totals per category per month
@@ -52,7 +51,7 @@ export const CategoryComparisonChart: React.FC<
       .filter(
         (t) =>
           t.type === 'expense' &&
-          t.category?._id !== CREDIT_CARD_PAYMENT_CATEGORY_ID &&
+          !t.isPayment &&
           sortedMonths.includes(
             `${new Date(t.date).getFullYear()}-${String(new Date(t.date).getMonth() + 1).padStart(2, '0')}`
           )

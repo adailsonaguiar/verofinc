@@ -46,4 +46,8 @@ export class CreateTransactionDto {
   @IsOptional()
   @IsBoolean()
   isFixed?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isPayment?: boolean;
 }

@@ -45,19 +45,19 @@ export class AccountService {
   async update(
     id: string,
     data: Partial<Account>,
-    scapeMultiplyValues = false
+    isFromApi: boolean = false
   ) {
-    let accountValues = {};
-    if (scapeMultiplyValues) {
-      accountValues = {
-        initialBalance: data.initialBalance * 100 || 0,
-        creditLimit: data.creditLimit * 100 || 0,
-      };
+    const updatePayload: any = { ...data };
+    if (isFromApi) {
+      if (updatePayload.initialBalance !== undefined) {
+        updatePayload.initialBalance *= 100;
+      }
+      if (updatePayload.creditLimit !== undefined) {
+        updatePayload.creditLimit *= 100;
+      }
     }
-    const account = await this.accountRepository.update(id, {
-      ...data,
-      ...accountValues,
-    });
+
+    const account = await this.accountRepository.update(id, updatePayload);
     if (!account)
       throw new NotFoundException(`Account with ID ${id} not found`);
     return account;
@@ -108,37 +108,33 @@ export class AccountService {
       throw new BadRequestException('No invoice to pay');
     }
 
-    // Buscar categoria de despesa padrão
-    const categories = await this.categoriesService.findByType('expense');
-    if (!categories || categories.length === 0) {
-      throw new BadRequestException(
-        'No expense category found. Please create at least one expense category.'
-      );
+    // Buscar ou criar categoria do sistema "Pagamento de Fatura"
+    let sysCategory = null;
+    const allExpCategories = await this.categoriesService.findByType('expense');
+    sysCategory = allExpCategories.find(c => c.name === 'Pagamento de Fatura' || c.name === 'Pagamento de fatura');
+    
+    if (!sysCategory) {
+      sysCategory = await this.categoriesService.create({
+        name: 'Pagamento de Fatura',
+        type: 'expense' as any,
+        active: true,
+        icon: '💳'
+      });
     }
 
-    const categoryId =
-      (categories[0] as any)._id?.toString() || categories[0].toString();
-
-    // Buscar categoria de receita para a transação no cartão
-    const incomeCategories = await this.categoriesService.findByType('income');
-    if (!incomeCategories || incomeCategories.length === 0) {
-      throw new BadRequestException(
-        'No income category found. Please create at least one income category.'
-      );
-    }
-    const incomeCategoryId =
-      (incomeCategories[0] as any)._id?.toString() ||
-      incomeCategories[0].toString();
+    const magicCategoryId = (sysCategory as any)._id.toString();
+    const dateStr = new Date().toISOString().split('T')[0];
 
     // Criar transação de pagamento na conta corrente (despesa)
     await this.transactionsService.create({
       description: `Pagamento fatura ${creditCard.name}`,
       amount: invoiceAmount,
-      date: new Date().toISOString().split('T')[0],
+      date: dateStr,
       type: TransactionType.EXPENSE,
-      categoryId: categoryId,
+      categoryId: magicCategoryId,
       status: TransactionStatus.PAID,
       account: checkingAccountId,
+      isPayment: true,
     });
 
     // Criar transação de recebimento no cartão (receita)
@@ -146,11 +142,12 @@ export class AccountService {
       {
         description: `Pagamento fatura ${creditCard.name}`,
         amount: invoiceAmount,
-        date: new Date().toISOString().split('T')[0],
+        date: dateStr,
         type: TransactionType.INCOME,
-        categoryId: incomeCategoryId,
+        categoryId: magicCategoryId,
         status: TransactionStatus.PAID,
         account: creditCardId,
+        isPayment: true,
       },
       true
     ); // byPassCreditInvoiceCheck = true

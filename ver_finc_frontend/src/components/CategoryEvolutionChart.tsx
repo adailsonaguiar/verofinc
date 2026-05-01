@@ -23,7 +23,6 @@ Chart.register(
   Filler
 );
 
-const CREDIT_CARD_PAYMENT_CATEGORY_ID = '699f0d49c0a92c8334e60765';
 
 interface CategoryEvolutionChartProps {
   allTransactions: Transaction[];
@@ -37,7 +36,7 @@ export const CategoryEvolutionChart: React.FC<CategoryEvolutionChartProps> = ({
   const expenseCategories = useMemo(
     () =>
       categories.filter(
-        (c) => c.type === 'expense' && c._id !== CREDIT_CARD_PAYMENT_CATEGORY_ID
+        (c) => c.type === 'expense' && c.name !== 'Pagamento de Fatura'
       ),
     [categories]
   );

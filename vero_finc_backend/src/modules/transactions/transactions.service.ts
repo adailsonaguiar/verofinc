@@ -125,6 +125,7 @@ export class TransactionsService {
       status: createTransactionDto.status,
       account: createTransactionDto.account,
       isFixed: createTransactionDto.isFixed || false,
+      isPayment: createTransactionDto.isPayment || false,
     };
 
     const created = await this.transactionRepository.create(transaction);
@@ -166,6 +167,7 @@ export class TransactionsService {
           ...transaction,
           date: nextDate,
           status: nextStatus,
+          isPayment: transaction.isPayment,
         };
 
         const nextCreated = await this.transactionRepository.create(nextTransaction);

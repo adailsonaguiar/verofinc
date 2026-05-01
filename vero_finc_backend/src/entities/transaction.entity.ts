@@ -46,6 +46,9 @@ export class Transaction {
   @Prop({ default: false })
   isFixed: boolean;
 
+  @Prop({ default: false })
+  isPayment: boolean;
+
   createdAt: Date;
   updatedAt: Date;
 }
