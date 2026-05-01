@@ -13,7 +13,7 @@ export class Account {
   @Prop({ required: true })
   name: string;
 
-  @Prop({ required: true, enum: AccountType })
+  @Prop({ type: String, required: true, enum: AccountType })
   type: AccountType;
 
   @Prop({ default: true })

@@ -24,13 +24,14 @@ export class Transaction {
   @Prop({ required: true })
   date: Date;
 
-  @Prop({ required: true, enum: TransactionType })
+  @Prop({ type: String, required: true, enum: TransactionType })
   type: TransactionType;
 
   @Prop({ type: Types.ObjectId, ref: 'Category', required: true })
   category: Types.ObjectId;
 
   @Prop({
+    type: String,
     required: true,
     enum: TransactionStatus,
     default: TransactionStatus.UNPAID,

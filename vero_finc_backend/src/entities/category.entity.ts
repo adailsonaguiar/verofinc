@@ -19,7 +19,7 @@ export class Category {
   @Prop({ required: false })
   icon: string;
 
-  @Prop({ required: true, enum: CategoryType })
+  @Prop({ type: String, required: true, enum: CategoryType })
   type: CategoryType;
 
   @Prop({ default: true })

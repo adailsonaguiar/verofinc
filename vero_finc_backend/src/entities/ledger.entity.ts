@@ -13,7 +13,7 @@ export class Ledger extends Document {
   @Prop({ type: Types.ObjectId, ref: 'Transaction' })
   transactionId?: Types.ObjectId;
 
-  @Prop({ required: true, enum: LedgerOperationType })
+  @Prop({ type: String, required: true, enum: LedgerOperationType })
   operationType: LedgerOperationType;
 
   @Prop()

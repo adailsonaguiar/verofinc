@@ -324,8 +324,9 @@ export class TransactionsService {
     id: string,
     updateTransactionDto: UpdateTransactionDto
   ): Promise<Transaction> {
-    updateTransactionDto.amount = updateTransactionDto.amount * 100;
-
+    if (updateTransactionDto.amount !== undefined) {
+      updateTransactionDto.amount = updateTransactionDto.amount * 100;
+    }
     const original = await this.transactionRepository.findById(id);
     if (!original)
       throw new NotFoundException(`Transaction with ID ${id} not found`);
