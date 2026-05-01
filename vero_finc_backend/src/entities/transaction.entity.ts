@@ -43,6 +43,9 @@ export class Transaction {
   @Prop({ default: false })
   isReversal: boolean;
 
+  @Prop({ default: false })
+  isFixed: boolean;
+
   createdAt: Date;
   updatedAt: Date;
 }

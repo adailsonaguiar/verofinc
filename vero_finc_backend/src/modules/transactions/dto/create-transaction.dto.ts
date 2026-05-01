@@ -11,6 +11,7 @@ import {
   Min,
   IsMongoId,
   IsOptional,
+  IsBoolean,
 } from 'class-validator';
 
 export class CreateTransactionDto {
@@ -41,4 +42,8 @@ export class CreateTransactionDto {
   @IsNotEmpty()
   @IsEnum(TransactionStatus)
   status: TransactionStatus;
+
+  @IsOptional()
+  @IsBoolean()
+  isFixed?: boolean;
 }

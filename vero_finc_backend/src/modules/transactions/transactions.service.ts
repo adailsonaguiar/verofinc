@@ -124,6 +124,7 @@ export class TransactionsService {
       category: new Types.ObjectId(createTransactionDto.categoryId),
       status: createTransactionDto.status,
       account: createTransactionDto.account,
+      isFixed: createTransactionDto.isFixed || false,
     };
 
     if (transaction.status === TransactionStatus.PAID) {
@@ -138,6 +139,37 @@ export class TransactionsService {
     }
 
     const created = await this.transactionRepository.create(transaction);
+
+    if (createTransactionDto.isFixed) {
+      for (let i = 1; i <= 11; i++) {
+        const nextDate = new Date(transactionDate);
+        nextDate.setMonth(nextDate.getMonth() + i);
+
+        const nextStatus =
+          account.type === 'credit_card'
+            ? TransactionStatus.PAID
+            : TransactionStatus.UNPAID;
+
+        const nextTransaction: any = {
+          ...transaction,
+          date: nextDate,
+          status: nextStatus,
+        };
+
+        if (nextTransaction.status === TransactionStatus.PAID) {
+          await this.ledgerService.logOperation(
+            LedgerOperationType.CREATE,
+            nextTransaction.type === TransactionType.EXPENSE
+              ? -nextTransaction.amount
+              : nextTransaction.amount,
+            JSON.parse(JSON.stringify(nextTransaction.account)),
+            `Transação criada: ${nextTransaction.description}`
+          );
+        }
+
+        await this.transactionRepository.create(nextTransaction);
+      }
+    }
 
     return created;
   }
