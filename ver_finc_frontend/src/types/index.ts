@@ -35,6 +35,7 @@ export interface Transaction {
   createdAt: string;
   updatedAt: string;
   account: string;
+  isFixed?: boolean;
 }
 
 export interface CreateTransactionDto {
@@ -45,6 +46,7 @@ export interface CreateTransactionDto {
   categoryId: string;
   status: TransactionStatus;
   account?: string;
+  isFixed?: boolean;
 }
 
 export interface UpdateTransactionDto {
