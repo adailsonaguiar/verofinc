@@ -16,7 +16,7 @@ export class TransactionRepository {
       try {
         const { Types } = require('mongoose');
         query.category = Types.ObjectId.isValid(filters.category)
-          ? filters.category
+          ? new Types.ObjectId(filters.category)
           : undefined;
       } catch {
         query.category = filters.category;

@@ -127,18 +127,24 @@ export class TransactionsService {
       isFixed: createTransactionDto.isFixed || false,
     };
 
-    if (transaction.status === TransactionStatus.PAID) {
-      await this.ledgerService.logOperation(
-        LedgerOperationType.CREATE,
-        transaction.type === TransactionType.EXPENSE
-          ? -transaction.amount
-          : transaction.amount,
-        JSON.parse(JSON.stringify(transaction.account)),
-        `Transação criada: ${transaction.description}`
-      );
-    }
-
     const created = await this.transactionRepository.create(transaction);
+
+    if (created.status === TransactionStatus.PAID) {
+      try {
+        await this.ledgerService.logOperation(
+          LedgerOperationType.CREATE,
+          created.type === TransactionType.EXPENSE
+            ? -created.amount
+            : created.amount,
+          new Types.ObjectId(created.account.toString()),
+          `Transação criada: ${created.description}`,
+          new Types.ObjectId((created as any)._id)
+        );
+      } catch (error) {
+        await this.transactionRepository.delete((created as any)._id.toString());
+        throw error;
+      }
+    }
 
     if (createTransactionDto.isFixed) {
       for (let i = 1; i <= 11; i++) {
@@ -162,18 +168,24 @@ export class TransactionsService {
           status: nextStatus,
         };
 
-        if (nextTransaction.status === TransactionStatus.PAID) {
-          await this.ledgerService.logOperation(
-            LedgerOperationType.CREATE,
-            nextTransaction.type === TransactionType.EXPENSE
-              ? -nextTransaction.amount
-              : nextTransaction.amount,
-            JSON.parse(JSON.stringify(nextTransaction.account)),
-            `Transação criada: ${nextTransaction.description}`
-          );
-        }
+        const nextCreated = await this.transactionRepository.create(nextTransaction);
 
-        await this.transactionRepository.create(nextTransaction);
+        if (nextCreated.status === TransactionStatus.PAID) {
+          try {
+            await this.ledgerService.logOperation(
+              LedgerOperationType.CREATE,
+              nextCreated.type === TransactionType.EXPENSE
+                ? -nextCreated.amount
+                : nextCreated.amount,
+              new Types.ObjectId(nextCreated.account.toString()),
+              `Transação criada: ${nextCreated.description}`,
+              new Types.ObjectId((nextCreated as any)._id)
+            );
+          } catch (error) {
+            await this.transactionRepository.delete((nextCreated as any)._id.toString());
+            throw error;
+          }
+        }
       }
     }
 
@@ -224,27 +236,68 @@ export class TransactionsService {
       original.status === TransactionStatus.PAID &&
       updateData.status === TransactionStatus.PAID
     ) {
-      // Reverter o valor original na conta ORIGINAL
-      await this.ledgerService.logOperation(
-        LedgerOperationType.UPDATE,
-        original.type === TransactionType.EXPENSE
-          ? original.amount
-          : -original.amount,
-        new Types.ObjectId(originalAccountId),
-        `Transação atualizada de (-): ${updateData.description}`,
-        new Types.ObjectId(originalId)
-      );
+      if (originalAccountId === newAccountId) {
+        const originalEffect =
+          original.type === TransactionType.EXPENSE
+            ? -original.amount
+            : original.amount;
+        const newEffect =
+          updateData.type === TransactionType.EXPENSE
+            ? -updateData.amount
+            : updateData.amount;
+        const netChange = newEffect - originalEffect;
 
-      // Aplicar o novo valor na conta NOVA
-      await this.ledgerService.logOperation(
-        LedgerOperationType.UPDATE,
-        updateData.type === TransactionType.EXPENSE
-          ? -updateData.amount
-          : updateData.amount,
-        new Types.ObjectId(newAccountId),
-        `Transação atualizada de (+): ${updateData.description}`,
-        new Types.ObjectId(originalId)
-      );
+        if (netChange !== 0) {
+          await this.ledgerService.logOperation(
+            LedgerOperationType.UPDATE,
+            netChange,
+            new Types.ObjectId(newAccountId),
+            `Transação atualizada: ${updateData.description}`,
+            new Types.ObjectId(originalId)
+          );
+        }
+      } else {
+        const originalRevertValue =
+          original.type === TransactionType.EXPENSE
+            ? original.amount
+            : -original.amount;
+        const newApplyValue =
+          updateData.type === TransactionType.EXPENSE
+            ? -updateData.amount
+            : updateData.amount;
+
+        if (newApplyValue < 0) {
+          await this.ledgerService.logOperation(
+            LedgerOperationType.UPDATE,
+            newApplyValue,
+            new Types.ObjectId(newAccountId),
+            `Transação transferida (entrada): ${updateData.description}`,
+            new Types.ObjectId(originalId)
+          );
+          await this.ledgerService.logOperation(
+            LedgerOperationType.UPDATE,
+            originalRevertValue,
+            new Types.ObjectId(originalAccountId),
+            `Transação transferida (saída): ${updateData.description}`,
+            new Types.ObjectId(originalId)
+          );
+        } else {
+          await this.ledgerService.logOperation(
+            LedgerOperationType.UPDATE,
+            originalRevertValue,
+            new Types.ObjectId(originalAccountId),
+            `Transação transferida (saída): ${updateData.description}`,
+            new Types.ObjectId(originalId)
+          );
+          await this.ledgerService.logOperation(
+            LedgerOperationType.UPDATE,
+            newApplyValue,
+            new Types.ObjectId(newAccountId),
+            `Transação transferida (entrada): ${updateData.description}`,
+            new Types.ObjectId(originalId)
+          );
+        }
+      }
       return;
     }
 
@@ -316,10 +369,14 @@ export class TransactionsService {
       }
     }
 
-    // Atualizar livro caixa baseado nas mudanças de status
-    await this.handleLedgerUpdatesOnTransactionUpdate(original, updateData);
-
     const updated = await this.transactionRepository.update(id, updateData);
+
+    try {
+      await this.handleLedgerUpdatesOnTransactionUpdate(original, updateData);
+    } catch (err) {
+      await this.transactionRepository.update(id, original);
+      throw err;
+    }
 
     return updated;
   }
@@ -329,19 +386,24 @@ export class TransactionsService {
     if (!original)
       throw new NotFoundException(`Transaction with ID ${id} not found`);
 
-    if (original.status === TransactionStatus.PAID) {
-      await this.ledgerService.logOperation(
-        LedgerOperationType.DELETE,
-        original.type === TransactionType.EXPENSE
-          ? original.amount
-          : -original.amount,
-        JSON.parse(JSON.stringify(original.account)),
-        `Transação removida: ${original.description}`,
-        (original as any)._id.toString()
-      );
-    }
-
     await this.transactionRepository.delete(id);
+
+    if (original.status === TransactionStatus.PAID) {
+      try {
+        await this.ledgerService.logOperation(
+          LedgerOperationType.DELETE,
+          original.type === TransactionType.EXPENSE
+            ? original.amount
+            : -original.amount,
+          new Types.ObjectId(original.account.toString()),
+          `Transação removida: ${original.description}`,
+          new Types.ObjectId((original as any)._id)
+        );
+      } catch (err) {
+        await this.transactionRepository.create(original);
+        throw err;
+      }
+    }
   }
 
   async findByCategory(category: string): Promise<Transaction[]> {
