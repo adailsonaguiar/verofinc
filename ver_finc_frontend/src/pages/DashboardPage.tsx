@@ -166,8 +166,16 @@ export const DashboardPage: React.FC = () => {
   };
 
   // Processamento de dados
+  // Filtra transações até o mês atual (exclui meses futuros)
+  const todayYear = new Date().getFullYear();
+  const todayMonth = new Date().getMonth() + 1;
+  const pastAndCurrentTransactions = allTransactions.filter((t) => {
+    const [year, month] = t.date.split('T')[0].split('-').map(Number);
+    return year < todayYear || (year === todayYear && month <= todayMonth);
+  });
+
   const monthlyMap: { [key: string]: { income: number; expense: number } } = {};
-  allTransactions
+  pastAndCurrentTransactions
     .filter((t) => !t.isPayment)
     .forEach((t) => {
       // Divide a string da data UTC "YYYY-MM-DD" e usa diretamente o ano e mês para evitar recuo no fuso horário
@@ -254,8 +262,8 @@ export const DashboardPage: React.FC = () => {
     .reduce((sum, t) => sum + t.amount, 0);
   const balance = totalIncome - totalExpense;
 
-  // Transações mais recentes globais (últimas 5)
-  const recentGlobalTransactions = allTransactions.slice(0, 5);
+  // Transações mais recentes globais (últimas 5), apenas do mês atual e passados
+  const recentGlobalTransactions = pastAndCurrentTransactions.slice(0, 5);
 
   const CurrencyFormatter = new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -644,13 +652,13 @@ export const DashboardPage: React.FC = () => {
           <div className="lg:col-span-2 flex flex-col gap-6">
             <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-100 dark:border-slate-700/60 shadow-sm overflow-hidden">
               <CategoryEvolutionChart
-                allTransactions={allTransactions}
+                allTransactions={pastAndCurrentTransactions}
                 categories={categories}
               />
             </div>
             <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-100 dark:border-slate-700/60 shadow-sm overflow-hidden">
               <CategoryComparisonChart
-                allTransactions={allTransactions}
+                allTransactions={pastAndCurrentTransactions}
                 categories={categories}
               />
             </div>
