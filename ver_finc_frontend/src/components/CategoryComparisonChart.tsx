@@ -52,6 +52,7 @@ export const CategoryComparisonChart: React.FC<
         (t) =>
           t.type === 'expense' &&
           !t.isPayment &&
+          t.category?._id &&
           sortedMonths.includes(
             `${new Date(t.date).getFullYear()}-${String(new Date(t.date).getMonth() + 1).padStart(2, '0')}`
           )
