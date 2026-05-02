@@ -1,18 +1,64 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
 import { TransactionRepository } from '../../repositories/transaction.repository';
 import { LedgerService } from '../ledger/ledger.service';
 import { AccountRepository } from '../../repositories/account.repository';
-import { TransactionType, TransactionStatus } from '../../entities/transaction.entity';
+import {
+  TransactionType,
+  TransactionStatus,
+} from '../../entities/transaction.entity';
 import { AccountType } from '../../entities/account.entity';
 import { Types } from 'mongoose';
 import { describe, it, expect, beforeEach, vi, Mock } from 'vitest';
 
 describe('TransactionsService', () => {
   let service: TransactionsService;
-  let transactionRepo: { create: Mock; delete: Mock; update: Mock; findById: Mock; findWithFilters: Mock };
-  let ledgerService: { logOperation: Mock; updateAccountBalance: Mock; findByTransactionId: Mock };
+  let transactionRepo: {
+    create: Mock;
+    delete: Mock;
+    update: Mock;
+    findById: Mock;
+    findWithFilters: Mock;
+    findAll: Mock;
+    findByDescription: Mock;
+    findByAccount: Mock;
+    findByCategory: Mock;
+    findByStatus: Mock;
+    findByDateRange: Mock;
+    findByMonth: Mock;
+    getAvailableMonths: Mock;
+  };
+  let ledgerService: {
+    logOperation: Mock;
+    updateAccountBalance: Mock;
+    findByTransactionId: Mock;
+  };
   let accountRepo: { findAll: Mock; findById: Mock; update: Mock };
+
+  const makeId = () => new Types.ObjectId();
+  const makeCheckingAccount = (overrides: any = {}) => ({
+    _id: makeId(),
+    type: AccountType.CHECKING,
+    name: 'Conta',
+    ...overrides,
+  });
+  const makeCreditCard = (overrides: any = {}) => ({
+    _id: makeId(),
+    type: AccountType.CREDIT_CARD,
+    name: 'Visa',
+    ...overrides,
+  });
+  const makeTx = (overrides: any = {}) => ({
+    _id: makeId(),
+    description: 'Aluguel',
+    amount: 150000,
+    date: new Date('2026-05-01T12:00:00'),
+    type: TransactionType.EXPENSE,
+    status: TransactionStatus.PAID,
+    account: makeId(),
+    ...overrides,
+  });
 
   beforeEach(async () => {
     transactionRepo = {
@@ -21,6 +67,14 @@ describe('TransactionsService', () => {
       update: vi.fn(),
       findById: vi.fn(),
       findWithFilters: vi.fn(),
+      findAll: vi.fn(),
+      findByDescription: vi.fn(),
+      findByAccount: vi.fn(),
+      findByCategory: vi.fn(),
+      findByStatus: vi.fn(),
+      findByDateRange: vi.fn(),
+      findByMonth: vi.fn(),
+      getAvailableMonths: vi.fn(),
     };
     ledgerService = {
       logOperation: vi.fn(),
@@ -51,15 +105,19 @@ describe('TransactionsService', () => {
 
   describe('create', () => {
     it('should multiply amount by 100 before saving', async () => {
-      const mockAccount = { _id: new Types.ObjectId(), type: AccountType.CHECKING, name: 'Conta' };
+      const mockAccount = {
+        _id: new Types.ObjectId(),
+        type: AccountType.CHECKING,
+        name: 'Conta',
+      };
       accountRepo.findById.mockResolvedValue(mockAccount);
-      
-      const createdTx = { 
-        _id: new Types.ObjectId(), 
+
+      const createdTx = {
+        _id: new Types.ObjectId(),
         amount: 2500, // 25 * 100
         type: TransactionType.EXPENSE,
         status: TransactionStatus.UNPAID,
-        account: mockAccount._id
+        account: mockAccount._id,
       };
       transactionRepo.create.mockResolvedValue(createdTx);
 
@@ -70,7 +128,7 @@ describe('TransactionsService', () => {
         type: TransactionType.EXPENSE,
         categoryId: new Types.ObjectId().toString(),
         status: TransactionStatus.UNPAID,
-        account: mockAccount._id.toString()
+        account: mockAccount._id.toString(),
       });
 
       expect(transactionRepo.create).toHaveBeenCalled();
@@ -79,50 +137,64 @@ describe('TransactionsService', () => {
     });
 
     it('should log operation if status is PAID and rollback if ledger throws error', async () => {
-      const mockAccount = { _id: new Types.ObjectId(), type: AccountType.CHECKING, name: 'Conta' };
+      const mockAccount = {
+        _id: new Types.ObjectId(),
+        type: AccountType.CHECKING,
+        name: 'Conta',
+      };
       accountRepo.findById.mockResolvedValue(mockAccount);
-      
-      const createdTx = { 
-        _id: new Types.ObjectId(), 
-        amount: 3000, 
+
+      const createdTx = {
+        _id: new Types.ObjectId(),
+        amount: 3000,
         type: TransactionType.EXPENSE,
         status: TransactionStatus.PAID,
         account: mockAccount._id,
-        description: 'Test Ledger Rollback'
-      };
-      
-      transactionRepo.create.mockResolvedValue(createdTx);
-      
-      // Simulate ledger error (e.g. insufficient funds)
-      ledgerService.logOperation.mockRejectedValue(new Error('Insufficient funds'));
-
-      await expect(service.create({
         description: 'Test Ledger Rollback',
-        amount: 30,
-        date: '2026-05-01',
-        type: TransactionType.EXPENSE,
-        categoryId: new Types.ObjectId().toString(),
-        status: TransactionStatus.PAID,
-        account: mockAccount._id.toString()
-      })).rejects.toThrow('Insufficient funds');
+      };
+
+      transactionRepo.create.mockResolvedValue(createdTx);
+
+      // Simulate ledger error (e.g. insufficient funds)
+      ledgerService.logOperation.mockRejectedValue(
+        new Error('Insufficient funds')
+      );
+
+      await expect(
+        service.create({
+          description: 'Test Ledger Rollback',
+          amount: 30,
+          date: '2026-05-01',
+          type: TransactionType.EXPENSE,
+          categoryId: new Types.ObjectId().toString(),
+          status: TransactionStatus.PAID,
+          account: mockAccount._id.toString(),
+        })
+      ).rejects.toThrow('Insufficient funds');
 
       // Ensure transaction was deleted
-      expect(transactionRepo.delete).toHaveBeenCalledWith(createdTx._id.toString());
+      expect(transactionRepo.delete).toHaveBeenCalledWith(
+        createdTx._id.toString()
+      );
     });
 
     it('should automatically create future duplicates if isFixed is true', async () => {
-      const mockAccount = { _id: new Types.ObjectId(), type: AccountType.CHECKING, name: 'Conta' };
+      const mockAccount = {
+        _id: new Types.ObjectId(),
+        type: AccountType.CHECKING,
+        name: 'Conta',
+      };
       accountRepo.findById.mockResolvedValue(mockAccount);
-      
-      const createdTx = { 
-        _id: new Types.ObjectId(), 
-        amount: 5000, 
+
+      const createdTx = {
+        _id: new Types.ObjectId(),
+        amount: 5000,
         type: TransactionType.EXPENSE,
         status: TransactionStatus.UNPAID,
         account: mockAccount._id,
-        date: new Date('2026-05-01T12:00:00')
+        date: new Date('2026-05-01T12:00:00'),
       };
-      
+
       transactionRepo.create.mockResolvedValue(createdTx);
 
       await service.create({
@@ -133,7 +205,7 @@ describe('TransactionsService', () => {
         categoryId: new Types.ObjectId().toString(),
         status: TransactionStatus.UNPAID,
         account: mockAccount._id.toString(),
-        isFixed: true
+        isFixed: true,
       });
 
       // 1 base + 11 future
@@ -143,7 +215,10 @@ describe('TransactionsService', () => {
 
   describe('update', () => {
     it('should correctly calculate net difference if updating amount in the same account', async () => {
-      const mockAccount = { _id: new Types.ObjectId(), type: AccountType.CHECKING };
+      const mockAccount = {
+        _id: new Types.ObjectId(),
+        type: AccountType.CHECKING,
+      };
       accountRepo.findById.mockResolvedValue(mockAccount);
 
       const oldTx = {
@@ -158,7 +233,7 @@ describe('TransactionsService', () => {
       transactionRepo.update.mockResolvedValue(oldTx); // return updated
 
       await service.update(oldTx._id, {
-        amount: 150 // becomes 15000
+        amount: 150, // becomes 15000
       });
 
       expect(ledgerService.logOperation).toHaveBeenCalled();
@@ -166,13 +241,21 @@ describe('TransactionsService', () => {
       // Old was 10000 (expense is negated so -10000)
       // New is 15000 (expense is negated so -15000)
       // Difference -> -15000 - (-10000) = -5000. So logOperation should be called with -5000.
-      expect(logArgs[1]).toBe(-5000); 
+      expect(logArgs[1]).toBe(-5000);
     });
 
     it('should fully process a cross-account transfer update safely', async () => {
-      const mockAccountOld = { _id: new Types.ObjectId(), type: AccountType.CHECKING, name: 'Old' };
-      const mockAccountNew = { _id: new Types.ObjectId(), type: AccountType.CHECKING, name: 'New' };
-      
+      const mockAccountOld = {
+        _id: new Types.ObjectId(),
+        type: AccountType.CHECKING,
+        name: 'Old',
+      };
+      const mockAccountNew = {
+        _id: new Types.ObjectId(),
+        type: AccountType.CHECKING,
+        name: 'New',
+      };
+
       accountRepo.findById.mockImplementation((id) => {
         if (id === mockAccountOld._id.toString()) return mockAccountOld;
         if (id === mockAccountNew._id.toString()) return mockAccountNew;
@@ -190,24 +273,359 @@ describe('TransactionsService', () => {
       transactionRepo.findById.mockResolvedValue(oldTx);
       transactionRepo.update.mockResolvedValue({
         ...oldTx,
-        account: mockAccountNew._id
+        account: mockAccountNew._id,
       });
 
       await service.update(oldTx._id, {
-        account: mockAccountNew._id.toString()
+        account: mockAccountNew._id.toString(),
       });
 
       // It should revert the old account and apply to the new account
       expect(ledgerService.logOperation).toHaveBeenCalledTimes(2);
-      
+
       // The order might vary depending on whether it's subtracting first to prevent overdrafts.
       // Since it's an INCOME, reverting it means subtracting.
       const calls = ledgerService.logOperation.mock.calls;
-      
+
       // the revert on the old account
-      expect(calls.some(args => args[2].toString() === mockAccountOld._id.toString() && args[1] === -2000)).toBe(true);
+      expect(
+        calls.some(
+          (args) =>
+            args[2].toString() === mockAccountOld._id.toString() &&
+            args[1] === -2000
+        )
+      ).toBe(true);
       // the application on the new account
-      expect(calls.some(args => args[2].toString() === mockAccountNew._id.toString() && args[1] === 2000)).toBe(true);
+      expect(
+        calls.some(
+          (args) =>
+            args[2].toString() === mockAccountNew._id.toString() &&
+            args[1] === 2000
+        )
+      ).toBe(true);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // create – credit card validations
+  // ---------------------------------------------------------------------------
+  describe('create – credit card validations', () => {
+    it('should throw NotFoundException when account does not exist', async () => {
+      accountRepo.findById.mockResolvedValue(null);
+
+      await expect(
+        service.create({
+          description: 'Test',
+          amount: 10,
+          date: '2026-05-01',
+          type: TransactionType.EXPENSE,
+          categoryId: makeId().toString(),
+          status: TransactionStatus.UNPAID,
+          account: makeId().toString(),
+        })
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw BadRequestException when creating UNPAID on credit card', async () => {
+      accountRepo.findById.mockResolvedValue(makeCreditCard());
+
+      await expect(
+        service.create({
+          description: 'Test',
+          amount: 10,
+          date: '2026-05-01',
+          type: TransactionType.EXPENSE,
+          categoryId: makeId().toString(),
+          status: TransactionStatus.UNPAID,
+          account: makeId().toString(),
+        })
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when creating INCOME on credit card without bypass', async () => {
+      accountRepo.findById.mockResolvedValue(makeCreditCard());
+
+      await expect(
+        service.create({
+          description: 'Test',
+          amount: 10,
+          date: '2026-05-01',
+          type: TransactionType.INCOME,
+          categoryId: makeId().toString(),
+          status: TransactionStatus.PAID,
+          account: makeId().toString(),
+        })
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should allow INCOME on credit card when byPassCreditInvoiceCheck=true', async () => {
+      const card = makeCreditCard();
+      accountRepo.findById.mockResolvedValue(card);
+      const tx = makeTx({
+        type: TransactionType.INCOME,
+        status: TransactionStatus.PAID,
+      });
+      transactionRepo.create.mockResolvedValue(tx);
+      ledgerService.logOperation.mockResolvedValue(undefined);
+
+      await expect(
+        service.create(
+          {
+            description: 'Invoice payment',
+            amount: 10,
+            date: '2026-05-01',
+            type: TransactionType.INCOME,
+            categoryId: makeId().toString(),
+            status: TransactionStatus.PAID,
+            account: card._id.toString(),
+          },
+          true
+        )
+      ).resolves.not.toThrow();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // findWithFilters
+  // ---------------------------------------------------------------------------
+  describe('findWithFilters', () => {
+    it('should return filtered and sorted transactions', async () => {
+      const accId = makeId();
+      const checkingAcc = makeCheckingAccount({ _id: accId });
+      const txs = [
+        makeTx({ account: accId, date: new Date('2026-05-01') }),
+        makeTx({ account: accId, date: new Date('2026-04-01') }),
+      ];
+      accountRepo.findAll.mockResolvedValue([checkingAcc]);
+      transactionRepo.findWithFilters.mockResolvedValue(txs);
+
+      const result = await service.findWithFilters({});
+
+      expect(transactionRepo.findWithFilters).toHaveBeenCalledWith({});
+      // Sorted descending by date
+      expect(new Date(result[0].date).getTime()).toBeGreaterThan(
+        new Date(result[1].date).getTime()
+      );
+    });
+
+    it('should skip credit-card INCOME filter when withCreditCardFilter=true', async () => {
+      const cardId = makeId();
+      const card = makeCreditCard({ _id: cardId });
+      const incomeTx = makeTx({
+        account: cardId,
+        type: TransactionType.INCOME,
+        status: TransactionStatus.PAID,
+      });
+      accountRepo.findAll.mockResolvedValue([card]);
+      transactionRepo.findWithFilters.mockResolvedValue([incomeTx]);
+
+      const result = await service.findWithFilters({
+        withCreditCardFilter: true,
+      });
+
+      // Should NOT call findAll (no filtering)
+      expect(accountRepo.findAll).not.toHaveBeenCalled();
+      expect(result).toHaveLength(1);
+    });
+
+    it('should filter out credit-card INCOME transactions when withCreditCardFilter is absent', async () => {
+      const cardId = makeId();
+      const card = makeCreditCard({ _id: cardId });
+      const incomeTx = makeTx({
+        account: cardId,
+        type: TransactionType.INCOME,
+      });
+      const expenseTx = makeTx({
+        account: cardId,
+        type: TransactionType.EXPENSE,
+      });
+      accountRepo.findAll.mockResolvedValue([card]);
+      transactionRepo.findWithFilters.mockResolvedValue([incomeTx, expenseTx]);
+
+      const result = await service.findWithFilters({});
+
+      expect(result.every((t) => t.type !== TransactionType.INCOME)).toBe(true);
+      expect(result).toHaveLength(1);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // findOne
+  // ---------------------------------------------------------------------------
+  describe('findOne', () => {
+    it('should return the transaction when found', async () => {
+      const tx = makeTx();
+      transactionRepo.findById.mockResolvedValue(tx);
+
+      const result = await service.findOne(tx._id.toString());
+
+      expect(result).toEqual(tx);
+    });
+
+    it('should throw NotFoundException when transaction does not exist', async () => {
+      transactionRepo.findById.mockResolvedValue(null);
+
+      await expect(service.findOne('nonexistent')).rejects.toThrow(
+        NotFoundException
+      );
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // update – validations
+  // ---------------------------------------------------------------------------
+  describe('update – validations', () => {
+    it('should throw NotFoundException when transaction to update does not exist', async () => {
+      transactionRepo.findById.mockResolvedValue(null);
+
+      await expect(service.update('bad-id', { amount: 10 })).rejects.toThrow(
+        NotFoundException
+      );
+    });
+
+    it('should throw NotFoundException when account does not exist during update', async () => {
+      const tx = makeTx({ status: TransactionStatus.UNPAID });
+      transactionRepo.findById.mockResolvedValue(tx);
+      accountRepo.findById.mockResolvedValue(null);
+
+      await expect(
+        service.update(tx._id.toString(), { description: 'X' })
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw BadRequestException when setting UNPAID on credit card', async () => {
+      const card = makeCreditCard();
+      const tx = makeTx({
+        account: card._id,
+        status: TransactionStatus.PAID,
+        type: TransactionType.EXPENSE,
+      });
+      transactionRepo.findById.mockResolvedValue(tx);
+      accountRepo.findById.mockResolvedValue(card);
+
+      await expect(
+        service.update(tx._id.toString(), { status: TransactionStatus.UNPAID })
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when setting INCOME type on credit card', async () => {
+      const card = makeCreditCard();
+      const tx = makeTx({
+        account: card._id,
+        status: TransactionStatus.PAID,
+        type: TransactionType.EXPENSE,
+      });
+      transactionRepo.findById.mockResolvedValue(tx);
+      accountRepo.findById.mockResolvedValue(card);
+
+      await expect(
+        service.update(tx._id.toString(), { type: TransactionType.INCOME })
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should rollback to original when ledger update throws', async () => {
+      const acc = makeCheckingAccount();
+      const originalTx = makeTx({
+        account: acc._id,
+        status: TransactionStatus.PAID,
+        type: TransactionType.EXPENSE,
+        amount: 10000,
+      });
+      transactionRepo.findById.mockResolvedValue(originalTx);
+      accountRepo.findById.mockResolvedValue(acc);
+      transactionRepo.update.mockResolvedValue({
+        ...originalTx,
+        amount: 20000,
+      });
+      ledgerService.logOperation.mockRejectedValue(new Error('ledger fail'));
+
+      await expect(
+        service.update(originalTx._id.toString(), { amount: 200 })
+      ).rejects.toThrow('ledger fail');
+
+      // Should have called update again to restore original
+      expect(transactionRepo.update).toHaveBeenCalledTimes(2);
+      const rollbackArgs = transactionRepo.update.mock.calls[1];
+      expect(rollbackArgs[1]).toEqual(originalTx);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // remove
+  // ---------------------------------------------------------------------------
+  describe('remove', () => {
+    it('should delete a PAID transaction and log the reversal', async () => {
+      const acc = makeCheckingAccount();
+      const tx = makeTx({
+        account: acc._id,
+        status: TransactionStatus.PAID,
+        type: TransactionType.EXPENSE,
+        amount: 5000,
+      });
+      transactionRepo.findById.mockResolvedValue(tx);
+      transactionRepo.delete.mockResolvedValue(tx);
+      ledgerService.logOperation.mockResolvedValue(undefined);
+
+      await service.remove(tx._id.toString());
+
+      expect(transactionRepo.delete).toHaveBeenCalledWith(tx._id.toString());
+      expect(ledgerService.logOperation).toHaveBeenCalledTimes(1);
+      // expense reversal: positive amount
+      expect(ledgerService.logOperation.mock.calls[0][1]).toBe(5000);
+    });
+
+    it('should delete an UNPAID transaction without logging to ledger', async () => {
+      const tx = makeTx({ status: TransactionStatus.UNPAID });
+      transactionRepo.findById.mockResolvedValue(tx);
+      transactionRepo.delete.mockResolvedValue(tx);
+
+      await service.remove(tx._id.toString());
+
+      expect(transactionRepo.delete).toHaveBeenCalled();
+      expect(ledgerService.logOperation).not.toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when transaction does not exist', async () => {
+      transactionRepo.findById.mockResolvedValue(null);
+
+      await expect(service.remove('nonexistent')).rejects.toThrow(
+        NotFoundException
+      );
+    });
+
+    it('should rollback (re-create) transaction if ledger throws after deletion', async () => {
+      const tx = makeTx({
+        status: TransactionStatus.PAID,
+        type: TransactionType.EXPENSE,
+      });
+      transactionRepo.findById.mockResolvedValue(tx);
+      transactionRepo.delete.mockResolvedValue(tx);
+      transactionRepo.create.mockResolvedValue(tx);
+      ledgerService.logOperation.mockRejectedValue(new Error('ledger fail'));
+
+      await expect(service.remove(tx._id.toString())).rejects.toThrow(
+        'ledger fail'
+      );
+
+      expect(transactionRepo.create).toHaveBeenCalledWith(tx);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // getAvailableMonths
+  // ---------------------------------------------------------------------------
+  describe('getAvailableMonths', () => {
+    it('should delegate to transactionRepository.getAvailableMonths', async () => {
+      const months = [
+        { year: 2026, month: 5 },
+        { year: 2026, month: 4 },
+      ];
+      transactionRepo.getAvailableMonths.mockResolvedValue(months);
+
+      const result = await service.getAvailableMonths();
+
+      expect(transactionRepo.getAvailableMonths).toHaveBeenCalledTimes(1);
+      expect(result).toEqual(months);
     });
   });
 });
