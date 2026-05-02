@@ -105,15 +105,14 @@ export const DashboardPage: React.FC = () => {
 
   const loadAllTransactions = async () => {
     try {
-      const all = await transactionService.getAll();
-      // O backend pode não retorná-las ordenadas exatamente como queremos para a UI
+      const all = await transactionService.getLastMonths(6);
       const sorted = [...all].sort(
         (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          new Date(b.date).getTime() - new Date(a.date).getTime()
       );
       setAllTransactions(sorted);
     } catch (err) {
-      console.error('Erro ao carregar todas as transações:', err);
+      console.error('Erro ao carregar transações:', err);
     }
   };
 
@@ -166,13 +165,8 @@ export const DashboardPage: React.FC = () => {
   };
 
   // Processamento de dados
-  // Filtra transações até o mês atual (exclui meses futuros)
-  const todayYear = new Date().getFullYear();
-  const todayMonth = new Date().getMonth() + 1;
-  const pastAndCurrentTransactions = allTransactions.filter((t) => {
-    const [year, month] = t.date.split('T')[0].split('-').map(Number);
-    return year < todayYear || (year === todayYear && month <= todayMonth);
-  });
+  // allTransactions já vem filtrado até o mês atual pelo backend (últimos 6 meses)
+  const pastAndCurrentTransactions = allTransactions;
 
   const monthlyMap: { [key: string]: { income: number; expense: number } } = {};
   pastAndCurrentTransactions

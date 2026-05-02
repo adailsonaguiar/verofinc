@@ -21,6 +21,19 @@ export const transactionService = {
     return response.data;
   },
 
+  async getLastMonths(months: number = 6): Promise<Transaction[]> {
+    const end = new Date();
+    const start = new Date(end.getFullYear(), end.getMonth() - (months - 1), 1);
+    const startDate = start.toISOString().split('T')[0];
+    const endDate = new Date(end.getFullYear(), end.getMonth() + 1, 0)
+      .toISOString()
+      .split('T')[0];
+    const response = await api.get<Transaction[]>(
+      `/transactions?startDate=${startDate}&endDate=${endDate}`
+    );
+    return response.data;
+  },
+
   async getById(id: string): Promise<Transaction> {
     const response = await api.get<Transaction>(`/transactions/${id}`);
     return response.data;
