@@ -29,10 +29,12 @@ export const accountService = {
     const res = await api.delete(`/accounts/${id}`);
     return res.data;
   },
-  async payInvoice(creditCardId: string, checkingAccountId: string) {
+  async payInvoice(creditCardId: string, checkingAccountId: string, year: number, month: number) {
     const res = await api.post('/accounts/pay-invoice', {
       creditCardId,
       checkingAccountId,
+      year,
+      month,
     });
     return res.data;
   },

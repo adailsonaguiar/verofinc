@@ -254,38 +254,27 @@ export const CreditCardsPage: React.FC = () => {
   const hasPrevious = currentIndex < availableMonths.length - 1;
   const hasNext = currentIndex > 0;
 
-  const selectedCardLimit = selectedCard ? selectedCard.creditLimit || 0 : 0;
-  const selectedCardBalance = selectedCard
-    ? selectedCard.initialBalance || 0
-    : 0;
-  const selectedCardAvailableLimit =
-    (selectedCardLimit - selectedCardBalance) / 100;
+  // Fatura do mês selecionado: soma de despesas do mês menos pagamentos já feitos no mês
+  const monthExpensesSum = transactions
+    .filter((t) => t.type === 'expense' && !t.isPayment)
+    .reduce((sum, t) => sum + t.amount, 0);
+  const monthPaymentsSum = transactions
+    .filter((t) => t.type === 'income' && t.isPayment)
+    .reduce((sum, t) => sum + t.amount, 0);
+  const monthInvoiceAmount = (monthExpensesSum - monthPaymentsSum) / 100;
+  const monthInvoicePaid = monthInvoiceAmount <= 0;
 
   const handlePayInvoice = async () => {
     if (!selectedCard || !selectedCheckingAccount) return;
 
-    if (selectedCardAvailableLimit <= 0) {
-      alert('Não há fatura para pagar.');
-      return;
-    }
-
-    if (
-      !window.confirm(
-        `Pagar fatura de R$ ${selectedCardAvailableLimit.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}?`,
-      )
-    ) {
-      return;
-    }
-
     try {
       setPayingInvoice(true);
-
-      // Chamar rota de pagamento de fatura
       await accountService.payInvoice(
         selectedCard._id,
         selectedCheckingAccount,
+        currentYear,
+        currentMonth,
       );
-
       alert('Fatura paga com sucesso!');
       setShowPaymentModal(false);
       await loadCards();
@@ -433,14 +422,14 @@ export const CreditCardsPage: React.FC = () => {
                     <p className="font-bold text-lg mb-1">{card.name}</p>
                     <p className="text-sm opacity-90">
                       Fatura: R${' '}
-                      {selectedCardAvailableLimit.toLocaleString('pt-BR', {
+                      {((card.creditLimit - card.initialBalance) / 100).toLocaleString('pt-BR', {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })}
                     </p>
                     <p className="text-xs opacity-75 mt-0.5">
                       Limite: R${' '}
-                      {(selectedCardLimit / 100).toLocaleString('pt-BR', {
+                      {(card.creditLimit / 100).toLocaleString('pt-BR', {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })}
@@ -456,9 +445,21 @@ export const CreditCardsPage: React.FC = () => {
         {selectedCard && (
           <div className="mt-8">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900">
-                Transações - {selectedCard.name}
-              </h3>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">
+                  Transações - {selectedCard.name}
+                </h3>
+                {currentMonthLabel && (
+                  <p className="text-sm text-gray-500 mt-0.5">
+                    Fatura de {currentMonthLabel}:{' '}
+                    <span className={monthInvoicePaid ? 'text-green-600 font-semibold' : 'text-purple-600 font-semibold'}>
+                      {monthInvoicePaid
+                        ? 'Paga'
+                        : `R$ ${monthInvoiceAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    </span>
+                  </p>
+                )}
+              </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => {
@@ -472,10 +473,11 @@ export const CreditCardsPage: React.FC = () => {
                 </button>
                 <button
                   onClick={handleOpenPaymentModal}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  disabled={monthInvoicePaid}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                 >
                   <Wallet className="w-4 h-4" />
-                  Pagar Fatura
+                  {monthInvoicePaid ? 'Fatura Paga' : 'Pagar Fatura'}
                 </button>
               </div>
             </div>
@@ -570,10 +572,10 @@ export const CreditCardsPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Valor da Fatura</p>
+                  <p className="text-sm text-gray-600 mb-1">Fatura de {currentMonthLabel}</p>
                   <p className="text-2xl font-bold text-purple-600">
                     R${' '}
-                    {selectedCardAvailableLimit.toLocaleString('pt-BR', {
+                    {monthInvoiceAmount.toLocaleString('pt-BR', {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}

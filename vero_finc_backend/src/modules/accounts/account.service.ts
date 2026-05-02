@@ -76,7 +76,12 @@ export class AccountService {
       .then((accounts) => accounts.filter((acc) => acc.type === type));
   }
 
-  async payInvoice(creditCardId: string, checkingAccountId: string) {
+  async payInvoice(
+    creditCardId: string,
+    checkingAccountId: string,
+    year: number,
+    month: number
+  ) {
     // Buscar cartão de crédito
     const creditCard = await this.accountRepository.findById(creditCardId);
     if (!creditCard) {
@@ -100,36 +105,53 @@ export class AccountService {
       throw new BadRequestException('Account must be a checking account');
     }
 
-    // Calcular valor da fatura: creditLimit - saldo atual
-    const invoiceAmount =
-      (creditCard.creditLimit - creditCard.initialBalance) / 100;
+    // Calcular fatura do mês com base nas transações do mês selecionado
+    const monthTransactions = await this.transactionsService.findWithFilters({
+      account: creditCardId,
+      year,
+      month,
+      withCreditCardFilter: true,
+    });
+
+    const monthExpenses = monthTransactions
+      .filter((t) => t.type === TransactionType.EXPENSE && !t.isPayment)
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const monthPayments = monthTransactions
+      .filter((t) => t.type === TransactionType.INCOME && t.isPayment)
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const invoiceAmount = (monthExpenses - monthPayments) / 100;
 
     if (invoiceAmount <= 0) {
-      throw new BadRequestException('No invoice to pay');
+      throw new BadRequestException('No invoice to pay for this month');
     }
 
     // Buscar ou criar categoria do sistema "Pagamento de Fatura"
     let sysCategory = null;
     const allExpCategories = await this.categoriesService.findByType('expense');
-    sysCategory = allExpCategories.find(c => c.name === 'Pagamento de Fatura' || c.name === 'Pagamento de fatura');
-    
+    sysCategory = allExpCategories.find(
+      (c) => c.name === 'Pagamento de Fatura' || c.name === 'Pagamento de fatura'
+    );
+
     if (!sysCategory) {
       sysCategory = await this.categoriesService.create({
         name: 'Pagamento de Fatura',
         type: 'expense' as any,
         active: true,
-        icon: '💳'
+        icon: '💳',
       });
     }
 
     const magicCategoryId = (sysCategory as any)._id.toString();
-    const dateStr = new Date().toISOString().split('T')[0];
+    // Data do pagamento = último dia do mês selecionado
+    const paymentDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
 
     // Criar transação de pagamento na conta corrente (despesa)
     await this.transactionsService.create({
-      description: `Pagamento fatura ${creditCard.name}`,
+      description: `Pagamento fatura ${creditCard.name} ${String(month).padStart(2, '0')}/${year}`,
       amount: invoiceAmount,
-      date: dateStr,
+      date: paymentDate,
       type: TransactionType.EXPENSE,
       categoryId: magicCategoryId,
       status: TransactionStatus.PAID,
@@ -140,9 +162,9 @@ export class AccountService {
     // Criar transação de recebimento no cartão (receita)
     await this.transactionsService.create(
       {
-        description: `Pagamento fatura ${creditCard.name}`,
+        description: `Pagamento fatura ${creditCard.name} ${String(month).padStart(2, '0')}/${year}`,
         amount: invoiceAmount,
-        date: dateStr,
+        date: paymentDate,
         type: TransactionType.INCOME,
         categoryId: magicCategoryId,
         status: TransactionStatus.PAID,
@@ -156,6 +178,8 @@ export class AccountService {
       creditCardId,
       checkingAccountId,
       invoiceAmount,
+      year,
+      month,
       creditCardName: creditCard.name,
       checkingAccountName: checkingAccount.name,
       message: 'Invoice payment processed successfully',

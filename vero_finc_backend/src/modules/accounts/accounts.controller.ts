@@ -49,8 +49,10 @@ export class AccountsController {
   @Post('pay-invoice')
   payInvoice(
     @Body('creditCardId') creditCardId: string,
-    @Body('checkingAccountId') checkingAccountId: string
+    @Body('checkingAccountId') checkingAccountId: string,
+    @Body('year') year: number,
+    @Body('month') month: number
   ) {
-    return this.accountService.payInvoice(creditCardId, checkingAccountId);
+    return this.accountService.payInvoice(creditCardId, checkingAccountId, year, month);
   }
 }
