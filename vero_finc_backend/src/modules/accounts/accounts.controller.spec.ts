@@ -160,12 +160,16 @@ describe('AccountsController', () => {
 
       const result = await controller.payInvoice(
         creditCardId,
-        checkingAccountId
+        checkingAccountId,
+        2026,
+        5
       );
 
       expect(accountService.payInvoice).toHaveBeenCalledWith(
         creditCardId,
-        checkingAccountId
+        checkingAccountId,
+        2026,
+        5
       );
       expect(result).toEqual(paymentResult);
     });

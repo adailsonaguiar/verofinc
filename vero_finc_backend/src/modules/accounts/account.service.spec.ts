@@ -21,7 +21,7 @@ describe('AccountService', () => {
     update: Mock;
     delete: Mock;
   };
-  let transactionsService: { create: Mock };
+  let transactionsService: { create: Mock; findWithFilters: Mock };
   let categoriesService: { findByType: Mock; create: Mock };
 
   const makeId = () => new Types.ObjectId();
@@ -37,6 +37,7 @@ describe('AccountService', () => {
 
     transactionsService = {
       create: vi.fn(),
+      findWithFilters: vi.fn().mockResolvedValue([]),
     };
 
     categoriesService = {
@@ -267,9 +268,9 @@ describe('AccountService', () => {
     it('should throw NotFoundException when credit card is not found', async () => {
       accountRepo.findById.mockResolvedValueOnce(null);
 
-      await expect(service.payInvoice('cc-id', 'check-id')).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        service.payInvoice('cc-id', 'check-id', 2026, 5)
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException when first account is not a credit card', async () => {
@@ -277,7 +278,7 @@ describe('AccountService', () => {
       accountRepo.findById.mockResolvedValueOnce(notACard);
 
       await expect(
-        service.payInvoice(notACard._id.toString(), 'check-id')
+        service.payInvoice(notACard._id.toString(), 'check-id', 2026, 5)
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -287,7 +288,7 @@ describe('AccountService', () => {
       accountRepo.findById.mockResolvedValueOnce(null);
 
       await expect(
-        service.payInvoice(card._id.toString(), 'check-id')
+        service.payInvoice(card._id.toString(), 'check-id', 2026, 5)
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -298,22 +299,30 @@ describe('AccountService', () => {
       accountRepo.findById.mockResolvedValueOnce(anotherCard);
 
       await expect(
-        service.payInvoice(card._id.toString(), anotherCard._id.toString())
+        service.payInvoice(
+          card._id.toString(),
+          anotherCard._id.toString(),
+          2026,
+          5
+        )
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should throw BadRequestException when there is no invoice to pay (balance === limit)', async () => {
-      // initialBalance === creditLimit → invoiceAmount = 0
-      const card = buildCreditCard({
-        creditLimit: 100000,
-        initialBalance: 100000,
-      });
+    it('should throw BadRequestException when there is no invoice to pay (no expenses in month)', async () => {
+      // findWithFilters returns no transactions → invoiceAmount = 0
+      const card = buildCreditCard();
       const checking = buildCheckingAccount();
       accountRepo.findById.mockResolvedValueOnce(card);
       accountRepo.findById.mockResolvedValueOnce(checking);
+      transactionsService.findWithFilters.mockResolvedValueOnce([]);
 
       await expect(
-        service.payInvoice(card._id.toString(), checking._id.toString())
+        service.payInvoice(
+          card._id.toString(),
+          checking._id.toString(),
+          2026,
+          5
+        )
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -322,6 +331,9 @@ describe('AccountService', () => {
       const checking = buildCheckingAccount();
       accountRepo.findById.mockResolvedValueOnce(card);
       accountRepo.findById.mockResolvedValueOnce(checking);
+      transactionsService.findWithFilters.mockResolvedValueOnce([
+        { type: TransactionType.EXPENSE, isPayment: false, amount: 10000 },
+      ]);
 
       const existingCategory = {
         _id: makeId(),
@@ -331,7 +343,12 @@ describe('AccountService', () => {
       categoriesService.findByType.mockResolvedValue([existingCategory]);
       transactionsService.create.mockResolvedValue({});
 
-      await service.payInvoice(card._id.toString(), checking._id.toString());
+      await service.payInvoice(
+        card._id.toString(),
+        checking._id.toString(),
+        2026,
+        5
+      );
 
       expect(categoriesService.create).not.toHaveBeenCalled();
     });
@@ -341,6 +358,9 @@ describe('AccountService', () => {
       const checking = buildCheckingAccount();
       accountRepo.findById.mockResolvedValueOnce(card);
       accountRepo.findById.mockResolvedValueOnce(checking);
+      transactionsService.findWithFilters.mockResolvedValueOnce([
+        { type: TransactionType.EXPENSE, isPayment: false, amount: 10000 },
+      ]);
 
       categoriesService.findByType.mockResolvedValue([]);
       const newCategory = {
@@ -351,7 +371,12 @@ describe('AccountService', () => {
       categoriesService.create.mockResolvedValue(newCategory);
       transactionsService.create.mockResolvedValue({});
 
-      await service.payInvoice(card._id.toString(), checking._id.toString());
+      await service.payInvoice(
+        card._id.toString(),
+        checking._id.toString(),
+        2026,
+        5
+      );
 
       expect(categoriesService.create).toHaveBeenCalledWith(
         expect.objectContaining({ name: 'Pagamento de Fatura' })
@@ -363,10 +388,13 @@ describe('AccountService', () => {
         creditLimit: 100000,
         initialBalance: 60000,
       });
-      // invoiceAmount = (100000 - 60000) / 100 = 400
+      // month has 40000 cents in expenses → invoiceAmount = 40000 / 100 = 400
       const checking = buildCheckingAccount();
       accountRepo.findById.mockResolvedValueOnce(card);
       accountRepo.findById.mockResolvedValueOnce(checking);
+      transactionsService.findWithFilters.mockResolvedValueOnce([
+        { type: TransactionType.EXPENSE, isPayment: false, amount: 40000 },
+      ]);
 
       const category = {
         _id: makeId(),
@@ -378,7 +406,9 @@ describe('AccountService', () => {
 
       const result = await service.payInvoice(
         card._id.toString(),
-        checking._id.toString()
+        checking._id.toString(),
+        2026,
+        5
       );
 
       expect(transactionsService.create).toHaveBeenCalledTimes(2);

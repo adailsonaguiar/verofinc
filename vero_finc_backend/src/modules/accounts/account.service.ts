@@ -42,11 +42,7 @@ export class AccountService {
     return account;
   }
 
-  async update(
-    id: string,
-    data: Partial<Account>,
-    isFromApi: boolean = false
-  ) {
+  async update(id: string, data: Partial<Account>, isFromApi: boolean = false) {
     const updatePayload: any = { ...data };
     if (isFromApi) {
       if (updatePayload.initialBalance !== undefined) {
@@ -131,7 +127,8 @@ export class AccountService {
     let sysCategory = null;
     const allExpCategories = await this.categoriesService.findByType('expense');
     sysCategory = allExpCategories.find(
-      (c) => c.name === 'Pagamento de Fatura' || c.name === 'Pagamento de fatura'
+      (c) =>
+        c.name === 'Pagamento de Fatura' || c.name === 'Pagamento de fatura'
     );
 
     if (!sysCategory) {
@@ -145,7 +142,9 @@ export class AccountService {
 
     const magicCategoryId = (sysCategory as any)._id.toString();
     // Data do pagamento = último dia do mês selecionado
-    const paymentDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
+    const paymentDate = new Date(year, month - 1, 1)
+      .toISOString()
+      .split('T')[0];
 
     // Criar transação de pagamento na conta corrente (despesa)
     await this.transactionsService.create({
