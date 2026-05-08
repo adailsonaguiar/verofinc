@@ -19,6 +19,7 @@ import {
 import { TransactionCard } from '../components/TransactionCard';
 import { TransactionModal } from '../components/TransactionModal';
 import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import api from '../services/api';
 
 export const CreditCardsPage: React.FC = () => {
@@ -173,7 +174,9 @@ export const CreditCardsPage: React.FC = () => {
       const formattedMonths = months.map((m) => ({
         year: m.year,
         month: m.month,
-        label: format(new Date(m.year, m.month - 1), 'MMMM yyyy'),
+        label: format(new Date(m.year, m.month - 1), 'MMMM yyyy', {
+          locale: ptBR,
+        }),
       }));
       setAvailableMonths(formattedMonths);
     } catch (err) {
@@ -195,7 +198,10 @@ export const CreditCardsPage: React.FC = () => {
         .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
         .join('&');
       const res = await api.get(`transactions?${query}`);
-      setTransactions(res.data);
+      const sorted = [...(res.data as Transaction[])].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+      );
+      setTransactions(sorted);
     } catch (err) {
       console.error('Error loading card transactions:', err);
     } finally {
@@ -298,6 +304,7 @@ export const CreditCardsPage: React.FC = () => {
   const handleUpdateTransaction = async (data: UpdateTransactionDto) => {
     if (!editingTransaction) return;
     await transactionService.update(editingTransaction._id, data);
+    await loadAvailableMonths();
     await loadCardTransactions();
     await loadCards();
   };
@@ -421,7 +428,7 @@ export const CreditCardsPage: React.FC = () => {
                   <div>
                     <p className="font-bold text-lg mb-1">{card.name}</p>
                     <p className="text-sm opacity-90">
-                      Fatura: R${' '}
+                      Limite utilizado: R${' '}
                       {((card.creditLimit - card.initialBalance) / 100).toLocaleString('pt-BR', {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,

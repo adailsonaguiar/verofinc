@@ -127,9 +127,7 @@ export const TransactionsPage: React.FC = () => {
 
   const handleUpdateTransaction = async (data: UpdateTransactionDto) => {
     if (!editingTransaction) return;
-    const updateData = { ...data } as any;
-    delete updateData?.isFixed;
-    await transactionService.update(editingTransaction._id, updateData);
+    await transactionService.update(editingTransaction._id, data);
     await loadAvailableMonths();
     await loadMonthTransactions();
   };
