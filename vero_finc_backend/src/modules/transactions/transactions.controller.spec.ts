@@ -256,6 +256,48 @@ describe('TransactionsController', () => {
       expect(transactionsService.update).toHaveBeenCalledWith(id, dto);
       expect(result).toEqual(updated);
     });
+
+    it('should accept isFixed=true in the update payload', async () => {
+      const id = makeId();
+      const dto: any = {
+        description: 'MARIA LUCA PEREIA',
+        amount: 7,
+        date: '2026-05-01',
+        type: TransactionType.EXPENSE,
+        categoryId: makeId(),
+        status: TransactionStatus.PAID,
+        account: makeId(),
+        isFixed: true,
+      };
+      const updated = makeTx({ _id: id, ...dto, isFixed: true });
+      transactionsService.update.mockResolvedValue(updated);
+
+      const result = await controller.update(id, dto);
+
+      expect(transactionsService.update).toHaveBeenCalledWith(id, dto);
+      expect(result.isFixed).toBe(true);
+    });
+
+    it('should accept isFixed=false in the update payload', async () => {
+      const id = makeId();
+      const dto: any = {
+        description: 'MARIA LUCA PEREIA',
+        amount: 7,
+        date: '2026-05-01',
+        type: TransactionType.EXPENSE,
+        categoryId: makeId(),
+        status: TransactionStatus.PAID,
+        account: makeId(),
+        isFixed: false,
+      };
+      const updated = makeTx({ _id: id, ...dto, isFixed: false });
+      transactionsService.update.mockResolvedValue(updated);
+
+      const result = await controller.update(id, dto);
+
+      expect(transactionsService.update).toHaveBeenCalledWith(id, dto);
+      expect(result.isFixed).toBe(false);
+    });
   });
 
   // ---------------------------------------------------------------------------

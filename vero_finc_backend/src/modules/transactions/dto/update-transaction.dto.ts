@@ -10,6 +10,7 @@ import {
   IsString,
   Min,
   IsMongoId,
+  IsBoolean,
 } from 'class-validator';
 
 export class UpdateTransactionDto {
@@ -40,4 +41,8 @@ export class UpdateTransactionDto {
   @IsOptional()
   @IsEnum(TransactionStatus)
   status?: TransactionStatus;
+
+  @IsOptional()
+  @IsBoolean()
+  isFixed?: boolean;
 }
