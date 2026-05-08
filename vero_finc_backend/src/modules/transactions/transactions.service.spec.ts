@@ -10,7 +10,7 @@ import {
 } from '../../entities/transaction.entity';
 import { AccountType } from '../../entities/account.entity';
 import { Types } from 'mongoose';
-import { describe, it, expect, beforeEach, vi, Mock } from 'vitest';
+import { describe, it, expect, beforeEach, vi, Mock, afterEach } from 'vitest';
 
 describe('TransactionsService', () => {
   let service: TransactionsService;
@@ -608,6 +608,78 @@ describe('TransactionsService', () => {
       );
 
       expect(transactionRepo.create).toHaveBeenCalledWith(tx);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // buildDateWithCurrentTime
+  // ---------------------------------------------------------------------------
+  describe('buildDateWithCurrentTime', () => {
+    const FIXED_NOW = new Date('2026-05-07T17:30:45.123Z');
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(FIXED_NOW);
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('should preserve the date portion and inject the current time (string input)', () => {
+      const input = '2026-03-15';
+      const expectedBase = new Date(input);
+      const result = (service as any).buildDateWithCurrentTime(input);
+
+      expect(result.getFullYear()).toBe(expectedBase.getFullYear());
+      expect(result.getMonth()).toBe(expectedBase.getMonth());
+      expect(result.getDate()).toBe(expectedBase.getDate());
+      expect(result.getHours()).toBe(FIXED_NOW.getHours());
+      expect(result.getMinutes()).toBe(FIXED_NOW.getMinutes());
+      expect(result.getSeconds()).toBe(FIXED_NOW.getSeconds());
+      expect(result.getMilliseconds()).toBe(FIXED_NOW.getMilliseconds());
+    });
+
+    it('should preserve the date portion and inject the current time (Date object input)', () => {
+      const input = new Date('2025-12-01T08:00:00');
+      const result = (service as any).buildDateWithCurrentTime(input);
+
+      expect(result.getFullYear()).toBe(input.getFullYear());
+      expect(result.getMonth()).toBe(input.getMonth());
+      expect(result.getDate()).toBe(input.getDate());
+      expect(result.getHours()).toBe(FIXED_NOW.getHours());
+      expect(result.getMinutes()).toBe(FIXED_NOW.getMinutes());
+      expect(result.getSeconds()).toBe(FIXED_NOW.getSeconds());
+      expect(result.getMilliseconds()).toBe(FIXED_NOW.getMilliseconds());
+    });
+
+    it('should inject current time when creating a transaction', async () => {
+      const acc = makeCheckingAccount();
+      accountRepo.findById.mockResolvedValue(acc);
+      let capturedDate: Date | undefined;
+      transactionRepo.create.mockImplementation((tx: any) => {
+        capturedDate = tx.date;
+        return { ...tx, _id: makeId(), status: TransactionStatus.UNPAID };
+      });
+
+      await service.create({
+        description: 'Test',
+        amount: 10,
+        date: '2026-01-20',
+        type: TransactionType.EXPENSE,
+        categoryId: makeId().toString(),
+        status: TransactionStatus.UNPAID,
+        account: acc._id.toString(),
+      });
+
+      const expectedBase = new Date('2026-01-20');
+      expect(capturedDate!.getFullYear()).toBe(expectedBase.getFullYear());
+      expect(capturedDate!.getMonth()).toBe(expectedBase.getMonth());
+      expect(capturedDate!.getDate()).toBe(expectedBase.getDate());
+      expect(capturedDate!.getHours()).toBe(FIXED_NOW.getHours());
+      expect(capturedDate!.getMinutes()).toBe(FIXED_NOW.getMinutes());
+      expect(capturedDate!.getSeconds()).toBe(FIXED_NOW.getSeconds());
+      expect(capturedDate!.getMilliseconds()).toBe(FIXED_NOW.getMilliseconds());
     });
   });
 

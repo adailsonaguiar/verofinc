@@ -45,6 +45,18 @@ export class TransactionsService {
     });
   }
 
+  private buildDateWithCurrentTime(date: string | Date): Date {
+    const dateNow = new Date();
+    const transactionDate = new Date(date as any);
+    transactionDate.setHours(
+      dateNow.getHours(),
+      dateNow.getMinutes(),
+      dateNow.getSeconds(),
+      dateNow.getMilliseconds()
+    );
+    return transactionDate;
+  }
+
   private sortTransactionsByDate(transactions: Transaction[]): Transaction[] {
     return transactions.sort((a, b) => {
       const dateA = new Date(a.date).getTime();
@@ -107,13 +119,8 @@ export class TransactionsService {
       }
     }
 
-    const dateNow = new Date();
-    const transactionDate = new Date(createTransactionDto.date);
-    transactionDate.setHours(
-      dateNow.getHours(),
-      dateNow.getMinutes(),
-      dateNow.getSeconds(),
-      dateNow.getMilliseconds()
+    const transactionDate = this.buildDateWithCurrentTime(
+      createTransactionDto.date
     );
 
     const transaction: any = {
@@ -142,7 +149,9 @@ export class TransactionsService {
           new Types.ObjectId((created as any)._id)
         );
       } catch (error) {
-        await this.transactionRepository.delete((created as any)._id.toString());
+        await this.transactionRepository.delete(
+          (created as any)._id.toString()
+        );
         throw error;
       }
     }
@@ -154,7 +163,7 @@ export class TransactionsService {
         nextDate.setMonth(targetMonth);
 
         // Previne pular para o próximo mês se o dia for > 28-30 e o mês-alvo for mais curto
-        if (nextDate.getMonth() !== ((targetMonth % 12 + 12) % 12)) {
+        if (nextDate.getMonth() !== ((targetMonth % 12) + 12) % 12) {
           nextDate.setDate(0);
         }
 
@@ -170,7 +179,8 @@ export class TransactionsService {
           isPayment: transaction.isPayment,
         };
 
-        const nextCreated = await this.transactionRepository.create(nextTransaction);
+        const nextCreated =
+          await this.transactionRepository.create(nextTransaction);
 
         if (nextCreated.status === TransactionStatus.PAID) {
           try {
@@ -184,7 +194,9 @@ export class TransactionsService {
               new Types.ObjectId((nextCreated as any)._id)
             );
           } catch (error) {
-            await this.transactionRepository.delete((nextCreated as any)._id.toString());
+            await this.transactionRepository.delete(
+              (nextCreated as any)._id.toString()
+            );
             throw error;
           }
         }
@@ -337,9 +349,7 @@ export class TransactionsService {
         updateTransactionDto.amount !== undefined
           ? updateTransactionDto.amount
           : original.amount,
-      date: updateTransactionDto.date
-        ? new Date(updateTransactionDto.date)
-        : original.date,
+      date: original.date,
       type: updateTransactionDto.type || original.type,
       category: updateTransactionDto.categoryId
         ? new Types.ObjectId(updateTransactionDto.categoryId)
