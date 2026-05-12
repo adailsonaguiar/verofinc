@@ -96,6 +96,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           setStatus(initialData.status);
           setAccountId(initialData.account || '');
           setIsFixed(initialData.isFixed || false);
+          loadCategories(initialData.category._id);
         } else {
           setAmount('');
           setDescription('');
@@ -103,8 +104,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           setType(TransactionType.EXPENSE);
           setStatus(TransactionStatus.UNPAID);
           setIsFixed(false);
+          loadCategories();
         }
-        loadCategories();
       };
       initializeForm();
     }
@@ -166,15 +167,16 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     }
   };
 
-  const loadCategories = async () => {
+  const loadCategories = async (targetCategoryId?: string) => {
     try {
       setLoadingCategories(true);
       const data = await categoryService.getByType(type);
       setCategories(data);
-      if (data.length > 0 && !categoryId) {
+      const effectiveCategoryId = targetCategoryId !== undefined ? targetCategoryId : categoryId;
+      if (data.length > 0 && !effectiveCategoryId) {
         setCategoryId(data[0]._id);
       } else if (data.length > 0) {
-        const validCategory = data.find((cat) => cat._id === categoryId);
+        const validCategory = data.find((cat) => cat._id === effectiveCategoryId);
         if (!validCategory) setCategoryId(data[0]._id);
       } else {
         setCategoryId('');
