@@ -36,19 +36,20 @@ function App() {
     <div className="flex h-screen overflow-hidden bg-gray-50">
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
-      <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
+      <div className="flex-1 flex flex-col overflow-hidden bg-gray-50 pt-14 lg:pt-0">
         <MobileHeader
           onMenuClick={() => setIsSidebarOpen(true)}
           title="Vero Finc"
         />
 
-        <main className="flex-1 overflow-y-auto pt-14 lg:pt-0 bg-gradient-to-br from-gray-50 via-white to-gray-50">
-          {!isOnline && (
-            <div className="flex items-center justify-center gap-2 bg-amber-50 border-b border-amber-200 text-amber-700 text-xs font-semibold py-2 px-4">
-              <WifiOff className="w-3.5 h-3.5 shrink-0" />
-              <span>Sem conexão — exibindo dados salvos localmente</span>
-            </div>
-          )}
+        {!isOnline && (
+          <div className="flex items-center justify-center gap-2 bg-amber-50 border-b border-amber-200 text-amber-700 text-xs font-semibold py-2 px-4 shrink-0">
+            <WifiOff className="w-3.5 h-3.5 shrink-0" />
+            <span>Sem conexão — exibindo dados salvos localmente</span>
+          </div>
+        )}
+
+        <main className="flex-1 overflow-y-auto bg-gradient-to-br from-gray-50 via-white to-gray-50">
           <Outlet />
         </main>
       </div>
