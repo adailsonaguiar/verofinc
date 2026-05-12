@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { WifiOff } from 'lucide-react';
 import {
   BrowserRouter as Router,
   Routes,
@@ -18,6 +19,18 @@ import { RequireAuth } from './contexts/AuthContext';
 
 function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const goOnline = () => setIsOnline(true);
+    const goOffline = () => setIsOnline(false);
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
+    return () => {
+      window.removeEventListener('online', goOnline);
+      window.removeEventListener('offline', goOffline);
+    };
+  }, []);
 
   const AppLayout = () => (
     <div className="flex h-screen overflow-hidden bg-gray-50">
@@ -30,6 +43,12 @@ function App() {
         />
 
         <main className="flex-1 overflow-y-auto pt-14 lg:pt-0 bg-gradient-to-br from-gray-50 via-white to-gray-50">
+          {!isOnline && (
+            <div className="flex items-center justify-center gap-2 bg-amber-50 border-b border-amber-200 text-amber-700 text-xs font-semibold py-2 px-4">
+              <WifiOff className="w-3.5 h-3.5 shrink-0" />
+              <span>Sem conexão — exibindo dados salvos localmente</span>
+            </div>
+          )}
           <Outlet />
         </main>
       </div>

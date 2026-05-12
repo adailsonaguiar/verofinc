@@ -9,6 +9,25 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'maskable-icon.png'],
+      workbox: {
+        runtimeCaching: [
+          {
+            // Cache all API calls with NetworkFirst — falls back to SW cache offline
+            urlPattern: ({ url }) =>
+              url.pathname.startsWith('/api') || url.pathname.startsWith('/transactions') || url.pathname.startsWith('/accounts') || url.pathname.startsWith('/categories'),
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'verofinc-api-v1',
+              expiration: {
+                maxEntries: 300,
+                maxAgeSeconds: 60 * 60 * 24, // 24h
+              },
+              networkTimeoutSeconds: 8,
+              cacheableResponse: { statuses: [200] },
+            },
+          },
+        ],
+      },
       manifest: {
         name: 'VeroFinc - Gerenciador Financeiro',
         short_name: 'VeroFinc',
