@@ -17,6 +17,7 @@ describe('TransactionsController', () => {
     findOne: Mock;
     update: Mock;
     remove: Mock;
+    reorder: Mock;
   };
 
   const makeId = () => new Types.ObjectId().toString();
@@ -40,6 +41,7 @@ describe('TransactionsController', () => {
       findOne: vi.fn(),
       update: vi.fn(),
       remove: vi.fn(),
+      reorder: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -311,6 +313,37 @@ describe('TransactionsController', () => {
       await controller.remove(id);
 
       expect(transactionsService.remove).toHaveBeenCalledWith(id);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /transactions/reorder
+  // ---------------------------------------------------------------------------
+  describe('reorder', () => {
+    it('should delegate ids to transactionsService.reorder', async () => {
+      const ids = [makeId(), makeId(), makeId()];
+      transactionsService.reorder.mockResolvedValue(undefined);
+
+      await controller.reorder(ids);
+
+      expect(transactionsService.reorder).toHaveBeenCalledOnce();
+      expect(transactionsService.reorder).toHaveBeenCalledWith(ids);
+    });
+
+    it('should accept an empty array of ids', async () => {
+      transactionsService.reorder.mockResolvedValue(undefined);
+
+      await controller.reorder([]);
+
+      expect(transactionsService.reorder).toHaveBeenCalledWith([]);
+    });
+
+    it('should return undefined (no body) after successful reorder', async () => {
+      transactionsService.reorder.mockResolvedValue(undefined);
+
+      const result = await controller.reorder([makeId()]);
+
+      expect(result).toBeUndefined();
     });
   });
 });

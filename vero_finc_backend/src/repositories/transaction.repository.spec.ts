@@ -48,6 +48,7 @@ describe('TransactionRepository', () => {
     MockModel.findById = vi.fn();
     MockModel.findByIdAndUpdate = vi.fn();
     MockModel.findByIdAndDelete = vi.fn();
+    MockModel.bulkWrite = vi.fn().mockResolvedValue({});
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -285,6 +286,54 @@ describe('TransactionRepository', () => {
       const result = await repository.getAvailableMonths();
 
       expect(result).toEqual([]);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // reorder
+  // ---------------------------------------------------------------------------
+  describe('reorder', () => {
+    it('should call bulkWrite with updateOne ops assigning sortOrder = ids.length - index', async () => {
+      const ids = [
+        new Types.ObjectId().toString(),
+        new Types.ObjectId().toString(),
+        new Types.ObjectId().toString(),
+      ];
+
+      await repository.reorder(ids);
+
+      expect(MockModel.bulkWrite).toHaveBeenCalledOnce();
+      const [ops] = MockModel.bulkWrite.mock.calls[0] as [any[]];
+
+      expect(ops).toHaveLength(3);
+
+      // first id gets highest sortOrder (ids.length - 0 = 3)
+      expect(ops[0].updateOne.update.$set.sortOrder).toBe(3);
+      expect(ops[0].updateOne.filter._id.toString()).toBe(ids[0]);
+
+      // second id gets sortOrder 2
+      expect(ops[1].updateOne.update.$set.sortOrder).toBe(2);
+      expect(ops[1].updateOne.filter._id.toString()).toBe(ids[1]);
+
+      // third id gets lowest sortOrder (1)
+      expect(ops[2].updateOne.update.$set.sortOrder).toBe(1);
+      expect(ops[2].updateOne.filter._id.toString()).toBe(ids[2]);
+    });
+
+    it('should call bulkWrite with an empty array when ids is empty', async () => {
+      await repository.reorder([]);
+
+      expect(MockModel.bulkWrite).toHaveBeenCalledWith([]);
+    });
+
+    it('should assign sortOrder 1 to a single id', async () => {
+      const id = new Types.ObjectId().toString();
+
+      await repository.reorder([id]);
+
+      const [ops] = MockModel.bulkWrite.mock.calls[0] as [any[]];
+      expect(ops[0].updateOne.update.$set.sortOrder).toBe(1);
+      expect(ops[0].updateOne.filter._id.toString()).toBe(id);
     });
   });
 });

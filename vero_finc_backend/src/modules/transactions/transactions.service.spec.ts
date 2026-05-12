@@ -28,6 +28,7 @@ describe('TransactionsService', () => {
     findByDateRange: Mock;
     findByMonth: Mock;
     getAvailableMonths: Mock;
+    reorder: Mock;
   };
   let ledgerService: {
     logOperation: Mock;
@@ -75,6 +76,7 @@ describe('TransactionsService', () => {
       findByDateRange: vi.fn(),
       findByMonth: vi.fn(),
       getAvailableMonths: vi.fn(),
+      reorder: vi.fn(),
     };
     ledgerService = {
       logOperation: vi.fn(),
@@ -698,6 +700,120 @@ describe('TransactionsService', () => {
 
       expect(transactionRepo.getAvailableMonths).toHaveBeenCalledTimes(1);
       expect(result).toEqual(months);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // reorder
+  // ---------------------------------------------------------------------------
+  describe('reorder', () => {
+    it('should delegate to transactionRepository.reorder', async () => {
+      const ids = [
+        new Types.ObjectId().toString(),
+        new Types.ObjectId().toString(),
+        new Types.ObjectId().toString(),
+      ];
+      transactionRepo.reorder.mockResolvedValue(undefined);
+
+      await service.reorder(ids);
+
+      expect(transactionRepo.reorder).toHaveBeenCalledOnce();
+      expect(transactionRepo.reorder).toHaveBeenCalledWith(ids);
+    });
+
+    it('should pass an empty array when ids is empty', async () => {
+      transactionRepo.reorder.mockResolvedValue(undefined);
+
+      await service.reorder([]);
+
+      expect(transactionRepo.reorder).toHaveBeenCalledWith([]);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // sortTransactionsByDate (sortOrder-aware)
+  // ---------------------------------------------------------------------------
+  describe('sortTransactionsByDate (via findWithFilters)', () => {
+    it('should return items ordered by sortOrder DESC when sortOrder differs', async () => {
+      const account = makeCheckingAccount();
+      accountRepo.findAll.mockResolvedValue([account]);
+
+      const accId = account._id;
+      const txA = makeTx({
+        account: accId,
+        sortOrder: 1,
+        date: new Date('2026-05-01'),
+      });
+      const txB = makeTx({
+        account: accId,
+        sortOrder: 5,
+        date: new Date('2026-05-01'),
+      });
+      const txC = makeTx({
+        account: accId,
+        sortOrder: 3,
+        date: new Date('2026-05-01'),
+      });
+
+      // repo returns them in arbitrary order; service must sort
+      transactionRepo.findWithFilters.mockResolvedValue([txA, txC, txB]);
+
+      const result = await service.findWithFilters({});
+
+      expect(result[0].sortOrder).toBe(5);
+      expect(result[1].sortOrder).toBe(3);
+      expect(result[2].sortOrder).toBe(1);
+    });
+
+    it('should fall back to date DESC when sortOrder is equal', async () => {
+      const account = makeCheckingAccount();
+      accountRepo.findAll.mockResolvedValue([account]);
+
+      const accId = account._id;
+      const older = makeTx({
+        account: accId,
+        sortOrder: 0,
+        date: new Date('2026-04-01'),
+      });
+      const newer = makeTx({
+        account: accId,
+        sortOrder: 0,
+        date: new Date('2026-05-15'),
+      });
+
+      transactionRepo.findWithFilters.mockResolvedValue([older, newer]);
+
+      const result = await service.findWithFilters({});
+
+      expect(new Date(result[0].date).getTime()).toBeGreaterThan(
+        new Date(result[1].date).getTime()
+      );
+    });
+
+    it('should place higher sortOrder before newer date', async () => {
+      const account = makeCheckingAccount();
+      accountRepo.findAll.mockResolvedValue([account]);
+
+      const accId = account._id;
+      // txOld has higher sortOrder and an older date — should still come first
+      const txOld = makeTx({
+        account: accId,
+        sortOrder: 10,
+        date: new Date('2025-01-01'),
+      });
+      // txNew has lower sortOrder and a newer date
+      const txNew = makeTx({
+        account: accId,
+        sortOrder: 1,
+        date: new Date('2026-05-01'),
+      });
+
+      transactionRepo.findWithFilters.mockResolvedValue([txNew, txOld]);
+
+      const result = await service.findWithFilters({});
+
+      expect(result[0].sortOrder).toBe(10);
+      expect(result[1].sortOrder).toBe(1);
     });
   });
 });
