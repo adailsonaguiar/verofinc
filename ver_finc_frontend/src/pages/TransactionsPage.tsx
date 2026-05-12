@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { accountService } from '../services/accountService';
 import { transactionService } from '../services/transactionService';
 import {
@@ -41,6 +41,11 @@ export const TransactionsPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] =
     useState<Transaction | null>(null);
+
+  // drag-and-drop secondary ordering
+  const [orderedTransactions, setOrderedTransactions] = useState<Transaction[]>([]);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const dragIndexRef = useRef<number | null>(null);
 
   useEffect(() => {
     loadCategories();
@@ -111,6 +116,7 @@ export const TransactionsPage: React.FC = () => {
         .join('&');
       const res = await api.get(`/transactions?${query}`);
       setTransactions(res?.data);
+      setOrderedTransactions(res?.data ?? []);
     } catch (err) {
       // setError('Falha ao carregar transações. Verifique se o backend está rodando.');
       console.error('Error loading transactions:', err);
@@ -155,6 +161,44 @@ export const TransactionsPage: React.FC = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingTransaction(null);
+  };
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    dragIndexRef.current = index;
+    setDraggingId(orderedTransactions[index]._id);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = async (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    const fromIndex = dragIndexRef.current;
+    if (fromIndex === null || fromIndex === dropIndex) {
+      setDraggingId(null);
+      dragIndexRef.current = null;
+      return;
+    }
+    const newOrder = [...orderedTransactions];
+    const [removed] = newOrder.splice(fromIndex, 1);
+    newOrder.splice(dropIndex, 0, removed);
+    setOrderedTransactions(newOrder);
+    setDraggingId(null);
+    dragIndexRef.current = null;
+    try {
+      await transactionService.reorder(newOrder.map((t) => t._id));
+    } catch (err) {
+      console.error('Erro ao persistir ordenação:', err);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggingId(null);
+    dragIndexRef.current = null;
   };
 
   const handlePreviousMonth = () => {
@@ -387,14 +431,20 @@ export const TransactionsPage: React.FC = () => {
 
         {/* Transactions List */}
         <div className="space-y-4">
-          {transactions.length > 0 ? (
+          {orderedTransactions.length > 0 ? (
             <div className="grid grid-cols-1 gap-4">
-              {transactions.map((transaction) => (
+              {orderedTransactions.map((transaction, index) => (
                 <TransactionCard
                   key={transaction._id}
                   transaction={transaction}
                   onEdit={handleEditTransaction}
                   onDelete={handleDeleteTransaction}
+                  isDraggable
+                  isDragging={draggingId === transaction._id}
+                  onDragStart={(e) => handleDragStart(e, index)}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, index)}
+                  onDragEnd={handleDragEnd}
                 />
               ))}
             </div>

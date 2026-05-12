@@ -37,6 +37,7 @@ export interface Transaction {
   account: string;
   isFixed?: boolean;
   isPayment?: boolean;
+  sortOrder?: number;
 }
 
 export interface CreateTransactionDto {

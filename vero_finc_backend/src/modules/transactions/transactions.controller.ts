@@ -60,6 +60,11 @@ export class TransactionsController {
     return this.transactionsService.getAvailableMonths();
   }
 
+  @Post('reorder')
+  reorder(@Body('ids') ids: string[]) {
+    return this.transactionsService.reorder(ids);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.transactionsService.findOne(id);

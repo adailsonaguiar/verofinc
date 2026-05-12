@@ -14,6 +14,7 @@ export class TransactionRepository {
     if (filters.category) {
       // Aceita tanto string quanto ObjectId
       try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
         const { Types } = require('mongoose');
         query.category = Types.ObjectId.isValid(filters.category)
           ? new Types.ObjectId(filters.category)
@@ -44,7 +45,7 @@ export class TransactionRepository {
     return this.transactionModel
       .find(query)
       .populate('category')
-      .sort({ date: -1 })
+      .sort({ sortOrder: -1, date: -1 })
       .exec();
   }
 
@@ -92,6 +93,17 @@ export class TransactionRepository {
 
   async delete(id: string): Promise<Transaction> {
     return this.transactionModel.findByIdAndDelete(id).exec();
+  }
+
+  async reorder(ids: string[]): Promise<void> {
+    const { Types } = await import('mongoose');
+    const operations = ids.map((id, index) => ({
+      updateOne: {
+        filter: { _id: new Types.ObjectId(id) },
+        update: { $set: { sortOrder: ids.length - index } },
+      },
+    }));
+    await this.transactionModel.bulkWrite(operations);
   }
 
   async findByType(type: string): Promise<Transaction[]> {

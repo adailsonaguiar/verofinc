@@ -9,18 +9,31 @@ import {
   MoreVertical,
   Pencil,
   Trash2,
+  GripVertical,
 } from 'lucide-react';
 
 interface TransactionCardProps {
   transaction: Transaction;
   onEdit?: (transaction: Transaction) => void;
   onDelete?: (transaction: Transaction) => void;
+  isDraggable?: boolean;
+  isDragging?: boolean;
+  onDragStart?: (e: React.DragEvent) => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDrop?: (e: React.DragEvent) => void;
+  onDragEnd?: (e: React.DragEvent) => void;
 }
 
 export const TransactionCard: React.FC<TransactionCardProps> = ({
   transaction,
   onEdit,
   onDelete,
+  isDraggable = false,
+  isDragging = false,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
 }) => {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -44,11 +57,25 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
 
   return (
     <div
+      draggable={isDraggable}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
       className={`bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700/50 p-5 hover:border-indigo-200 dark:hover:border-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/5 transition-all duration-300 group ${
         !isPaid ? 'opacity-60 hover:opacity-100' : ''
+      } ${
+        isDragging ? 'opacity-40 scale-[0.98] border-indigo-300 dark:border-indigo-500/50 shadow-lg' : ''
+      } ${
+        isDraggable ? 'cursor-grab active:cursor-grabbing' : ''
       }`}
     >
       <div className="flex items-center justify-between gap-4">
+        {isDraggable && (
+          <div className="shrink-0 text-slate-300 dark:text-slate-600 hover:text-slate-400 dark:hover:text-slate-400 transition-colors cursor-grab active:cursor-grabbing">
+            <GripVertical className="w-4 h-4" />
+          </div>
+        )}
         <div className="flex items-center gap-4 flex-1">
           <div
             className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm transition-transform group-hover:scale-105 duration-300 ${

@@ -81,4 +81,8 @@ export const transactionService = {
     );
     return response.data;
   },
+
+  async reorder(ids: string[]): Promise<void> {
+    await api.post('/transactions/reorder', { ids });
+  },
 };

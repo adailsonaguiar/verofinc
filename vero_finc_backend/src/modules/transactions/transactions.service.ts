@@ -59,9 +59,12 @@ export class TransactionsService {
 
   private sortTransactionsByDate(transactions: Transaction[]): Transaction[] {
     return transactions.sort((a, b) => {
+      const orderA = (a as any).sortOrder ?? 0;
+      const orderB = (b as any).sortOrder ?? 0;
+      if (orderA !== orderB) return orderB - orderA; // sortOrder DESC
       const dateA = new Date(a.date).getTime();
       const dateB = new Date(b.date).getTime();
-      return dateB - dateA; // Decrescente (mais recentes primeiro)
+      return dateB - dateA; // date DESC as tiebreaker
     });
   }
 
@@ -443,5 +446,9 @@ export class TransactionsService {
 
   async getAvailableMonths(): Promise<{ year: number; month: number }[]> {
     return this.transactionRepository.getAvailableMonths();
+  }
+
+  async reorder(ids: string[]): Promise<void> {
+    await this.transactionRepository.reorder(ids);
   }
 }

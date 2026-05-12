@@ -50,6 +50,9 @@ export class Transaction {
   @Prop({ default: false })
   isPayment: boolean;
 
+  @Prop({ default: 0 })
+  sortOrder: number;
+
   createdAt: Date;
   updatedAt: Date;
 }
