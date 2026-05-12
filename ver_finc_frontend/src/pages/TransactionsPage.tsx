@@ -55,10 +55,10 @@ export const TransactionsPage: React.FC = () => {
 
   const loadAccounts = async () => {
     try {
-      const data = await accountService.getByType('checking');
+      const data = await accountService.getAll();
       setAccounts(data);
     } catch (err) {
-      console.error('Erro ao carregar contas correntes:', err);
+      console.error('Erro ao carregar contas:', err);
     }
   };
 
@@ -297,7 +297,7 @@ export const TransactionsPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
               <div className="space-y-2">
                 <label className="text-[13px] font-bold text-slate-500 dark:text-slate-400 ml-1">
-                  Conta Corrente
+                  Conta
                 </label>
                 <select
                   value={selectedAccount}
@@ -307,7 +307,7 @@ export const TransactionsPage: React.FC = () => {
                   <option value="all">Todas as Contas</option>
                   {accounts.map((acc) => (
                     <option key={acc._id} value={acc._id}>
-                      {acc.name}
+                      {acc.name}{acc.type === 'credit_card' ? ' (Cartão)' : ''}
                     </option>
                   ))}
                 </select>
