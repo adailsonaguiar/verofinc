@@ -494,12 +494,6 @@ export const CreditCardsPage: React.FC = () => {
                   <TransactionCard
                     key={transaction._id}
                     transaction={transaction}
-                    onEdit={() => handleEditTransaction(transaction)}
-                    onDelete={async () => {
-                      await transactionService.delete(transaction._id);
-                      loadCardTransactions();
-                      loadCards();
-                    }}
                   />
                 ))}
               </div>
