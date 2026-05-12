@@ -36,7 +36,7 @@ function App() {
     <div className="flex h-screen overflow-hidden bg-gray-50">
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
-      <div className="flex-1 flex flex-col overflow-hidden bg-gray-50 pt-14 lg:pt-0">
+      <div className="flex-1 flex flex-col overflow-hidden bg-gray-50 pt-20 lg:pt-0">
         <MobileHeader
           onMenuClick={() => setIsSidebarOpen(true)}
           title="Vero Finc"
