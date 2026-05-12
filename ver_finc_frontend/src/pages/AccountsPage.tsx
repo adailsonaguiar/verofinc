@@ -339,12 +339,6 @@ export const AccountsPage: React.FC = () => {
                   <TransactionCard
                     key={transaction._id}
                     transaction={transaction}
-                    onEdit={() => {}}
-                    onDelete={async () => {
-                      await transactionService.delete(transaction._id);
-                      loadAccountTransactions();
-                      loadAccounts();
-                    }}
                   />
                 ))}
               </div>
