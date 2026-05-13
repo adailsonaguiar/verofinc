@@ -100,18 +100,18 @@ export class TransactionRepository {
     const operations = ids.map((id, index) => ({
       updateOne: {
         filter: { _id: new Types.ObjectId(id) },
-        update: { $set: { sortOrder: ids.length - index } },
+        update: { $set: { sortOrder: ids.length - 1 - index } },
       },
     }));
     await this.transactionModel.bulkWrite(operations);
   }
 
-  async findMinSortOrderForMonth(year: number, month: number): Promise<number> {
+  async findMaxSortOrderForMonth(year: number, month: number): Promise<number> {
     const startDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
     const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
     const result = await this.transactionModel
       .findOne({ date: { $gte: startDate, $lte: endDate } })
-      .sort({ sortOrder: 1 })
+      .sort({ sortOrder: -1 })
       .select('sortOrder')
       .exec();
     return result ? ((result as any).sortOrder ?? 0) : 0;

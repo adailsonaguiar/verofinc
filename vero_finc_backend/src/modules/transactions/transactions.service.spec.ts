@@ -29,7 +29,7 @@ describe('TransactionsService', () => {
     findByMonth: Mock;
     getAvailableMonths: Mock;
     reorder: Mock;
-    findMinSortOrderForMonth: Mock;
+    findMaxSortOrderForMonth: Mock;
   };
   let ledgerService: {
     logOperation: Mock;
@@ -78,7 +78,7 @@ describe('TransactionsService', () => {
       findByMonth: vi.fn(),
       getAvailableMonths: vi.fn(),
       reorder: vi.fn(),
-      findMinSortOrderForMonth: vi.fn().mockResolvedValue(0),
+      findMaxSortOrderForMonth: vi.fn().mockResolvedValue(0),
     };
     ledgerService = {
       logOperation: vi.fn(),
@@ -216,10 +216,12 @@ describe('TransactionsService', () => {
       expect(transactionRepo.create).toHaveBeenCalledTimes(12);
     });
 
-    it('should assign sortOrder as minSortOrderForMonth - 1 on creation', async () => {
+    it('should assign sortOrder as maxSortOrderForMonth + 1 on creation', async () => {
       const mockAccount = makeCheckingAccount();
       accountRepo.findById.mockResolvedValue(mockAccount);
-      transactionRepo.findMinSortOrderForMonth.mockResolvedValue(3);
+      // Existing transactions have sortOrder 0..n-1; max = n-1.
+      // The new transaction should get max+1 = n, placing it at the top.
+      transactionRepo.findMaxSortOrderForMonth.mockResolvedValue(4);
       const createdTx = makeTx({ status: TransactionStatus.UNPAID });
       transactionRepo.create.mockResolvedValue(createdTx);
 
@@ -234,7 +236,7 @@ describe('TransactionsService', () => {
       });
 
       const createArgs = transactionRepo.create.mock.calls[0][0];
-      expect(createArgs.sortOrder).toBe(2); // 3 - 1 = 2, below minimum of 3
+      expect(createArgs.sortOrder).toBe(5); // 4 + 1 = 5, above maximum of 4
     });
   });
 

@@ -127,8 +127,8 @@ export class TransactionsService {
     const txDate = new Date(createTransactionDto.date);
     const txYear = txDate.getUTCFullYear();
     const txMonth = txDate.getUTCMonth() + 1;
-    const minSortOrder =
-      await this.transactionRepository.findMinSortOrderForMonth(
+    const maxSortOrder =
+      await this.transactionRepository.findMaxSortOrderForMonth(
         txYear,
         txMonth
       );
@@ -143,7 +143,7 @@ export class TransactionsService {
       account: createTransactionDto.account,
       isFixed: createTransactionDto.isFixed || false,
       isPayment: createTransactionDto.isPayment || false,
-      sortOrder: minSortOrder - 1,
+      sortOrder: maxSortOrder + 1,
     };
 
     const created = await this.transactionRepository.create(transaction);
