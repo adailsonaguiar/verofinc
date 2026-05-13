@@ -106,6 +106,17 @@ export class TransactionRepository {
     await this.transactionModel.bulkWrite(operations);
   }
 
+  async findMinSortOrderForMonth(year: number, month: number): Promise<number> {
+    const startDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
+    const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
+    const result = await this.transactionModel
+      .findOne({ date: { $gte: startDate, $lte: endDate } })
+      .sort({ sortOrder: 1 })
+      .select('sortOrder')
+      .exec();
+    return result ? ((result as any).sortOrder ?? 0) : 0;
+  }
+
   async findByType(type: string): Promise<Transaction[]> {
     return this.transactionModel.find({ type }).exec();
   }

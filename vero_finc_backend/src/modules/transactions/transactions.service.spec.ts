@@ -29,6 +29,7 @@ describe('TransactionsService', () => {
     findByMonth: Mock;
     getAvailableMonths: Mock;
     reorder: Mock;
+    findMinSortOrderForMonth: Mock;
   };
   let ledgerService: {
     logOperation: Mock;
@@ -77,6 +78,7 @@ describe('TransactionsService', () => {
       findByMonth: vi.fn(),
       getAvailableMonths: vi.fn(),
       reorder: vi.fn(),
+      findMinSortOrderForMonth: vi.fn().mockResolvedValue(0),
     };
     ledgerService = {
       logOperation: vi.fn(),
@@ -212,6 +214,27 @@ describe('TransactionsService', () => {
 
       // 1 base + 11 future
       expect(transactionRepo.create).toHaveBeenCalledTimes(12);
+    });
+
+    it('should assign sortOrder as minSortOrderForMonth - 1 on creation', async () => {
+      const mockAccount = makeCheckingAccount();
+      accountRepo.findById.mockResolvedValue(mockAccount);
+      transactionRepo.findMinSortOrderForMonth.mockResolvedValue(3);
+      const createdTx = makeTx({ status: TransactionStatus.UNPAID });
+      transactionRepo.create.mockResolvedValue(createdTx);
+
+      await service.create({
+        description: 'Test sortOrder',
+        amount: 10,
+        date: '2026-05-01',
+        type: TransactionType.EXPENSE,
+        categoryId: new Types.ObjectId().toString(),
+        status: TransactionStatus.UNPAID,
+        account: mockAccount._id.toString(),
+      });
+
+      const createArgs = transactionRepo.create.mock.calls[0][0];
+      expect(createArgs.sortOrder).toBe(2); // 3 - 1 = 2, below minimum of 3
     });
   });
 

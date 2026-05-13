@@ -1,8 +1,6 @@
 import {
   Injectable,
   NotFoundException,
-  Inject,
-  forwardRef,
   BadRequestException,
 } from '@nestjs/common';
 import { Types } from 'mongoose';
@@ -126,6 +124,15 @@ export class TransactionsService {
       createTransactionDto.date
     );
 
+    const txDate = new Date(createTransactionDto.date);
+    const txYear = txDate.getUTCFullYear();
+    const txMonth = txDate.getUTCMonth() + 1;
+    const minSortOrder =
+      await this.transactionRepository.findMinSortOrderForMonth(
+        txYear,
+        txMonth
+      );
+
     const transaction: any = {
       description: createTransactionDto.description,
       amount: createTransactionDto.amount,
@@ -136,6 +143,7 @@ export class TransactionsService {
       account: createTransactionDto.account,
       isFixed: createTransactionDto.isFixed || false,
       isPayment: createTransactionDto.isPayment || false,
+      sortOrder: minSortOrder - 1,
     };
 
     const created = await this.transactionRepository.create(transaction);
