@@ -9,6 +9,7 @@ import { LedgerModule } from './modules/ledger/ledger.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -29,6 +30,10 @@ import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
     LedgerModule,
     UsersModule,
     AuthModule,
+    ThrottlerModule.forRoot([{
+      ttl: 60000,
+      limit: 10,
+    }]),
   ],
   controllers: [],
   providers: [
