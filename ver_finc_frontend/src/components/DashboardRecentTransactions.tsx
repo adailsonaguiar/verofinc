@@ -1,79 +1,78 @@
 import React from 'react';
-import { ArrowUpRight, ArrowDownRight, Activity } from 'lucide-react';
+import { ArrowDown, ArrowUp, Activity } from 'lucide-react';
 import { Transaction } from '../types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { SectionTitle } from './SectionTitle';
+import { EmptyState } from './EmptyState';
 
-const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+const brl = (value: number) =>
+  value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 interface DashboardRecentTransactionsProps {
   transactions: Transaction[];
 }
 
-export const DashboardRecentTransactions: React.FC<DashboardRecentTransactionsProps> = ({
-  transactions,
-}) => (
+export const DashboardRecentTransactions: React.FC<
+  DashboardRecentTransactionsProps
+> = ({ transactions }) => (
   <>
-    <div className="mb-6">
-      <h2 className="text-lg font-bold text-slate-900 dark:text-white">Mais Recentes</h2>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-        Últimas movimentações.
-      </p>
-    </div>
+    <SectionTitle
+      title="Mais recentes"
+      subtitle="Últimas movimentações"
+      className="mb-3"
+    />
 
     {transactions.length > 0 ? (
-      <div className="flex-1 flex flex-col gap-5 overflow-y-auto pr-1">
-        {transactions.map((tx) => (
-          <div key={tx._id} className="flex items-center justify-between group">
-            <div className="flex items-center gap-4">
-              <div
-                className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${
-                  tx.type === 'income'
-                    ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                    : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400'
+      <div className="divide-classic -mx-1">
+        {transactions.map((tx) => {
+          const isIncome = tx.type === 'income';
+          return (
+            <div key={tx._id} className="flex items-center gap-3 px-1 py-3">
+              <span
+                className={`w-8 h-8 rounded-full grid place-items-center shrink-0 ${
+                  isIncome
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : 'bg-rose-100 text-rose-700'
                 }`}
               >
-                {tx.type === 'income' ? (
-                  <ArrowUpRight className="w-5 h-5" />
+                {isIncome ? (
+                  <ArrowDown className="w-4 h-4" />
                 ) : (
-                  <ArrowDownRight className="w-5 h-5" />
+                  <ArrowUp className="w-4 h-4" />
                 )}
-              </div>
-              <div className="overflow-hidden">
-                <p className="text-sm font-semibold text-slate-900 dark:text-white truncate max-w-[120px] sm:max-w-[180px]">
+              </span>
+
+              <div className="flex-1 min-w-0">
+                <div className="text-sm text-navy-900 truncate">
                   {tx.description}
-                </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                  {tx.category?.name || 'Sem categoria'} •{' '}
-                  {format(
-                    new Date(tx.date.split('T')[0] + 'T12:00:00'),
-                    'dd MMM',
-                    { locale: ptBR }
-                  )}
-                </p>
+                </div>
+                <div className="text-xs text-navy-500 mt-0.5 truncate">
+                  {tx.category?.name || 'Sem categoria'} ·{' '}
+                  {format(new Date(`${tx.date.split('T')[0]}T12:00:00`), 'dd/MM/yyyy', {
+                    locale: ptBR,
+                  })}
+                </div>
+              </div>
+
+              <div
+                className={`num text-sm shrink-0 ${
+                  isIncome ? 'text-emerald-700' : 'text-rose-700'
+                }`}
+              >
+                {isIncome ? '+' : '-'}
+                {brl(tx.amount / 100)}
               </div>
             </div>
-            <div
-              className={`text-sm font-bold whitespace-nowrap ${
-                tx.type === 'income'
-                  ? 'text-emerald-600 dark:text-emerald-400'
-                  : 'text-slate-900 dark:text-white'
-              }`}
-            >
-              {tx.type === 'income' ? '+' : '-'}
-              {fmt.format(tx.amount / 100)}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     ) : (
-      <div className="flex-1 flex flex-col items-center justify-center text-center">
-        <div className="w-16 h-16 bg-slate-50 dark:bg-slate-700/50 rounded-full flex items-center justify-center mb-4">
-          <Activity className="w-8 h-8 text-slate-400" />
-        </div>
-        <p className="text-slate-600 dark:text-slate-300 font-medium">Nenhuma transação</p>
-        <p className="text-sm text-slate-400 mt-1">Sua lista está vazia.</p>
-      </div>
+      <EmptyState
+        icon={<Activity className="w-5 h-5" />}
+        title="Nenhuma transação"
+        description="Sua lista está vazia."
+      />
     )}
   </>
 );

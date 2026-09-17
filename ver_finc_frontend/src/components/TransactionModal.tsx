@@ -19,11 +19,18 @@ import {
   CheckCircle2,
   Clock,
   AlignLeft,
-  Plus,
   Loader2,
+  TrendingDown,
+  TrendingUp,
 } from 'lucide-react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+
+interface AccountOption {
+  _id: string;
+  name: string;
+  type: string;
+}
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -48,7 +55,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   creditCardOnly = false,
   hideStatus = false,
 }) => {
-  const [accounts, setAccounts] = useState<any[]>([]);
+  const [accounts, setAccounts] = useState<AccountOption[]>([]);
   const [accountId, setAccountId] = useState('');
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
@@ -73,11 +80,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   }
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value;
-    const digits = raw.replace(/\D/g, '');
-    const limited = digits.slice(0, 12);
-    const formatted = formatCurrencyInput(limited);
-    setAmount(formatted);
+    const digits = e.target.value.replace(/\D/g, '').slice(0, 12);
+    setAmount(formatCurrencyInput(digits));
   };
 
   useEffect(() => {
@@ -113,7 +117,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
   useEffect(() => {
     const selectedAccount = accounts.find((acc) => acc._id === accountId);
-   if (selectedAccount?.type === 'credit_card') {
+    if (selectedAccount?.type === 'credit_card') {
       setStatus(TransactionStatus.PAID);
     }
   }, [accountId, accounts, hideStatus]);
@@ -158,7 +162,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       }
 
       if (!initialData && !accountId && allAccounts.length > 0) {
-        if(creditCardOnly) setAccountId(cards[0]._id);
+        if (creditCardOnly) setAccountId(cards[0]._id);
         else setAccountId(allAccounts[0]._id);
       }
     } catch (err) {
@@ -172,7 +176,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setLoadingCategories(true);
       const data = await categoryService.getByType(type);
       setCategories(data);
-      const effectiveCategoryId = targetCategoryId !== undefined ? targetCategoryId : categoryId;
+      const effectiveCategoryId =
+        targetCategoryId !== undefined ? targetCategoryId : categoryId;
       if (data.length > 0 && !effectiveCategoryId) {
         setCategoryId(data[0]._id);
       } else if (data.length > 0) {
@@ -204,7 +209,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       await onSubmit({
         description: description.trim(),
         amount: numericAmount,
-        date: date,
+        date,
         type,
         categoryId,
         status,
@@ -224,56 +229,54 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
   return (
     <>
-      <ToastContainer theme="dark" />
+      <ToastContainer theme="light" />
       <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
-        {/* Overlay */}
         <div
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity animate-in fade-in duration-300"
+          className="fixed inset-0 bg-navy-900/50 backdrop-blur-sm"
           onClick={onClose}
         />
 
-        {/* Modal Content */}
-        <div className="relative z-10 w-full max-w-xl bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-slate-800 transition-all duration-300 animate-in fade-in zoom-in-95 slide-in-from-bottom-8 duration-500 overflow-hidden">
-          {/* Top Bar / Header */}
-          <div className="px-8 py-8 flex items-center justify-between">
-            <div className="flex items-center gap-4">
+        <div className="relative z-10 w-full max-w-xl card overflow-hidden">
+          <div className="px-6 py-5 flex items-center justify-between border-b border-bone-border">
+            <div className="flex items-center gap-3">
               <div
-                className={`p-3 rounded-2xl ${isEditing ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-600' : 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600'}`}
+                className={`w-10 h-10 rounded-full grid place-items-center ${
+                  isEditing
+                    ? 'bg-gold-400/20 text-gold-600'
+                    : 'bg-navy-100 text-navy-700'
+                }`}
               >
                 {isEditing ? (
-                  <CheckCircle2 className="w-6 h-6" />
+                  <CheckCircle2 className="w-5 h-5" />
                 ) : (
-                  <Plus className="w-6 h-6" strokeWidth={3} />
+                  <DollarSign className="w-5 h-5" />
                 )}
               </div>
               <div>
-                <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                  {isEditing ? 'Editar Transação' : 'Nova Transação'}
+                <h2 className="font-display text-lg text-navy-900">
+                  {isEditing ? 'Editar transação' : 'Nova transação'}
                 </h2>
-                <p className="text-sm font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">
-                  Preencha os detalhes abaixo
-                </p>
+                <p className="text-xs text-navy-500">Preencha os detalhes</p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="p-2.5 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-2xl transition-all duration-200 active:scale-90"
-            >
-              <X className="w-6 h-6" />
+            <button onClick={onClose} className="btn btn-ghost !p-2">
+              <X className="w-4 h-4" />
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="px-8 pb-10 space-y-6">
-            {/* Type Toggles */}
+          <form
+            onSubmit={handleSubmit}
+            className="px-6 py-5 space-y-5 max-h-[75vh] overflow-y-auto"
+          >
             {!expenseOnly && (
-              <div className="p-1.5 bg-slate-100 dark:bg-slate-800 rounded-3xl flex gap-1.5 border border-slate-200/50 dark:border-slate-700/50">
+              <div className="p-1 bg-navy-50 rounded-lg flex gap-1">
                 <button
                   type="button"
                   onClick={() => setType(TransactionType.INCOME)}
-                  className={`flex-1 py-3.5 rounded-2xl font-black text-sm uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 ${
+                  className={`flex-1 py-2.5 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
                     type === TransactionType.INCOME
-                      ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-xl shadow-emerald-500/5'
-                      : 'text-slate-400 dark:text-slate-500 hover:text-slate-600'
+                      ? 'bg-white text-emerald-700 shadow-sm'
+                      : 'text-navy-500 hover:text-navy-700'
                   }`}
                 >
                   <TrendingUp className="w-4 h-4" />
@@ -282,10 +285,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setType(TransactionType.EXPENSE)}
-                  className={`flex-1 py-3.5 rounded-2xl font-black text-sm uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 ${
+                  className={`flex-1 py-2.5 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
                     type === TransactionType.EXPENSE
-                      ? 'bg-white dark:bg-slate-700 text-rose-600 dark:text-rose-400 shadow-xl shadow-rose-500/5'
-                      : 'text-slate-400 dark:text-slate-500 hover:text-slate-600'
+                      ? 'bg-white text-rose-700 shadow-sm'
+                      : 'text-navy-500 hover:text-navy-700'
                   }`}
                 >
                   <TrendingDown className="w-4 h-4" />
@@ -294,185 +297,165 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Description */}
-              <div className="md:col-span-2 space-y-2">
-                <label className="flex items-center gap-2 text-[13px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">
-                  <AlignLeft className="w-4 h-4 text-indigo-500" /> Descrição
-                </label>
-                <input
-                  type="text"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-[1.25rem] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold placeholder:text-slate-300 dark:placeholder:text-slate-700"
-                  placeholder="Ex: Aluguel, Salário, Internet..."
-                  required
-                />
-              </div>
+            <div className="space-y-2">
+              <label className="label flex items-center gap-2">
+                <AlignLeft className="w-4 h-4 text-navy-500" /> Descrição
+              </label>
+              <input
+                type="text"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="input"
+                placeholder="Ex: Aluguel, Salário, Internet..."
+                required
+              />
+            </div>
 
-              {/* Amount */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-[13px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">
-                  <DollarSign className="w-4 h-4 text-indigo-500" /> Valor
+                <label className="label flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-navy-500" /> Valor
                 </label>
                 <input
                   type="text"
                   value={amount}
                   onChange={handleAmountChange}
-                  className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-[1.25rem] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-black text-xl"
+                  className="input num"
                   placeholder="R$ 0,00"
                   inputMode="numeric"
                   required
                 />
               </div>
 
-              {/* Date */}
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-[13px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">
-                  <Calendar className="w-4 h-4 text-indigo-500" /> Data
+                <label className="label flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-navy-500" /> Data
                 </label>
                 <input
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-[1.25rem] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold appearance-none"
+                  className="input num"
                   required
                 />
               </div>
 
-              {/* Account Selection */}
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-[13px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">
-                  <CreditCardIcon className="w-4 h-4 text-indigo-500" /> Conta /
+                <label className="label flex items-center gap-2">
+                  <CreditCardIcon className="w-4 h-4 text-navy-500" /> Conta /
                   Cartão
                 </label>
-                <div className="relative">
+                <select
+                  value={accountId}
+                  onChange={(e) => setAccountId(e.target.value)}
+                  className="input"
+                  required
+                >
+                  <option value="" disabled>
+                    Selecione a conta
+                  </option>
+                  {accounts
+                    .filter((acc) =>
+                      type === TransactionType.INCOME
+                        ? acc.type !== 'credit_card'
+                        : true
+                    )
+                    .map((acc) => (
+                      <option key={acc._id} value={acc._id}>
+                        {acc.name}
+                        {acc.type === 'credit_card' ? ' (Crédito)' : ''}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="label flex items-center gap-2">
+                  <Tag className="w-4 h-4 text-navy-500" /> Categoria
+                </label>
+                {loadingCategories ? (
+                  <div className="input text-navy-300">Buscando...</div>
+                ) : (
                   <select
-                    value={accountId}
-                    onChange={(e) => setAccountId(e.target.value)}
-                    className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-[1.25rem] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold appearance-none relative z-10"
+                    value={categoryId}
+                    onChange={(e) => setCategoryId(e.target.value)}
+                    className="input"
                     required
                   >
                     <option value="" disabled>
-                      Selecione a conta
+                      Selecione a categoria
                     </option>
-                    {accounts
-                      .filter((acc) =>
-                        type === TransactionType.INCOME
-                          ? acc.type !== 'credit_card'
-                          : true
-                      )
-                      .map((acc) => (
-                        <option key={acc._id} value={acc._id}>
-                          {acc.name}{' '}
-                          {acc.type === 'credit_card' ? '(Crédito)' : ''}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Category Selection */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-[13px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">
-                  <Tag className="w-4 h-4 text-indigo-500" /> Categoria
-                </label>
-                <div className="relative">
-                  {loadingCategories ? (
-                    <div className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950/50 rounded-[1.25rem] border border-slate-100 dark:border-slate-800 text-slate-400 text-sm font-bold animate-pulse">
-                      Buscando...
-                    </div>
-                  ) : (
-                    <select
-                      value={categoryId}
-                      onChange={(e) => setCategoryId(e.target.value)}
-                      className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-[1.25rem] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold appearance-none relative z-10"
-                      required
-                    >
-                      <option value="" disabled>
-                        Selecione a categoria
+                    {categories.map((cat) => (
+                      <option key={cat._id} value={cat._id}>
+                        {cat.name}
                       </option>
-                      {categories.map((cat) => (
-                        <option key={cat._id} value={cat._id}>
-                          {cat.icon ? `${cat.icon} ` : ''}
-                          {cat.name}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
+                    ))}
+                  </select>
+                )}
               </div>
             </div>
 
-            {/* Status Selector - Only for non-credit accounts */}
-            {!hideStatus &&
-              accounts.find((acc) => acc._id === accountId)?.type !==
-                'credit_card' && (
-                <div className="space-y-3 pt-2">
-                  <label className="flex items-center gap-2 text-[13px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">
-                    <Clock className="w-4 h-4 text-indigo-500" /> Status da
-                    Transação
-                  </label>
-                  <div className="flex gap-4">
-                    <button
-                      type="button"
-                      onClick={() => setStatus(TransactionStatus.PAID)}
-                      className={`flex-1 px-4 py-3.5 rounded-2xl font-bold transition-all border flex items-center justify-center gap-2 ${
-                        status === TransactionStatus.PAID
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/20'
-                          : 'bg-white dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
-                      }`}
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      Pago
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setStatus(TransactionStatus.UNPAID)}
-                      className={`flex-1 px-4 py-3.5 rounded-2xl font-bold transition-all border flex items-center justify-center gap-2 ${
-                        status === TransactionStatus.UNPAID
-                          ? 'bg-amber-500 text-white border-amber-500 shadow-lg shadow-amber-500/20'
-                          : 'bg-white dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
-                      }`}
-                    >
-                      <Clock className="w-4 h-4" />
-                      Pendente
-                    </button>
-                  </div>
-                </div>
-              )}
-
-            {/* Is Fixed Toggle */}
-            {!isEditing && (
-              <div className="space-y-3 pt-2">
-                <div className="flex items-center gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                  <div className="flex-1">
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">Fixar transação</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Criará lançamentos para os próximos 11 meses</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsFixed(!isFixed)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-                      isFixed ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        isFixed ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                </div>
+            {!hideStatus && (
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setStatus(TransactionStatus.PAID)}
+                  className={`py-2.5 rounded-lg border text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
+                    status === TransactionStatus.PAID
+                      ? 'bg-navy-700 text-white border-navy-700'
+                      : 'bg-white text-navy-500 border-bone-border hover:bg-bone-soft'
+                  }`}
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  Pago / Recebido
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatus(TransactionStatus.UNPAID)}
+                  className={`py-2.5 rounded-lg border text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
+                    status === TransactionStatus.UNPAID
+                      ? 'bg-gold-500 text-navy-900 border-gold-500'
+                      : 'bg-white text-navy-500 border-bone-border hover:bg-bone-soft'
+                  }`}
+                >
+                  <Clock className="w-4 h-4" />
+                  Pendente
+                </button>
               </div>
             )}
 
-            {/* Submit Actions */}
-            <div className="flex gap-4 pt-8">
+            {!isEditing && (
+              <div className="flex items-center gap-3 p-4 rounded-lg bg-bone-soft border border-bone-border">
+                <div className="flex-1">
+                  <h3 className="text-sm font-medium text-navy-900">
+                    Fixar transação
+                  </h3>
+                  <p className="text-xs text-navy-500 mt-0.5">
+                    Criará lançamentos para os próximos 11 meses
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsFixed(!isFixed)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    isFixed ? 'bg-navy-700' : 'bg-navy-200'
+                  }`}
+                  aria-label="Fixar transação"
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      isFixed ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-4 border-t border-bone-divider">
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 px-4 py-4 rounded-2xl font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 border border-transparent transition-all duration-200"
+                className="btn btn-ghost flex-1"
               >
                 Descartar
               </button>
@@ -485,14 +468,14 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   !categoryId ||
                   categories.length === 0
                 }
-                className="flex-[2] py-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-xl shadow-indigo-500/30 transition-all active:scale-95 flex items-center justify-center gap-3"
+                className="btn btn-primary flex-[2]"
               >
                 {loading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
-                  <Save className="w-5 h-5" strokeWidth={3} />
+                  <Save className="w-4 h-4" />
                 )}
-                {isEditing ? 'Atualizar' : 'Salvar Transação'}
+                {isEditing ? 'Atualizar' : 'Salvar transação'}
               </button>
             </div>
           </form>
@@ -502,32 +485,3 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   );
 };
 
-const TrendingUp = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-    <polyline points="17 6 23 6 23 12" />
-  </svg>
-);
-
-const TrendingDown = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polyline points="23 18 13.5 8.5 8.5 13.5 1 6" />
-    <polyline points="17 18 23 18 23 12" />
-  </svg>
-);

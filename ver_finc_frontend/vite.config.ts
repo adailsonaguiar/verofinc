@@ -26,14 +26,27 @@ export default defineConfig({
               cacheableResponse: { statuses: [200] },
             },
           },
+          {
+            // Cache the classic typefaces so the editorial layout survives offline
+            urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'verofinc-fonts-v1',
+              expiration: {
+                maxEntries: 20,
+                maxAgeSeconds: 60 * 60 * 24 * 365,
+              },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
         ],
       },
       manifest: {
         name: 'VeroFinc - Gerenciador Financeiro',
         short_name: 'VeroFinc',
         description: 'Seu gerenciador financeiro pessoal de alta performance.',
-        theme_color: '#4f46e5', // indigo-600
-        background_color: '#0f172a', // slate-900 (dark)
+        theme_color: '#0e1628', // navy-900
+        background_color: '#f7f6f2', // bone
         display: 'standalone',
         icons: [
           {

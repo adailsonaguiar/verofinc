@@ -11,7 +11,7 @@ import { CategoriesPage } from './pages/CategoriesPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { AccountsPage } from './pages/AccountsPage';
 import { Sidebar } from './components/Sidebar';
-import { MobileHeader } from './components/MobileHeader';
+import { Header } from './components/Header';
 import './index.css';
 import { CreditCardsPage } from './pages/CreditCardsPage';
 import { LoginPage } from './pages/LoginPage';
@@ -33,23 +33,20 @@ function App() {
   }, []);
 
   const AppLayout = () => (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    <div className="min-h-screen flex bg-bone text-navy-900">
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
-      <div className="flex-1 flex flex-col overflow-hidden bg-gray-50 pt-20 lg:pt-0">
-        <MobileHeader
-          onMenuClick={() => setIsSidebarOpen(true)}
-          title="Vero Finc"
-        />
+      <div className="flex-1 min-w-0 flex flex-col">
+        <Header onMenuClick={() => setIsSidebarOpen(true)} />
 
         {!isOnline && (
-          <div className="flex items-center justify-center gap-2 bg-amber-50 border-b border-amber-200 text-amber-700 text-xs font-semibold py-2 px-4 shrink-0">
+          <div className="flex items-center justify-center gap-2 bg-gold-400/15 border-b border-gold-400/40 text-gold-600 text-xs font-medium py-2 px-4 shrink-0">
             <WifiOff className="w-3.5 h-3.5 shrink-0" />
             <span>Sem conexão — exibindo dados salvos localmente</span>
           </div>
         )}
 
-        <main className="flex-1 overflow-y-auto bg-gradient-to-br from-gray-50 via-white to-gray-50">
+        <main className="flex-1">
           <Outlet />
         </main>
       </div>

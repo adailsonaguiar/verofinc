@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { accountService } from '../services/accountService';
 import { transactionService } from '../services/transactionService';
 import {
@@ -9,27 +10,47 @@ import {
 import { formatCurrency } from '../utils/transactions';
 import { TransactionCard } from '../components/TransactionCard';
 import { TransactionModal } from '../components/TransactionModal';
+import { MonthSelector } from '../components/MonthSelector';
+import { StatCard } from '../components/StatCard';
+import { EmptyState } from '../components/EmptyState';
 import {
+  ArrowDown,
+  ArrowUp,
+  GripVertical,
   Loader2,
-  TrendingUp,
-  TrendingDown,
+  MoreVertical,
+  Pencil,
   Plus,
-  ChevronLeft,
-  ChevronRight,
-  Filter,
   Search,
-  Activity,
+  Trash2,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import api from '../services/api';
 
+type TabKey = 'todas' | 'entradas' | 'saidas';
+
+interface AccountOption {
+  _id: string;
+  name: string;
+  type: string;
+}
+
+interface CategoryOption {
+  _id: string;
+  name: string;
+}
+
 export const TransactionsPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
+
+  const [typeTab, setTypeTab] = useState<TabKey>('todas');
+  const [query, setQuery] = useState(searchParams.get('q') ?? '');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [accounts, setAccounts] = useState<any[]>([]);
+  const [accounts, setAccounts] = useState<AccountOption[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<string>('all');
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
@@ -37,13 +58,15 @@ export const TransactionsPage: React.FC = () => {
     { year: number; month: number; label: string }[]
   >([]);
   const [loading, setLoading] = useState(true);
-  // const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] =
     useState<Transaction | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   // drag-and-drop secondary ordering
-  const [orderedTransactions, setOrderedTransactions] = useState<Transaction[]>([]);
+  const [orderedTransactions, setOrderedTransactions] = useState<Transaction[]>(
+    []
+  );
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const dragIndexRef = useRef<number | null>(null);
 
@@ -53,10 +76,19 @@ export const TransactionsPage: React.FC = () => {
     loadAccounts();
   }, []);
 
+  useEffect(() => {
+    if (searchParams.get('new') === '1') setIsModalOpen(true);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (currentYear && currentMonth) {
+      loadMonthTransactions();
+    }
+  }, [currentYear, currentMonth, selectedAccount, filterCategory, filterStatus]);
+
   const loadAccounts = async () => {
     try {
-      const data = await accountService.getAll();
-      setAccounts(data);
+      setAccounts(await accountService.getAll());
     } catch (err) {
       console.error('Erro ao carregar contas:', err);
     }
@@ -71,29 +103,18 @@ export const TransactionsPage: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    if (currentYear && currentMonth) {
-      loadMonthTransactions();
-    }
-  }, [
-    currentYear,
-    currentMonth,
-    selectedAccount,
-    filterCategory,
-    filterStatus,
-  ]);
-
   const loadAvailableMonths = async () => {
     try {
       const months = await transactionService.getAvailableMonths();
-      const formattedMonths = months.map((m) => ({
-        year: m.year,
-        month: m.month,
-        label: format(new Date(m.year, m.month - 1), 'MMMM yyyy', {
-          locale: ptBR,
-        }),
-      }));
-      setAvailableMonths(formattedMonths);
+      setAvailableMonths(
+        months.map((m) => ({
+          year: m.year,
+          month: m.month,
+          label: format(new Date(m.year, m.month - 1), 'MMMM yyyy', {
+            locale: ptBR,
+          }),
+        }))
+      );
     } catch (err) {
       console.error('Error loading available months:', err);
     }
@@ -102,8 +123,7 @@ export const TransactionsPage: React.FC = () => {
   const loadMonthTransactions = async () => {
     try {
       setLoading(true);
-      // setError(null);
-      const params: any = {
+      const params: Record<string, string | number> = {
         year: currentYear,
         month: currentMonth,
       };
@@ -111,14 +131,14 @@ export const TransactionsPage: React.FC = () => {
       if (filterCategory !== 'all') params.category = filterCategory;
       if (filterStatus !== 'all') params.status = filterStatus;
 
-      const query = Object.entries(params)
-        .map(([k, v]) => `${k}=${encodeURIComponent(v as string | number)}`)
+      const queryString = Object.entries(params)
+        .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
         .join('&');
-      const res = await api.get(`/transactions?${query}`);
+
+      const res = await api.get(`/transactions?${queryString}`);
       setTransactions(res?.data);
       setOrderedTransactions(res?.data ?? []);
     } catch (err) {
-      // setError('Falha ao carregar transações. Verifique se o backend está rodando.');
       console.error('Error loading transactions:', err);
     } finally {
       setLoading(false);
@@ -140,10 +160,12 @@ export const TransactionsPage: React.FC = () => {
 
   const handleEditTransaction = (transaction: Transaction) => {
     setEditingTransaction(transaction);
+    setOpenMenuId(null);
     setIsModalOpen(true);
   };
 
   const handleDeleteTransaction = async (transaction: Transaction) => {
+    setOpenMenuId(null);
     if (!confirm(`Deseja realmente excluir "${transaction.description}"?`)) {
       return;
     }
@@ -162,6 +184,79 @@ export const TransactionsPage: React.FC = () => {
     setIsModalOpen(false);
     setEditingTransaction(null);
   };
+
+  const handlePreviousMonth = () => {
+    const index = availableMonths.findIndex(
+      (m) => m.year === currentYear && m.month === currentMonth
+    );
+    if (index < availableMonths.length - 1) {
+      const prevMonth = availableMonths[index + 1];
+      setCurrentYear(prevMonth.year);
+      setCurrentMonth(prevMonth.month);
+    }
+  };
+
+  const handleNextMonth = () => {
+    const index = availableMonths.findIndex(
+      (m) => m.year === currentYear && m.month === currentMonth
+    );
+    if (index > 0) {
+      const nextMonth = availableMonths[index - 1];
+      setCurrentYear(nextMonth.year);
+      setCurrentMonth(nextMonth.month);
+    }
+  };
+
+  const currentIndexMonth = availableMonths.findIndex(
+    (m) => m.year === currentYear && m.month === currentMonth
+  );
+  const hasPrevious = currentIndexMonth < availableMonths.length - 1;
+  const hasNext = currentIndexMonth > 0;
+  const currentMonthLabel =
+    availableMonths.find(
+      (m) => m.year === currentYear && m.month === currentMonth
+    )?.label || '';
+
+  const transactionsForTotals = transactions.filter((t) => !t.isPayment);
+
+  const totalIncome = transactionsForTotals
+    .filter((t) => t.type === 'income')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const totalExpense = transactionsForTotals
+    .filter((t) => t.type === 'expense')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const balance = totalIncome - totalExpense;
+
+  const accountName = (accountId?: string) =>
+    accounts.find((acc) => acc._id === accountId)?.name ?? '—';
+
+  const term = query.trim().toLowerCase();
+  const visibleTransactions = orderedTransactions.filter((t) => {
+    const matchesTab =
+      typeTab === 'todas'
+        ? true
+        : typeTab === 'entradas'
+          ? t.type === 'income'
+          : t.type === 'expense';
+    const matchesQuery =
+      term.length === 0 ||
+      t.description.toLowerCase().includes(term) ||
+      (t.category?.name ?? '').toLowerCase().includes(term);
+    return matchesTab && matchesQuery;
+  });
+
+  if (loading && transactions.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <div className="flex flex-col items-center">
+          <Loader2 className="w-8 h-8 animate-spin text-navy-700 mb-3" />
+          <p className="text-sm text-navy-500">Carregando transações...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleDragStart = (e: React.DragEvent, index: number) => {
     dragIndexRef.current = index;
@@ -201,271 +296,273 @@ export const TransactionsPage: React.FC = () => {
     dragIndexRef.current = null;
   };
 
-  const handlePreviousMonth = () => {
-    const currentIndex = availableMonths.findIndex(
-      (m) => m.year === currentYear && m.month === currentMonth
-    );
-    if (currentIndex < availableMonths.length - 1) {
-      const prevMonth = availableMonths[currentIndex + 1];
-      setCurrentYear(prevMonth.year);
-      setCurrentMonth(prevMonth.month);
-    }
-  };
-
-  const handleNextMonth = () => {
-    const currentIndex = availableMonths.findIndex(
-      (m) => m.year === currentYear && m.month === currentMonth
-    );
-    if (currentIndex > 0) {
-      const nextMonth = availableMonths[currentIndex - 1];
-      setCurrentYear(nextMonth.year);
-      setCurrentMonth(nextMonth.month);
-    }
-  };
-
-  const currentMonthLabel =
-    availableMonths.find(
-      (m) => m.year === currentYear && m.month === currentMonth
-    )?.label || '';
-  const currentIndexMonth = availableMonths.findIndex(
-    (m) => m.year === currentYear && m.month === currentMonth
-  );
-  const hasPrevious = currentIndexMonth < availableMonths.length - 1;
-  const hasNext = currentIndexMonth > 0;
-
-  const transactionsForTotals = transactions.filter(
-    (t) => !t.isPayment
-  );
-
-  const totalIncome = transactionsForTotals
-    .filter((t) => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const totalExpense = transactionsForTotals
-    .filter((t) => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const balance = totalIncome - totalExpense;
-
-  if (loading && transactions.length === 0) {
-    return (
-      <div className="flex-1 flex items-center justify-center bg-slate-50 dark:bg-slate-900">
-        <div className="flex flex-col items-center">
-          <Loader2 className="w-10 h-10 animate-spin text-indigo-600 mb-4" />
-          <p className="text-slate-500 dark:text-slate-400 font-medium">
-            Carregando transações...
-          </p>
-        </div>
-      </div>
-    );
-  }
+  const TABS: TabKey[] = ['todas', 'entradas', 'saidas'];
 
   return (
-    <div className="flex-1 overflow-auto bg-[#F8FAFC] dark:bg-[#0F172A] transition-colors duration-300">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Header Page */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Transações
-            </h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">
-              Controle detalhado de cada movimentação.
-            </p>
+    <div className="p-4 md:p-8 space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <p className="text-sm text-navy-500">
+          Controle detalhado de cada movimentação.
+        </p>
+        <MonthSelector
+          label={currentMonthLabel}
+          hasPrevious={hasPrevious}
+          hasNext={hasNext}
+          onPrevious={handlePreviousMonth}
+          onNext={handleNextMonth}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard
+          label="Entradas"
+          value={formatCurrency(totalIncome)}
+          sub={currentMonthLabel}
+          tone="in"
+        />
+        <StatCard
+          label="Saídas"
+          value={formatCurrency(totalExpense)}
+          sub={currentMonthLabel}
+          tone="out"
+        />
+        <StatCard
+          label="Saldo do período"
+          value={formatCurrency(balance)}
+          sub={balance >= 0 ? 'Positivo' : 'Negativo'}
+        />
+      </div>
+
+      <div className="card">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3 p-4 border-b border-bone-divider">
+          <div className="flex gap-1 bg-navy-50 p-1 rounded-lg text-sm">
+            {TABS.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setTypeTab(tab)}
+                className={`px-3 py-1.5 rounded-md capitalize transition-colors ${
+                  typeTab === tab
+                    ? 'bg-white text-navy-900 shadow-sm'
+                    : 'text-navy-500 hover:text-navy-700'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
           </div>
+
+          <div className="flex items-center gap-2 px-3 py-2 bg-white border border-bone-border rounded-lg lg:w-60">
+            <Search className="w-4 h-4 text-navy-300 shrink-0" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="bg-transparent outline-none text-sm flex-1 text-navy-900 placeholder:text-navy-300"
+              placeholder="Buscar..."
+            />
+          </div>
+
+          <select
+            value={selectedAccount}
+            onChange={(e) => setSelectedAccount(e.target.value)}
+            className="input !w-auto !py-2 text-sm"
+            aria-label="Filtrar por conta"
+          >
+            <option value="all">Todas as contas</option>
+            {accounts.map((acc) => (
+              <option key={acc._id} value={acc._id}>
+                {acc.name}
+                {acc.type === 'credit_card' ? ' (Cartão)' : ''}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="input !w-auto !py-2 text-sm"
+            aria-label="Filtrar por categoria"
+          >
+            <option value="all">Todas as categorias</option>
+            {categories.map((cat) => (
+              <option key={cat._id} value={cat._id}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="input !w-auto !py-2 text-sm"
+            aria-label="Filtrar por situação"
+          >
+            <option value="all">Todas as situações</option>
+            <option value="paid">Pago / Recebido</option>
+            <option value="unpaid">Pendente</option>
+          </select>
 
           <button
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold shadow-lg shadow-indigo-500/20 transition-all active:scale-95"
+            className="btn btn-primary lg:ml-auto"
           >
-            <Plus className="w-5 h-5" strokeWidth={3} />
-            <span>Nova Transação</span>
+            <Plus className="w-4 h-4" />
+            Adicionar
           </button>
         </div>
 
-        {/* Filters & Statistics Summary */}
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-          {/* Filter Card */}
-          <div className="xl:col-span-3 bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-100 dark:border-slate-700/60 shadow-sm space-y-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Filter className="w-4 h-4 text-indigo-500" />
-              <span className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                Filtros
-              </span>
-            </div>
+        {/* Desktop table */}
+        {visibleTransactions.length > 0 ? (
+          <>
+            <table className="hidden md:table w-full text-sm">
+              <thead className="text-xs uppercase tracking-wider text-navy-500 bg-bone-soft">
+                <tr>
+                  <th className="text-left px-4 py-3 w-10" />
+                  <th className="text-left px-4 py-3">Descrição</th>
+                  <th className="text-left px-4 py-3">Categoria</th>
+                  <th className="text-left px-4 py-3">Conta</th>
+                  <th className="text-left px-4 py-3">Data</th>
+                  <th className="text-right px-4 py-3">Valor</th>
+                  <th className="text-right px-4 py-3 w-14">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-classic">
+                {visibleTransactions.map((tx) => {
+                  const isIncome = tx.type === 'income';
+                  const orderIndex = orderedTransactions.findIndex(
+                    (t) => t._id === tx._id
+                  );
+                  const canDrag = typeTab === 'todas' && term.length === 0;
+                  return (
+                    <tr
+                      key={tx._id}
+                      draggable={canDrag}
+                      onDragStart={
+                        canDrag
+                          ? (e) => handleDragStart(e, orderIndex)
+                          : undefined
+                      }
+                      onDragOver={canDrag ? handleDragOver : undefined}
+                      onDrop={
+                        canDrag ? (e) => handleDrop(e, orderIndex) : undefined
+                      }
+                      onDragEnd={handleDragEnd}
+                      className={`hover:bg-bone-soft transition-colors ${
+                        draggingId === tx._id ? 'opacity-40' : ''
+                      } ${canDrag ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                    >
+                      <td className="px-4 py-3">
+                        {canDrag && (
+                          <GripVertical className="w-4 h-4 text-navy-300" />
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`w-8 h-8 rounded-full grid place-items-center shrink-0 ${
+                              isIncome
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : 'bg-rose-100 text-rose-700'
+                            }`}
+                          >
+                            {isIncome ? (
+                              <ArrowDown className="w-4 h-4" />
+                            ) : (
+                              <ArrowUp className="w-4 h-4" />
+                            )}
+                          </span>
+                          <span className="text-navy-900 truncate">
+                            {tx.description}
+                          </span>
+                          {tx.status === 'unpaid' && (
+                            <span className="chip bg-amber-100 text-amber-800">
+                              Pendente
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="chip bg-navy-100 text-navy-800">
+                          {tx.category?.name || 'Sem categoria'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-navy-500">
+                        {accountName(tx.account)}
+                      </td>
+                      <td className="px-4 py-3 num text-navy-500">
+                        {format(
+                          new Date(`${tx.date.split('T')[0]}T12:00:00`),
+                          'dd/MM/yyyy'
+                        )}
+                      </td>
+                      <td
+                        className={`px-4 py-3 text-right num ${
+                          isIncome ? 'text-emerald-700' : 'text-rose-700'
+                        }`}
+                      >
+                        {isIncome ? '+' : '-'}
+                        {formatCurrency(tx.amount)}
+                      </td>
+                      <td className="px-4 py-3 text-right relative">
+                        <button
+                          onClick={() =>
+                            setOpenMenuId(openMenuId === tx._id ? null : tx._id)
+                          }
+                          className="p-2 rounded-lg text-navy-300 hover:text-navy-700 hover:bg-navy-100 transition-colors"
+                          aria-label="Opções"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                        {openMenuId === tx._id && (
+                          <>
+                            <div
+                              className="fixed inset-0 z-20"
+                              onClick={() => setOpenMenuId(null)}
+                            />
+                            <div className="absolute right-4 top-12 w-40 bg-white rounded-lg border border-bone-border shadow-lg py-1 z-30">
+                              <button
+                                onClick={() => handleEditTransaction(tx)}
+                                className="w-full px-3 py-2 text-left text-sm text-navy-700 hover:bg-bone-soft flex items-center gap-2"
+                              >
+                                <Pencil className="w-4 h-4" />
+                                Editar
+                              </button>
+                              <button
+                                onClick={() => handleDeleteTransaction(tx)}
+                                className="w-full px-3 py-2 text-left text-sm text-rose-700 hover:bg-rose-50 flex items-center gap-2"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                Excluir
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-              <div className="space-y-2">
-                <label className="text-[13px] font-bold text-slate-500 dark:text-slate-400 ml-1">
-                  Conta
-                </label>
-                <select
-                  value={selectedAccount}
-                  onChange={(e) => setSelectedAccount(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none font-semibold text-sm appearance-none"
-                >
-                  <option value="all">Todas as Contas</option>
-                  {accounts.map((acc) => (
-                    <option key={acc._id} value={acc._id}>
-                      {acc.name}{acc.type === 'credit_card' ? ' (Cartão)' : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[13px] font-bold text-slate-500 dark:text-slate-400 ml-1">
-                  Categoria
-                </label>
-                <select
-                  value={filterCategory}
-                  onChange={(e) => setFilterCategory(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none font-semibold text-sm appearance-none"
-                >
-                  <option value="all">Todas Categorias</option>
-                  {categories.map((cat) => (
-                    <option key={cat._id} value={cat._id}>
-                      {cat.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[13px] font-bold text-slate-500 dark:text-slate-400 ml-1">
-                  Status
-                </label>
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none font-semibold text-sm appearance-none"
-                >
-                  <option value="all">Todos</option>
-                  <option value="paid">Pago / Recebido</option>
-                  <option value="unpaid">Pendente</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Month Selector Mini-Card */}
-          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-100 dark:border-slate-700/60 shadow-sm flex flex-col justify-center gap-4">
-            <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-900/50 p-2 rounded-2xl border border-slate-100 dark:border-slate-700">
-              <button
-                onClick={handlePreviousMonth}
-                disabled={!hasPrevious}
-                className="p-2 hover:bg-white dark:hover:bg-slate-800 rounded-xl transition-all disabled:opacity-20 text-slate-600 dark:text-slate-300 shadow-sm"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <span className="text-sm font-extrabold text-slate-900 dark:text-white capitalize truncate px-2">
-                {currentMonthLabel}
-              </span>
-              <button
-                onClick={handleNextMonth}
-                disabled={!hasNext}
-                className="p-2 hover:bg-white dark:hover:bg-slate-800 rounded-xl transition-all disabled:opacity-20 text-slate-600 dark:text-slate-300 shadow-sm"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="flex items-center justify-between px-2">
-              <span className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">
-                Total Itens
-              </span>
-              <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-md">
-                {transactions.length}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Monthly Quick Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-slate-100 dark:border-slate-700/60 shadow-sm flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-              <TrendingUp className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                Receitas
-              </p>
-              <p className="text-xl font-extrabold text-slate-900 dark:text-white">
-                {formatCurrency(totalIncome)}
-              </p>
-            </div>
-          </div>
-          <div className="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-slate-100 dark:border-slate-700/60 shadow-sm flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-rose-600 dark:text-rose-400">
-              <TrendingDown className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                Despesas
-              </p>
-              <p className="text-xl font-extrabold text-slate-900 dark:text-white">
-                {formatCurrency(totalExpense)}
-              </p>
-            </div>
-          </div>
-          <div
-            className={`bg-white dark:bg-slate-800 rounded-3xl p-5 border border-slate-100 dark:border-slate-700/60 shadow-sm flex items-center gap-4 border-l-4 ${balance >= 0 ? 'border-l-indigo-500' : 'border-l-rose-500'}`}
-          >
-            <div
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center ${balance >= 0 ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}
-            >
-              <Activity className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                Saldo
-              </p>
-              <p
-                className={`text-xl font-extrabold ${balance >= 0 ? 'text-slate-900 dark:text-white' : 'text-rose-600 dark:text-rose-400'}`}
-              >
-                {formatCurrency(balance)}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Transactions List */}
-        <div className="space-y-4">
-          {orderedTransactions.length > 0 ? (
-            <div className="grid grid-cols-1 gap-4">
-              {orderedTransactions.map((transaction, index) => (
+            <div className="md:hidden divide-classic">
+              {visibleTransactions.map((tx) => (
                 <TransactionCard
-                  key={transaction._id}
-                  transaction={transaction}
+                  key={tx._id}
+                  transaction={tx}
                   onEdit={handleEditTransaction}
                   onDelete={handleDeleteTransaction}
-                  isDraggable
-                  isDragging={draggingId === transaction._id}
-                  onDragStart={(e) => handleDragStart(e, index)}
-                  onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, index)}
-                  onDragEnd={handleDragEnd}
                 />
               ))}
             </div>
-          ) : (
-            <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] border border-slate-100 dark:border-slate-700/60 p-16 text-center shadow-sm">
-              <div className="w-24 h-24 bg-slate-50 dark:bg-slate-900/50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Search className="w-10 h-10 text-slate-300 dark:text-slate-600" />
-              </div>
-              <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-                Nenhuma transação encontrada
-              </h3>
-              <p className="text-slate-500 dark:text-slate-400 max-w-sm mx-auto font-medium leading-relaxed">
-                Tente ajustar seus filtros ou mude o mês selecionado para
-                encontrar o que procura.
-              </p>
-            </div>
-          )}
-        </div>
+          </>
+        ) : (
+          <EmptyState
+            icon={<Search className="w-6 h-6" />}
+            title="Nenhuma transação encontrada"
+            description="Ajuste os filtros ou mude o mês selecionado para encontrar o que procura."
+          />
+        )}
       </div>
 
-      {/* Transaction Modal */}
       <TransactionModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}

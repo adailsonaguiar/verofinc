@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Controle Financeiro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/prop-types@15/prop-types.min.js" crossorigin></script>
+<script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['"IBM Plex Sans"', 'system-ui', 'sans-serif'],
+          display: ['"Playfair Display"', 'serif'],
+          mono: ['"IBM Plex Mono"', 'monospace'],
+        },
+        colors: {
+          navy: {
+            50:'#f2f4f8',100:'#e2e6ef',200:'#c2cadd',300:'#93a1c1',
+            500:'#3c4d78',700:'#1f2a4d',800:'#162038',900:'#0e1628',950:'#080d1a'
+          },
+          gold: { 400:'#d9b45a', 500:'#c99a3b', 600:'#a97d28' },
+          bone: '#f7f6f2'
+        }
+      }
+    }
+  }
+</script>
+<style>
+  html,body{background:#f7f6f2;color:#0e1628}
+  body{font-family:'IBM Plex Sans',system-ui,sans-serif}
+  .font-display{font-family:'Playfair Display',serif}
+  .font-mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
+  .card{background:#fff;border:1px solid #e6e3d9;border-radius:.5rem}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;padding:.5rem .9rem;border-radius:.5rem;font-weight:500;font-size:.875rem;transition:all .15s}
+  .btn-primary{background:#1f2a4d;color:#fff}
+  .btn-primary:hover{background:#162038}
+  .btn-ghost{background:transparent;color:#1f2a4d}
+  .btn-ghost:hover{background:#e2e6ef}
+  .chip{display:inline-flex;align-items:center;padding:.15rem .55rem;border-radius:9999px;font-size:.72rem;font-weight:500}
+  .nav-link{display:flex;align-items:center;gap:.75rem;padding:.6rem .8rem;border-radius:.5rem;color:#c2cadd;font-size:.9rem;cursor:pointer}
+  .nav-link:hover{background:rgba(255,255,255,.05);color:#fff}
+  .nav-link.active{background:#c99a3b;color:#0e1628;font-weight:600}
+  .divide-classic > * + *{border-top:1px solid #eeece3}
+  ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#c2cadd;border-radius:4px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState } = React;
+const { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } = Recharts;
+
+const brl = (n) => n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+
+/* ---------- ICONS (inline SVG) ---------- */
+const Icon = ({d, className='w-4 h-4'}) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>{d}</svg>
+);
+const IcHome=()=><Icon d={<><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></>}/>;
+const IcList=()=><Icon d={<><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/></>}/>;
+const IcBank=()=><Icon d={<><path d="M3 10 12 4l9 6"/><path d="M5 10v8M9 10v8M15 10v8M19 10v8"/><path d="M3 20h18"/></>}/>;
+const IcCard=()=><Icon d={<><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M2.5 10h19"/></>}/>;
+const IcSearch=()=><Icon d={<><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></>}/>;
+const IcPlus=()=><Icon d={<><path d="M12 5v14M5 12h14"/></>}/>;
+const IcDown=()=><Icon d={<><path d="M12 5v14"/><path d="m5 12 7 7 7-7"/></>}/>;
+const IcUp=()=><Icon d={<><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></>}/>;
+const IcBell=()=><Icon d={<><path d="M6 8a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10 20a2 2 0 0 0 4 0"/></>}/>;
+const IcMenu=()=><Icon d={<><path d="M4 6h16M4 12h16M4 18h16"/></>} />;
+
+/* ---------- MOCK DATA ---------- */
+const cashflow = [
+  {m:'Jan', in:8200, out:5100},{m:'Fev', in:7800, out:6200},{m:'Mar', in:9100, out:5800},
+  {m:'Abr', in:8600, out:6700},{m:'Mai', in:9500, out:7100},{m:'Jun', in:10200, out:6900},
+  {m:'Jul', in:11000, out:7400},
+];
+const categorias = [
+  {name:'Moradia', value:2400, color:'#1f2a4d'},
+  {name:'Alimentação', value:1600, color:'#3c4d78'},
+  {name:'Transporte', value:900, color:'#c99a3b'},
+  {name:'Lazer', value:700, color:'#93a1c1'},
+  {name:'Outros', value:800, color:'#a97d28'},
+];
+const semana = [
+  {d:'Seg', v:320},{d:'Ter', v:210},{d:'Qua', v:450},
+  {d:'Qui', v:180},{d:'Sex', v:610},{d:'Sáb', v:390},{d:'Dom', v:120},
+];
+const transacoes = [
+  {id:1, desc:'Salário — Empresa XYZ', cat:'Receita', conta:'Itaú Corrente', data:'27/07/2026', valor: 9800, tipo:'in'},
+  {id:2, desc:'Supermercado Pão de Açúcar', cat:'Alimentação', conta:'Nubank', data:'26/07/2026', valor:-486.23, tipo:'out'},
+  {id:3, desc:'Aluguel Julho', cat:'Moradia', conta:'Itaú Corrente', data:'25/07/2026', valor:-2400, tipo:'out'},
+  {id:4, desc:'Uber', cat:'Transporte', conta:'Nubank', data:'24/07/2026', valor:-42.90, tipo:'out'},
+  {id:5, desc:'Freelance Design', cat:'Receita', conta:'Inter', data:'23/07/2026', valor:1500, tipo:'in'},
+  {id:6, desc:'Netflix', cat:'Assinaturas', conta:'Inter', data:'22/07/2026', valor:-55.90, tipo:'out'},
+  {id:7, desc:'Restaurante Fasano', cat:'Alimentação', conta:'Itaú Corrente', data:'21/07/2026', valor:-312.40, tipo:'out'},
+  {id:8, desc:'Rendimento CDB', cat:'Investimentos', conta:'Itaú Corrente', data:'20/07/2026', valor:187.55, tipo:'in'},
+];
+const contas = [
+  {nome:'Itaú Unibanco', tipo:'Conta Corrente', num:'Ag 1234 · CC 56789-0', saldo:18420.55, cor:'#EC7000', trend:[4,4.2,4.1,4.6,4.9,5.1,5.4]},
+  {nome:'Nubank', tipo:'Conta Digital', num:'Ag 0001 · CC 12345-6', saldo:3210.10, cor:'#8A05BE', trend:[3.6,3.4,3.2,3.1,3.0,3.1,3.2]},
+  {nome:'Banco Inter', tipo:'Conta Digital', num:'Ag 0077 · CC 98765-4', saldo:6890.00, cor:'#FF7A00', trend:[5.9,6.1,6.3,6.5,6.6,6.8,6.9]},
+];
+const cartoes = [
+  {banco:'Nubank', final:'4127', limite:12000, usado:4820, venc:'10/08', cor:'from-purple-800 to-purple-950'},
+  {banco:'Itaú Personnalité', final:'8890', limite:25000, usado:8100, venc:'05/08', cor:'from-navy-800 to-navy-950'},
+  {banco:'Inter Black', final:'2231', limite:15000, usado:2350, venc:'15/08', cor:'from-orange-700 to-orange-950'},
+];
+
+/* ---------- COMPONENTS ---------- */
+function Sidebar({page,setPage,open,setOpen}){
+  const items=[
+    {k:'home',label:'Visão Geral',Ic:IcHome},
+    {k:'trans',label:'Transações',Ic:IcList},
+    {k:'contas',label:'Contas Correntes',Ic:IcBank},
+    {k:'cartoes',label:'Cartões de Crédito',Ic:IcCard},
+  ];
+  return (
+    <>
+      {open && <div className="fixed inset-0 bg-black/40 z-30 md:hidden" onClick={()=>setOpen(false)}/>}
+      <aside className={`fixed md:static z-40 top-0 left-0 h-full w-64 bg-navy-900 text-white flex flex-col transition-transform ${open?'translate-x-0':'-translate-x-full'} md:translate-x-0`}>
+        <div className="px-5 py-6 border-b border-white/10">
+          <div className="font-display text-2xl tracking-wide">Meridian</div>
+          <div className="text-xs text-navy-200 tracking-widest uppercase mt-1">Private Banking</div>
+        </div>
+        <nav className="p-3 space-y-1 flex-1">
+          {items.map(({k,label,Ic})=>(
+            <div key={k} className={`nav-link ${page===k?'active':''}`} onClick={()=>{setPage(k);setOpen(false)}}>
+              <Ic/><span>{label}</span>
+            </div>
+          ))}
+        </nav>
+        <div className="p-4 border-t border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-gold-500 text-navy-900 grid place-items-center font-semibold">R</div>
+            <div className="text-sm">
+              <div className="font-medium">Ricardo A.</div>
+              <div className="text-xs text-navy-200">Cliente Premium</div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </>
+  );
+}
+
+function Header({title,setOpen}){
+  return (
+    <header className="sticky top-0 z-20 bg-bone/80 backdrop-blur border-b border-[#e6e3d9]">
+      <div className="flex items-center gap-3 px-4 md:px-8 py-3">
+        <button className="md:hidden btn btn-ghost !p-2" onClick={()=>setOpen(true)}><IcMenu/></button>
+        <h1 className="font-display text-xl md:text-2xl">{title}</h1>
+        <div className="ml-auto flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-2 px-3 py-2 bg-white border border-[#e6e3d9] rounded-lg w-72">
+            <IcSearch/><input className="bg-transparent outline-none text-sm flex-1" placeholder="Buscar transações, contas..."/>
+          </div>
+          <button className="btn btn-ghost !p-2"><IcBell/></button>
+          <button className="btn btn-primary hidden sm:inline-flex"><IcPlus/>Nova transação</button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function Stat({label, value, sub, tone='navy'}){
+  const toneCls = tone==='in'?'text-emerald-700':tone==='out'?'text-rose-700':'text-navy-900';
+  return (
+    <div className="card p-5">
+      <div className="text-xs uppercase tracking-widest text-navy-500">{label}</div>
+      <div className={`font-mono text-2xl md:text-3xl mt-2 ${toneCls}`}>{value}</div>
+      {sub && <div className="text-xs text-navy-500 mt-1">{sub}</div>}
+    </div>
+  );
+}
+
+/* ---------- PAGES ---------- */
+function Home(){
+  return (
+    <div className="p-4 md:p-8 space-y-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Stat label="Saldo Consolidado" value={brl(28520.65)} sub="+ 4,2% no mês"/>
+        <Stat label="Entradas (Jul)" value={brl(11487.55)} sub="7 lançamentos" tone="in"/>
+        <Stat label="Saídas (Jul)" value={brl(7397.43)} sub="42 lançamentos" tone="out"/>
+        <Stat label="Fatura Aberta" value={brl(15270)} sub="3 cartões ativos"/>
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-4">
+        <div className="card p-5 lg:col-span-2">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="font-display text-lg">Fluxo de caixa</div>
+              <div className="text-xs text-navy-500">Últimos 7 meses</div>
+            </div>
+            <div className="flex gap-2 text-xs">
+              <span className="chip bg-navy-100 text-navy-800">Entradas</span>
+              <span className="chip bg-gold-400/20 text-gold-600">Saídas</span>
+            </div>
+          </div>
+          <div style={{height:280}}>
+            <ResponsiveContainer>
+              <AreaChart data={cashflow} margin={{left:-10,right:10,top:10}}>
+                <defs>
+                  <linearGradient id="gIn" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor="#1f2a4d" stopOpacity={.35}/>
+                    <stop offset="100%" stopColor="#1f2a4d" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="gOut" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor="#c99a3b" stopOpacity={.35}/>
+                    <stop offset="100%" stopColor="#c99a3b" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke="#eeece3" vertical={false}/>
+                <XAxis dataKey="m" stroke="#93a1c1" fontSize={12}/>
+                <YAxis stroke="#93a1c1" fontSize={12}/>
+                <Tooltip formatter={(v)=>brl(v)} contentStyle={{border:'1px solid #e6e3d9',borderRadius:8}}/>
+                <Area type="monotone" dataKey="in" stroke="#1f2a4d" fill="url(#gIn)" strokeWidth={2}/>
+                <Area type="monotone" dataKey="out" stroke="#c99a3b" fill="url(#gOut)" strokeWidth={2}/>
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="card p-5">
+          <div className="font-display text-lg mb-1">Gastos por categoria</div>
+          <div className="text-xs text-navy-500 mb-3">Julho / 2026</div>
+          <div style={{height:220}}>
+            <ResponsiveContainer>
+              <PieChart>
+                <Pie data={categorias} dataKey="value" innerRadius={55} outerRadius={85} paddingAngle={2}>
+                  {categorias.map((c,i)=><Cell key={i} fill={c.color}/>)}
+                </Pie>
+                <Tooltip formatter={(v)=>brl(v)}/>
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="mt-3 space-y-1">
+            {categorias.map(c=>(
+              <div key={c.name} className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-sm" style={{background:c.color}}/>{c.name}</div>
+                <span className="font-mono text-navy-700">{brl(c.value)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-4">
+        <div className="card p-5 lg:col-span-2">
+          <div className="font-display text-lg mb-3">Gastos por dia (semana)</div>
+          <div style={{height:220}}>
+            <ResponsiveContainer>
+              <BarChart data={semana}>
+                <CartesianGrid stroke="#eeece3" vertical={false}/>
+                <XAxis dataKey="d" stroke="#93a1c1" fontSize={12}/>
+                <YAxis stroke="#93a1c1" fontSize={12}/>
+                <Tooltip formatter={(v)=>brl(v)} contentStyle={{border:'1px solid #e6e3d9',borderRadius:8}}/>
+                <Bar dataKey="v" fill="#1f2a4d" radius={[6,6,0,0]}/>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        <div className="card p-5">
+          <div className="font-display text-lg mb-3">Insights</div>
+          <ul className="space-y-3 text-sm">
+            <li className="flex gap-3"><span className="chip bg-emerald-100 text-emerald-800">+12%</span> Suas receitas cresceram frente a Junho.</li>
+            <li className="flex gap-3"><span className="chip bg-rose-100 text-rose-800">Atenção</span> Alimentação já representa 22% dos gastos.</li>
+            <li className="flex gap-3"><span className="chip bg-gold-400/20 text-gold-600">Meta</span> Falta {brl(1480)} para atingir sua meta mensal.</li>
+            <li className="flex gap-3"><span className="chip bg-navy-100 text-navy-800">Dica</span> 3 assinaturas não usadas nos últimos 30 dias.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Transacoes(){
+  const [tab,setTab]=useState('todas');
+  const filt = transacoes.filter(t=>tab==='todas'||(tab==='entradas'&&t.tipo==='in')||(tab==='saidas'&&t.tipo==='out'));
+  return (
+    <div className="p-4 md:p-8 space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Stat label="Entradas" value={brl(11487.55)} tone="in" sub="Julho / 2026"/>
+        <Stat label="Saídas" value={brl(7397.43)} tone="out" sub="Julho / 2026"/>
+        <Stat label="Saldo do período" value={brl(4090.12)} sub="Positivo"/>
+      </div>
+
+      <div className="card">
+        <div className="flex flex-col md:flex-row md:items-center gap-3 p-4 border-b border-[#eeece3]">
+          <div className="flex gap-1 bg-navy-50 p-1 rounded-lg text-sm">
+            {['todas','entradas','saidas'].map(t=>(
+              <button key={t} onClick={()=>setTab(t)} className={`px-3 py-1.5 rounded-md capitalize ${tab===t?'bg-white text-navy-900 shadow-sm':'text-navy-500'}`}>{t}</button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 px-3 py-2 bg-white border border-[#e6e3d9] rounded-lg md:ml-auto md:w-72">
+            <IcSearch/><input className="bg-transparent outline-none text-sm flex-1" placeholder="Buscar..."/>
+          </div>
+          <button className="btn btn-primary"><IcPlus/>Adicionar</button>
+        </div>
+
+        {/* desktop */}
+        <table className="hidden md:table w-full text-sm">
+          <thead className="text-xs uppercase tracking-wider text-navy-500 bg-[#faf9f4]">
+            <tr><th className="text-left px-4 py-3">Descrição</th><th className="text-left px-4 py-3">Categoria</th><th className="text-left px-4 py-3">Conta</th><th className="text-left px-4 py-3">Data</th><th className="text-right px-4 py-3">Valor</th></tr>
+          </thead>
+          <tbody className="divide-classic">
+            {filt.map(t=>(
+              <tr key={t.id} className="hover:bg-[#faf9f4]">
+                <td className="px-4 py-3 flex items-center gap-3">
+                  <span className={`w-8 h-8 rounded-full grid place-items-center ${t.tipo==='in'?'bg-emerald-100 text-emerald-700':'bg-rose-100 text-rose-700'}`}>
+                    {t.tipo==='in'?<IcDown/>:<IcUp/>}
+                  </span>
+                  {t.desc}
+                </td>
+                <td className="px-4 py-3"><span className="chip bg-navy-100 text-navy-800">{t.cat}</span></td>
+                <td className="px-4 py-3 text-navy-500">{t.conta}</td>
+                <td className="px-4 py-3 text-navy-500">{t.data}</td>
+                <td className={`px-4 py-3 text-right font-mono ${t.tipo==='in'?'text-emerald-700':'text-rose-700'}`}>{brl(t.valor)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {/* mobile */}
+        <div className="md:hidden divide-classic">
+          {filt.map(t=>(
+            <div key={t.id} className="p-4 flex items-center gap-3">
+              <span className={`w-9 h-9 rounded-full grid place-items-center ${t.tipo==='in'?'bg-emerald-100 text-emerald-700':'bg-rose-100 text-rose-700'}`}>
+                {t.tipo==='in'?<IcDown/>:<IcUp/>}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm truncate">{t.desc}</div>
+                <div className="text-xs text-navy-500">{t.cat} · {t.data}</div>
+              </div>
+              <div className={`font-mono text-sm ${t.tipo==='in'?'text-emerald-700':'text-rose-700'}`}>{brl(t.valor)}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Contas(){
+  const total = contas.reduce((s,c)=>s+c.saldo,0);
+  return (
+    <div className="p-4 md:p-8 space-y-6">
+      <div className="card p-6 bg-gradient-to-br from-navy-900 to-navy-800 text-white">
+        <div className="text-xs uppercase tracking-widest text-navy-200">Saldo consolidado</div>
+        <div className="font-mono text-4xl mt-2">{brl(total)}</div>
+        <div className="text-sm text-navy-200 mt-1">{contas.length} contas ativas · atualizado agora</div>
+      </div>
+
+      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {contas.map((c,i)=>(
+          <div key={i} className="card p-5">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full" style={{background:c.cor}}/>
+                  <span className="font-display text-lg">{c.nome}</span>
+                </div>
+                <div className="text-xs text-navy-500 mt-0.5">{c.tipo}</div>
+              </div>
+              <span className="chip bg-navy-100 text-navy-800">Ativa</span>
+            </div>
+            <div className="font-mono text-2xl mt-4">{brl(c.saldo)}</div>
+            <div className="text-xs text-navy-500 mt-1">{c.num}</div>
+            <div style={{height:70}} className="mt-3">
+              <ResponsiveContainer>
+                <LineChart data={c.trend.map((v,i)=>({i,v}))}>
+                  <Line type="monotone" dataKey="v" stroke={c.cor} strokeWidth={2} dot={false}/>
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex gap-2 mt-3">
+              <button className="btn btn-ghost text-xs flex-1 border border-[#e6e3d9]">Extrato</button>
+              <button className="btn btn-primary text-xs flex-1">Transferir</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Cartoes(){
+  const totalLim = cartoes.reduce((s,c)=>s+c.limite,0);
+  const totalUso = cartoes.reduce((s,c)=>s+c.usado,0);
+  return (
+    <div className="p-4 md:p-8 space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Stat label="Limite Total" value={brl(totalLim)}/>
+        <Stat label="Fatura em aberto" value={brl(totalUso)} tone="out"/>
+        <Stat label="Limite disponível" value={brl(totalLim-totalUso)} tone="in"/>
+      </div>
+
+      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
+        {cartoes.map((c,i)=>{
+          const pct = Math.round(c.usado/c.limite*100);
+          return (
+            <div key={i} className="card p-5 space-y-4">
+              <div className={`rounded-xl p-5 h-44 text-white bg-gradient-to-br ${c.cor} relative overflow-hidden`}>
+                <div className="flex justify-between items-start">
+                  <div className="font-display text-lg">{c.banco}</div>
+                  <div className="w-10 h-7 rounded bg-gold-400/70"/>
+                </div>
+                <div className="absolute bottom-5 left-5 right-5">
+                  <div className="font-mono tracking-widest text-lg">•••• •••• •••• {c.final}</div>
+                  <div className="flex justify-between text-xs mt-2 opacity-80">
+                    <span>Vence {c.venc}</span><span>VISA</span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-xs text-navy-500"><span>Utilizado</span><span>{pct}%</span></div>
+                <div className="h-2 bg-navy-100 rounded-full mt-1 overflow-hidden">
+                  <div className="h-full bg-gold-500" style={{width:`${pct}%`}}/>
+                </div>
+                <div className="flex justify-between text-sm mt-2 font-mono">
+                  <span className="text-rose-700">{brl(c.usado)}</span>
+                  <span className="text-navy-500">{brl(c.limite)}</span>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button className="btn btn-ghost text-xs flex-1 border border-[#e6e3d9]">Fatura</button>
+                <button className="btn btn-primary text-xs flex-1">Pagar</button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="card">
+        <div className="p-4 border-b border-[#eeece3] font-display text-lg">Compras recentes no cartão</div>
+        <div className="divide-classic">
+          {transacoes.filter(t=>t.tipo==='out').slice(0,5).map(t=>(
+            <div key={t.id} className="p-4 flex items-center gap-3">
+              <span className="w-8 h-8 rounded-full bg-navy-100 text-navy-800 grid place-items-center"><IcCard/></span>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm truncate">{t.desc}</div>
+                <div className="text-xs text-navy-500">{t.cat} · {t.data}</div>
+              </div>
+              <div className="font-mono text-sm text-rose-700">{brl(t.valor)}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function App(){
+  const [page,setPage]=useState('home');
+  const [open,setOpen]=useState(false);
+  const titles={home:'Visão Geral',trans:'Transações',contas:'Contas Correntes',cartoes:'Cartões de Crédito'};
+  return (
+    <div className="min-h-screen flex">
+      <Sidebar page={page} setPage={setPage} open={open} setOpen={setOpen}/>
+      <div className="flex-1 min-w-0 flex flex-col">
+        <Header title={titles[page]} setOpen={setOpen}/>
+        <main className="flex-1">
+          {page==='home' && <Home/>}
+          {page==='trans' && <Transacoes/>}
+          {page==='contas' && <Contas/>}
+          {page==='cartoes' && <Cartoes/>}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

@@ -61,57 +61,48 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="bg-white dark:bg-slate-800 rounded-[2.5rem] border border-slate-100 dark:border-slate-700/60 shadow-xl shadow-indigo-500/5 p-8 sm:p-10"
-    >
-      <div className="flex items-center gap-4 mb-8">
+    <form onSubmit={handleSubmit} className="card p-6">
+      <div className="flex items-center gap-3 mb-6">
         <div
-          className={`p-3 rounded-2xl ${isEditing ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-600' : 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600'}`}
+          className={`w-10 h-10 rounded-full grid place-items-center ${
+            isEditing
+              ? 'bg-gold-400/20 text-gold-600'
+              : 'bg-navy-100 text-navy-700'
+          }`}
         >
-          <Save className="w-6 h-6" strokeWidth={2.5} />
+          <Save className="w-4 h-4" />
         </div>
         <div>
-          <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            {isEditing ? 'Editar Categoria' : 'Nova Categoria'}
+          <h3 className="font-display text-lg text-navy-900">
+            {isEditing ? 'Editar categoria' : 'Nova categoria'}
           </h3>
-          <p className="text-sm font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">
-            Defina as propriedades
-          </p>
+          <p className="text-xs text-navy-500">Defina as propriedades</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="md:col-span-2 space-y-2">
-          <label
-            htmlFor="name"
-            className="text-[13px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1"
-          >
-            Nome da Categoria *
-          </label>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="md:col-span-2">
+          <label className="label">Nome da categoria *</label>
           <input
             type="text"
-            id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-[1.25rem] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold placeholder:text-slate-300 dark:placeholder:text-slate-700"
+            className="input"
             placeholder="Ex: Alimentação, Transporte, Lazer..."
             required
           />
         </div>
 
-        <div className="md:col-span-2 space-y-3">
-          <label className="text-[13px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">
-            Tipo de Categoria *
-          </label>
-          <div className="grid grid-cols-2 gap-4">
+        <div className="md:col-span-2">
+          <span className="label">Tipo de categoria *</span>
+          <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
               onClick={() => setType(CategoryType.INCOME)}
-              className={`py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 border ${
+              className={`py-2.5 rounded-lg border text-sm font-medium transition-colors ${
                 type === CategoryType.INCOME
-                  ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-500/30 shadow-lg shadow-emerald-500/5'
-                  : 'bg-slate-50 dark:bg-slate-900/50 text-slate-400 dark:text-slate-500 border-transparent hover:text-slate-600'
+                  ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                  : 'bg-white text-navy-500 border-bone-border hover:bg-bone-soft'
               }`}
             >
               💰 Receita
@@ -119,10 +110,10 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
             <button
               type="button"
               onClick={() => setType(CategoryType.EXPENSE)}
-              className={`py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 border ${
+              className={`py-2.5 rounded-lg border text-sm font-medium transition-colors ${
                 type === CategoryType.EXPENSE
-                  ? 'bg-white dark:bg-slate-700 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-500/30 shadow-lg shadow-rose-500/5'
-                  : 'bg-slate-50 dark:bg-slate-900/50 text-slate-400 dark:text-slate-500 border-transparent hover:text-slate-600'
+                  ? 'bg-rose-100 text-rose-800 border-rose-200'
+                  : 'bg-white text-navy-500 border-bone-border hover:bg-bone-soft'
               }`}
             >
               💸 Despesa
@@ -130,77 +121,63 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
           </div>
         </div>
 
-        <div className="space-y-2">
-          <label
-            htmlFor="icon"
-            className="text-[13px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1"
-          >
-            Ícone (Emoji)
-          </label>
+        <div>
+          <label className="label">Ícone (emoji)</label>
           <input
             type="text"
-            id="icon"
             value={icon}
             onChange={(e) => setIcon(e.target.value)}
-            className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-[1.25rem] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-center text-2xl"
+            className="input text-center text-xl"
             placeholder="🍔"
             maxLength={5}
           />
         </div>
 
-        <div className="flex items-end pb-4 pl-2">
-          <label className="relative flex items-center cursor-pointer group">
+        <div className="flex items-center">
+          <label className="flex items-center gap-3 cursor-pointer">
             <input
               type="checkbox"
               checked={active}
               onChange={(e) => setActive(e.target.checked)}
               className="sr-only peer"
             />
-            <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-            <span className="ml-3 text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest">
-              Categoria Ativa
-            </span>
+            <span className="w-11 h-6 rounded-full bg-navy-200 relative transition-colors peer-checked:bg-navy-700 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5" />
+            <span className="text-sm text-navy-700">Categoria ativa</span>
           </label>
         </div>
 
-        <div className="md:col-span-2 space-y-2">
-          <label
-            htmlFor="description"
-            className="text-[13px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1"
-          >
-            Descrição (Opcional)
-          </label>
+        <div className="md:col-span-2">
+          <label className="label">Descrição (opcional)</label>
           <textarea
-            id="description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
-            className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-[1.25rem] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-medium resize-none"
+            className="input resize-none"
             placeholder="Algum comentário extra..."
           />
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 mt-10">
+      <div className="flex flex-col sm:flex-row gap-3 mt-6 pt-5 border-t border-bone-divider">
         <button
           type="submit"
           disabled={loading || !name.trim()}
-          className="flex-1 order-2 sm:order-1 py-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 dark:disabled:bg-slate-800 text-white rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-xl shadow-indigo-500/20 transition-all active:scale-95 flex items-center justify-center gap-3"
+          className="btn btn-primary flex-1 order-2 sm:order-1"
         >
           {loading
             ? 'Salvando...'
             : isEditing
-              ? 'Atualizar Categoria'
-              : 'Criar Categoria'}
+              ? 'Atualizar categoria'
+              : 'Criar categoria'}
         </button>
 
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 order-1 sm:order-2 py-4 px-6 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 rounded-2xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
+            className="btn btn-ghost flex-1 order-1 sm:order-2"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
             Cancelar
           </button>
         )}

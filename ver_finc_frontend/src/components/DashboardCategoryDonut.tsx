@@ -1,15 +1,24 @@
 import React, { useMemo } from 'react';
 import { Pie } from 'react-chartjs-2';
-import { Chart, ArcElement, Tooltip, Legend } from 'chart.js';
+import { Chart, ArcElement, Tooltip } from 'chart.js';
 import { Category, Transaction } from '../types';
+import { SectionTitle } from './SectionTitle';
 
-Chart.register(ArcElement, Tooltip, Legend);
+Chart.register(ArcElement, Tooltip);
 
-const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+const brl = (value: number) =>
+  value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
+/** Navy / gold ramp taken from the reference design. */
 const CHART_COLORS = [
-  '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316',
-  '#eab308', '#84cc16', '#10b981', '#14b8a6', '#06b6d4',
+  '#1f2a4d',
+  '#3c4d78',
+  '#c99a3b',
+  '#93a1c1',
+  '#a97d28',
+  '#162038',
+  '#d9b45a',
+  '#e2e6ef',
 ];
 
 interface DashboardCategoryDonutProps {
@@ -23,7 +32,7 @@ export const DashboardCategoryDonut: React.FC<DashboardCategoryDonutProps> = ({
   transactions,
   currentMonthLabel,
 }) => {
-  const { chartLabels, chartData, totalExpense } = useMemo(() => {
+  const { legend, chartData, totalExpense } = useMemo(() => {
     const expenseCategories = categories.filter(
       (c) => c.type === 'expense' && c.name !== 'Pagamento de Fatura'
     );
@@ -32,7 +41,8 @@ export const DashboardCategoryDonut: React.FC<DashboardCategoryDonutProps> = ({
     const dataByCategory: { [catId: string]: number } = {};
     expenseTx.forEach((t) => {
       if (t.category?._id) {
-        dataByCategory[t.category._id] = (dataByCategory[t.category._id] || 0) + t.amount;
+        dataByCategory[t.category._id] =
+          (dataByCategory[t.category._id] || 0) + t.amount;
       }
     });
 
@@ -41,97 +51,94 @@ export const DashboardCategoryDonut: React.FC<DashboardCategoryDonutProps> = ({
       .sort((a, b) => dataByCategory[b._id] - dataByCategory[a._id]);
 
     return {
-      chartLabels: ordered.map((c) => c.name),
-      chartData: ordered.map((c) => dataByCategory[c._id]),
-      totalExpense: expenseTx.reduce((s, t) => s + t.amount, 0),
+      legend: ordered.map((c, index) => ({
+        name: c.name,
+        value: dataByCategory[c._id] / 100,
+        color: CHART_COLORS[index % CHART_COLORS.length],
+      })),
+      chartData: ordered.map((c) => dataByCategory[c._id] / 100),
+      totalExpense: expenseTx.reduce((sum, t) => sum + t.amount, 0) / 100,
     };
   }, [categories, transactions]);
 
   return (
     <>
-      <div className="mb-6">
-        <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
-          Por Categoria
-        </h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400 capitalize">
-          Despesas em {currentMonthLabel}
-        </p>
-      </div>
+      <SectionTitle
+        title="Gastos por categoria"
+        subtitle={currentMonthLabel}
+        className="mb-3"
+      />
 
       {chartData.length > 0 ? (
-        <div
-          className="flex-1 flex items-center justify-center relative"
-          style={{ minHeight: 280 }}
-        >
-          <Pie
-            data={{
-              labels: chartLabels,
-              datasets: [
-                {
-                  data: chartData,
-                  backgroundColor: CHART_COLORS,
-                  borderWidth: 0,
-                  hoverOffset: 4,
-                },
-              ],
-            }}
-            options={{
-              cutout: '75%',
-              plugins: {
-                legend: { display: false },
-                tooltip: {
-                  backgroundColor: '#1e293b',
-                  titleFont: { family: 'inherit', size: 13 },
-                  bodyFont: { family: 'inherit', size: 14, weight: 'bold' },
-                  padding: 12,
-                  cornerRadius: 12,
-                  callbacks: {
-                    label: (ctx) =>
-                      ` ${ctx.label}: ${fmt.format((ctx.parsed as number) / 100)}`,
+        <>
+          <div className="relative" style={{ height: 220 }}>
+            <Pie
+              data={{
+                labels: legend.map((item) => item.name),
+                datasets: [
+                  {
+                    data: chartData,
+                    backgroundColor: legend.map((item) => item.color),
+                    borderWidth: 0,
+                    hoverOffset: 4,
+                  },
+                ],
+              }}
+              options={{
+                cutout: '62%',
+                plugins: {
+                  legend: { display: false },
+                  tooltip: {
+                    backgroundColor: '#0e1628',
+                    titleFont: { family: 'inherit', size: 13 },
+                    bodyFont: { family: 'inherit', size: 13 },
+                    padding: 12,
+                    cornerRadius: 8,
+                    callbacks: {
+                      label: (ctx) => ` ${ctx.label}: ${brl(ctx.parsed as number)}`,
+                    },
                   },
                 },
-              },
-              maintainAspectRatio: false,
-              responsive: true,
-            }}
-          />
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-6">
-              Total
-            </span>
-            <span className="text-2xl font-bold text-slate-900 dark:text-white">
-              {fmt.format(totalExpense / 100)}
-            </span>
+                maintainAspectRatio: false,
+                responsive: true,
+              }}
+            />
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="stat-label">Total</span>
+              <span className="num text-xl text-navy-900 mt-1">
+                {brl(totalExpense)}
+              </span>
+            </div>
           </div>
-        </div>
+
+          <div className="mt-4 space-y-1.5">
+            {legend.map((item) => (
+              <div
+                key={item.name}
+                className="flex items-center justify-between text-sm"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className="w-2.5 h-2.5 rounded-sm shrink-0"
+                    style={{ background: item.color }}
+                  />
+                  <span className="text-navy-700 truncate">{item.name}</span>
+                </div>
+                <span className="num text-navy-800 shrink-0">
+                  {brl(item.value)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
       ) : (
         <div
-          className="flex-1 flex flex-col items-center justify-center"
-          style={{ minHeight: 280 }}
+          className="flex items-center justify-center text-sm text-navy-500"
+          style={{ height: 220 }}
         >
-          <div className="w-16 h-16 bg-slate-50 dark:bg-slate-700/50 rounded-full flex items-center justify-center mb-4">
-            <PieChartIcon className="w-8 h-8 text-slate-400" />
-          </div>
-          <p className="text-slate-500 dark:text-slate-400 font-medium">
-            Sem dados no período
-          </p>
+          Sem dados no período
         </div>
       )}
     </>
   );
 };
-
-const PieChartIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
-    <path d="M22 12A10 10 0 0 0 12 2v10z" />
-  </svg>
-);

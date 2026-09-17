@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   DollarSign,
   FolderOpen,
@@ -7,8 +7,9 @@ import {
   CreditCard,
   Banknote,
   BarChart,
-  Activity,
+  LogOut,
 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -17,63 +18,63 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   const menuItems = [
-    { path: '/', icon: BarChart, label: 'Dashboard' },
+    { path: '/', icon: BarChart, label: 'Visão Geral' },
     { path: '/transactions', icon: DollarSign, label: 'Transações' },
     { path: '/accounts', icon: Banknote, label: 'Contas Correntes' },
     { path: '/credit-cards', icon: CreditCard, label: 'Cartões de Crédito' },
     { path: '/categories', icon: FolderOpen, label: 'Categorias' },
   ];
 
+  const initial = (user?.name || user?.email || 'V').charAt(0).toUpperCase();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
+
   return (
     <>
       {/* Overlay for mobile */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
+          className="fixed inset-0 bg-black/40 z-30 md:hidden"
           onClick={onClose}
         />
       )}
 
-      {/* Sidebar - Premium Minimalist Design */}
       <aside
-        className={`fixed top-0 left-0 h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 z-50 transition-transform duration-300 ease-out ${
+        className={`fixed md:static inset-y-0 left-0 z-40 h-full w-64 shrink-0 bg-navy-900 text-white flex flex-col transition-transform duration-300 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 lg:static lg:z-0 w-72 shadow-sm`}
+        } md:translate-x-0`}
       >
         <div className="flex flex-col h-full">
-          {/* Header - Minimalist Logo */}
-          <div className="px-8 py-10">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3.5">
-                <div className="p-2.5 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-2xl shadow-lg shadow-indigo-500/20">
-                  <DollarSign
-                    className="w-6 h-6 text-white"
-                    strokeWidth={2.5}
-                  />
+          {/* Brand */}
+          <div className="px-5 py-6 border-b border-white/10">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="font-display text-2xl tracking-wide">
+                  Vero Finc
                 </div>
-                <div className="leading-tight">
-                  <h1 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                    Vero Finc
-                  </h1>
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-0.5">
-                    Premium Finance
-                  </p>
+                <div className="text-xs text-navy-200 tracking-widest uppercase mt-1">
+                  Controle Financeiro
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="lg:hidden p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                className="md:hidden p-2 text-navy-200 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
                 aria-label="Fechar menu"
               >
-                <X className="w-5 h-5 text-slate-500" />
+                <X className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          {/* Navigation - Clean & Spaced */}
-          <nav className="flex-1 px-4 space-y-1.5">
+          {/* Navigation */}
+          <nav className="p-3 space-y-1 flex-1">
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
@@ -83,52 +84,36 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                   key={item.path}
                   to={item.path}
                   onClick={onClose}
-                  className={`flex items-center gap-3.5 px-5 py-3.5 rounded-2xl transition-all duration-300 group relative ${
-                    isActive
-                      ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold'
-                      : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white font-semibold'
-                  }`}
+                  className={`nav-link ${isActive ? 'active' : ''}`}
                 >
-                  <Icon
-                    className={`w-5 h-5 transition-all duration-300 ${
-                      isActive
-                        ? 'text-indigo-600 dark:text-indigo-400'
-                        : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200'
-                    } ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}
-                    strokeWidth={isActive ? 2.5 : 2}
-                  />
-                  <span className="text-[15px]">{item.label}</span>
-
-                  {isActive && (
-                    <div className="absolute left-0 w-1.5 h-6 bg-indigo-600 dark:bg-indigo-400 rounded-r-full"></div>
-                  )}
+                  <Icon className="w-4 h-4 shrink-0" />
+                  <span>{item.label}</span>
                 </Link>
               );
             })}
           </nav>
 
-          {/* Pro/Info Card - Aesthetic Improvement */}
-          <div className="px-6 py-6 mt-auto">
-            <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-800 rounded-3xl p-5 border border-slate-200/50 dark:border-slate-700/50">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 rounded-full bg-white dark:bg-slate-700 flex items-center justify-center shadow-sm">
-                  <Activity className="w-4 h-4 text-indigo-500" />
-                </div>
-                <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                  Visão Geral
-                </span>
+          {/* User */}
+          <div className="p-4 border-t border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-gold-500 text-navy-900 grid place-items-center font-semibold shrink-0">
+                {initial}
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
-                Organize suas finanças de forma simples e segura todos os dias.
-              </p>
+              <div className="text-sm min-w-0 flex-1">
+                <div className="font-medium truncate">
+                  {user?.name || user?.email || 'Cliente'}
+                </div>
+                <div className="text-xs text-navy-200">Cliente Premium</div>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="p-2 text-navy-200 hover:text-white hover:bg-white/10 rounded-lg transition-colors shrink-0"
+                title="Sair"
+                aria-label="Sair"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
             </div>
-          </div>
-
-          {/* Footer - Subtle */}
-          <div className="px-8 py-6">
-            <p className="text-[10px] text-slate-400 dark:text-slate-600 font-bold uppercase tracking-widest">
-              © 2026 Vero Finc Solution
-            </p>
           </div>
         </div>
       </aside>

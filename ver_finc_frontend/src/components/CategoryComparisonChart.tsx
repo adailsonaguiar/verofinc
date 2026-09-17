@@ -9,11 +9,14 @@ import {
   Legend,
 } from 'chart.js';
 import { Category, Transaction } from '../types';
-import { BarChart2 } from 'lucide-react';
+import { SectionTitle } from './SectionTitle';
 
 Chart.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
-const MONTH_COLORS = ['#6366f1', '#10b981', '#f59e42'];
+const MONTH_COLORS = ['#1f2a4d', '#c99a3b', '#93a1c1'];
+
+const brl = (value: number) =>
+  value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 interface CategoryComparisonChartProps {
   allTransactions: Transaction[];
@@ -24,18 +27,14 @@ export const CategoryComparisonChart: React.FC<
   CategoryComparisonChartProps
 > = ({ allTransactions, categories }) => {
   const { chartLabels, datasets } = useMemo(() => {
-    // Collect the last 3 months that have expense data
     const monthSet = new Set<string>();
     allTransactions
-      .filter(
-        (t) =>
-          t.type === 'expense' &&
-          !t.isPayment
-      )
+      .filter((t) => t.type === 'expense' && !t.isPayment)
       .forEach((t) => {
         const date = new Date(t.date);
-        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        monthSet.add(key);
+        monthSet.add(
+          `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+        );
       });
 
     const sortedMonths = Array.from(monthSet).sort().slice(-3);
@@ -45,7 +44,6 @@ export const CategoryComparisonChart: React.FC<
       (c) => c.type === 'expense' && c.name !== 'Pagamento de Fatura'
     );
 
-    // Build totals per category per month
     const totals: Record<string, Record<string, number>> = {};
     allTransactions
       .filter(
@@ -54,126 +52,108 @@ export const CategoryComparisonChart: React.FC<
           !t.isPayment &&
           t.category?._id &&
           sortedMonths.includes(
-            `${new Date(t.date).getFullYear()}-${String(new Date(t.date).getMonth() + 1).padStart(2, '0')}`
+            `${new Date(t.date).getFullYear()}-${String(
+              new Date(t.date).getMonth() + 1
+            ).padStart(2, '0')}`
           )
       )
       .forEach((t) => {
         const date = new Date(t.date);
-        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        const catId = t.category!._id;
+        const monthKey = `${date.getFullYear()}-${String(
+          date.getMonth() + 1
+        ).padStart(2, '0')}`;
+        const catId = t.category?._id ?? '';
         if (!totals[catId]) totals[catId] = {};
-        totals[catId][monthKey] = (totals[catId][monthKey] ?? 0) + t.amount;
+        totals[catId][monthKey] =
+          (totals[catId][monthKey] ?? 0) + t.amount / 100;
       });
 
-    // Only show categories that have data in at least one of the last 3 months
     const activeCategories = expenseCategories.filter((c) => totals[c._id]);
-    const labels = activeCategories.map((c) => c.name);
 
-    const monthDatasets = sortedMonths.map((monthKey, i) => {
-      const [year, month] = monthKey.split('-');
-      return {
-        label: `${month}/${year}`,
-        data: activeCategories.map((c) => totals[c._id]?.[monthKey] ?? 0),
-        backgroundColor: MONTH_COLORS[i] ?? '#94a3b8',
-        borderRadius: 6,
-        barPercentage: 0.7,
-        categoryPercentage: 0.7,
-      };
-    });
-
-    return { chartLabels: labels, datasets: monthDatasets };
+    return {
+      chartLabels: activeCategories.map((c) => c.name),
+      datasets: sortedMonths.map((monthKey, index) => {
+        const [year, month] = monthKey.split('-');
+        return {
+          label: `${month}/${year}`,
+          data: activeCategories.map((c) => totals[c._id]?.[monthKey] ?? 0),
+          backgroundColor: MONTH_COLORS[index] ?? '#93a1c1',
+          borderRadius: 6,
+          barPercentage: 0.7,
+          categoryPercentage: 0.7,
+        };
+      }),
+    };
   }, [allTransactions, categories]);
 
-  if (chartLabels.length === 0) {
-    return (
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 flex flex-col">
-        <div className="mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-1">
-            Comparativo de Categorias
-          </h2>
-          <p className="text-sm text-gray-500 font-medium">
-            Despesas por categoria nos últimos 3 meses
-          </p>
-        </div>
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <BarChart2 className="w-8 h-8 text-gray-400" />
-            </div>
-            <p className="text-gray-500 font-medium">
-              Nenhuma despesa encontrada
-            </p>
-            <p className="text-sm text-gray-400 mt-1">
-              Adicione transações para visualizar os dados
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 p-8 flex flex-col">
-      <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-1">
-          Comparativo de Categorias
-        </h2>
-        <p className="text-sm text-gray-500 font-medium">
-          Despesas por categoria nos últimos 3 meses
-        </p>
-      </div>
-      <div style={{ height: 380 }}>
-        <Bar
-          data={{ labels: chartLabels, datasets }}
-          options={{
-            plugins: {
-              legend: {
-                display: true,
-                position: 'top',
-                labels: {
-                  font: { size: 13, weight: 'bold' },
-                  padding: 16,
-                  usePointStyle: true,
-                  pointStyle: 'circle',
+    <div className="card p-5">
+      <SectionTitle
+        title="Comparativo de categorias"
+        subtitle="Despesas por categoria nos últimos 3 meses"
+        className="mb-4"
+      />
+
+      {chartLabels.length > 0 ? (
+        <div style={{ height: 320 }}>
+          <Bar
+            data={{ labels: chartLabels, datasets }}
+            options={{
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  display: true,
+                  position: 'top',
+                  align: 'end',
+                  labels: {
+                    color: '#3c4d78',
+                    font: { family: 'inherit', size: 12 },
+                    usePointStyle: true,
+                    boxWidth: 8,
+                  },
                 },
-              },
-              tooltip: {
-                callbacks: {
-                  label: (context) => {
-                    const label = context.dataset.label || '';
-                    const value = context.parsed.y ?? 0;
-                    const formatted = (value / 100).toLocaleString('pt-BR', {
-                      style: 'currency',
-                      currency: 'BRL',
-                    });
-                    return `${label}: ${formatted}`;
+                tooltip: {
+                  backgroundColor: '#0e1628',
+                  padding: 12,
+                  cornerRadius: 8,
+                  callbacks: {
+                    label: (ctx) =>
+                      ` ${ctx.dataset.label}: ${brl(ctx.parsed.y ?? 0)}`,
                   },
                 },
               },
-            },
-            scales: {
-              x: {
-                grid: { display: false },
-                ticks: { font: { size: 11 } },
-              },
-              y: {
-                beginAtZero: true,
-                grid: { color: '#f3f4f6' },
-                ticks: {
-                  font: { size: 11 },
-                  callback: (value) =>
-                    (Number(value) / 100).toLocaleString('pt-BR', {
-                      style: 'currency',
-                      currency: 'BRL',
-                    }),
+              scales: {
+                x: {
+                  grid: { display: false },
+                  border: { display: false },
+                  ticks: {
+                    color: '#93a1c1',
+                    font: { family: 'inherit', size: 11 },
+                  },
+                },
+                y: {
+                  beginAtZero: true,
+                  grid: { color: '#eeece3' },
+                  border: { display: false },
+                  ticks: {
+                    color: '#93a1c1',
+                    font: { family: 'inherit', size: 11 },
+                    callback: (value) => brl(Number(value)),
+                  },
                 },
               },
-            },
-            maintainAspectRatio: false,
-            responsive: true,
-          }}
-        />
-      </div>
+            }}
+          />
+        </div>
+      ) : (
+        <div
+          className="flex items-center justify-center text-sm text-navy-500"
+          style={{ height: 320 }}
+        >
+          Nenhuma despesa encontrada
+        </div>
+      )}
     </div>
   );
 };
