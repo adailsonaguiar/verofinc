@@ -1,5 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, GripVertical, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  MoreVertical,
+  Pencil,
+  Trash2,
+} from 'lucide-react';
 import { Transaction } from '../types';
 import { formatCurrency, formatDate } from '../utils/transactions';
 
@@ -7,12 +13,6 @@ interface TransactionCardProps {
   transaction: Transaction;
   onEdit?: (transaction: Transaction) => void;
   onDelete?: (transaction: Transaction) => void;
-  isDraggable?: boolean;
-  isDragging?: boolean;
-  onDragStart?: (e: React.DragEvent) => void;
-  onDragOver?: (e: React.DragEvent) => void;
-  onDrop?: (e: React.DragEvent) => void;
-  onDragEnd?: (e: React.DragEvent) => void;
 }
 
 /**
@@ -23,12 +23,6 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
   transaction,
   onEdit,
   onDelete,
-  isDraggable = false,
-  isDragging = false,
-  onDragStart,
-  onDragOver,
-  onDrop,
-  onDragEnd,
 }) => {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -44,32 +38,22 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
 
     if (showMenu) {
       document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      return () =>
+        document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [showMenu]);
 
   return (
     <div
-      draggable={isDraggable}
-      onDragStart={onDragStart}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
-      onDragEnd={onDragEnd}
       className={`flex items-center gap-3 px-4 py-3 transition-colors hover:bg-bone-soft ${
         !isPaid ? 'opacity-70' : ''
-      } ${isDragging ? 'bg-bone-soft' : ''} ${
-        isDraggable ? 'cursor-grab active:cursor-grabbing' : ''
       }`}
     >
-      {isDraggable && (
-        <div className="hidden sm:flex shrink-0 items-center text-navy-300 hover:text-navy-500 cursor-grab active:cursor-grabbing">
-          <GripVertical className="w-4 h-4" />
-        </div>
-      )}
-
       <span
         className={`w-9 h-9 rounded-full grid place-items-center shrink-0 ${
-          isIncome ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+          isIncome
+            ? 'bg-emerald-100 text-emerald-700'
+            : 'bg-rose-100 text-rose-700'
         }`}
       >
         {isIncome ? (

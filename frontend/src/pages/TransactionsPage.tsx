@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { accountService } from '../services/accountService';
 import { transactionService } from '../services/transactionService';
@@ -16,7 +16,6 @@ import { EmptyState } from '../components/EmptyState';
 import {
   ArrowDown,
   ArrowUp,
-  GripVertical,
   Loader2,
   MoreVertical,
   Pencil,
@@ -67,8 +66,6 @@ export const TransactionsPage: React.FC = () => {
   const [orderedTransactions, setOrderedTransactions] = useState<Transaction[]>(
     []
   );
-  const [draggingId, setDraggingId] = useState<string | null>(null);
-  const dragIndexRef = useRef<number | null>(null);
 
   useEffect(() => {
     loadCategories();
@@ -84,7 +81,13 @@ export const TransactionsPage: React.FC = () => {
     if (currentYear && currentMonth) {
       loadMonthTransactions();
     }
-  }, [currentYear, currentMonth, selectedAccount, filterCategory, filterStatus]);
+  }, [
+    currentYear,
+    currentMonth,
+    selectedAccount,
+    filterCategory,
+    filterStatus,
+  ]);
 
   const loadAccounts = async () => {
     try {
@@ -258,44 +261,6 @@ export const TransactionsPage: React.FC = () => {
     );
   }
 
-  const handleDragStart = (e: React.DragEvent, index: number) => {
-    dragIndexRef.current = index;
-    setDraggingId(orderedTransactions[index]._id);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', String(index));
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const handleDrop = async (e: React.DragEvent, dropIndex: number) => {
-    e.preventDefault();
-    const fromIndex = dragIndexRef.current;
-    if (fromIndex === null || fromIndex === dropIndex) {
-      setDraggingId(null);
-      dragIndexRef.current = null;
-      return;
-    }
-    const newOrder = [...orderedTransactions];
-    const [removed] = newOrder.splice(fromIndex, 1);
-    newOrder.splice(dropIndex, 0, removed);
-    setOrderedTransactions(newOrder);
-    setDraggingId(null);
-    dragIndexRef.current = null;
-    try {
-      await transactionService.reorder(newOrder.map((t) => t._id));
-    } catch (err) {
-      console.error('Erro ao persistir ordenação:', err);
-    }
-  };
-
-  const handleDragEnd = () => {
-    setDraggingId(null);
-    dragIndexRef.current = null;
-  };
-
   const TABS: TabKey[] = ['todas', 'entradas', 'saidas'];
 
   return (
@@ -416,7 +381,6 @@ export const TransactionsPage: React.FC = () => {
             <table className="hidden md:table w-full text-sm">
               <thead className="text-xs uppercase tracking-wider text-navy-500 bg-bone-soft">
                 <tr>
-                  <th className="text-left px-4 py-3 w-10" />
                   <th className="text-left px-4 py-3">Descrição</th>
                   <th className="text-left px-4 py-3">Categoria</th>
                   <th className="text-left px-4 py-3">Conta</th>
@@ -428,33 +392,13 @@ export const TransactionsPage: React.FC = () => {
               <tbody className="divide-classic">
                 {visibleTransactions.map((tx) => {
                   const isIncome = tx.type === 'income';
-                  const orderIndex = orderedTransactions.findIndex(
-                    (t) => t._id === tx._id
-                  );
+
                   const canDrag = typeTab === 'todas' && term.length === 0;
                   return (
                     <tr
                       key={tx._id}
-                      draggable={canDrag}
-                      onDragStart={
-                        canDrag
-                          ? (e) => handleDragStart(e, orderIndex)
-                          : undefined
-                      }
-                      onDragOver={canDrag ? handleDragOver : undefined}
-                      onDrop={
-                        canDrag ? (e) => handleDrop(e, orderIndex) : undefined
-                      }
-                      onDragEnd={handleDragEnd}
-                      className={`hover:bg-bone-soft transition-colors ${
-                        draggingId === tx._id ? 'opacity-40' : ''
-                      } ${canDrag ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                      className={`hover:bg-bone-soft transition-colors ${canDrag ? 'cursor-grab active:cursor-grabbing' : ''}`}
                     >
-                      <td className="px-4 py-3">
-                        {canDrag && (
-                          <GripVertical className="w-4 h-4 text-navy-300" />
-                        )}
-                      </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <span
