@@ -47,11 +47,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       )}
 
       <aside
-        className={`fixed md:static inset-y-0 left-0 z-40 h-full w-64 shrink-0 bg-navy-900 text-white flex flex-col transition-transform duration-300 ${
+        className={`fixed md:sticky top-0 left-0 h-full md:h-screen z-40 w-64 shrink-0 bg-navy-900 text-white flex flex-col transition-transform duration-300 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         } md:translate-x-0`}
       >
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full min-h-0">
           {/* Brand */}
           <div className="px-5 py-6 border-b border-white/10">
             <div className="flex items-start justify-between">
@@ -74,7 +74,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           </div>
 
           {/* Navigation */}
-          <nav className="p-3 space-y-1 flex-1">
+          <nav className="p-3 space-y-1 flex-1 overflow-y-auto min-h-0">
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
