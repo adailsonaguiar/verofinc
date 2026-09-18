@@ -61,7 +61,9 @@ export const CategoriesPage: React.FC = () => {
       await loadCategories();
     } catch (err) {
       console.error('Error deleting category:', err);
-      alert('Falha ao excluir categoria. Ela pode estar em uso por transações.');
+      alert(
+        'Falha ao excluir categoria. Ela pode estar em uso por transações.'
+      );
     }
   };
 
