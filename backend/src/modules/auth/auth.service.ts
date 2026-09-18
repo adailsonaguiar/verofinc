@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { UsersService } from '../users/users.service';
@@ -9,8 +14,28 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
-    private readonly firebaseService: FirebaseService
+    private readonly firebaseService: FirebaseService,
+    private readonly configService: ConfigService
   ) {}
+
+  private getAllowedEmails(): string[] {
+    const raw = this.configService.get<string>('ALLOWED_EMAILS');
+    if (!raw) return [];
+    return raw
+      .split(',')
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean);
+  }
+
+  private assertAllowed(email: string): void {
+    const allowed = this.getAllowedEmails();
+    if (allowed.length === 0) return;
+    if (!allowed.includes(email.toLowerCase())) {
+      throw new ForbiddenException(
+        'Acesso restrito. Esta conta não está autorizada.'
+      );
+    }
+  }
 
   private buildPayload(user: any) {
     return {
@@ -37,6 +62,8 @@ export class AuthService {
   }
 
   async login(email: string, password: string) {
+    this.assertAllowed(email);
+
     const user = await this.usersService.findByEmail(email);
     if (!user) {
       throw new UnauthorizedException('Credenciais inválidas.');
@@ -64,6 +91,8 @@ export class AuthService {
         'Não foi possível validar o email da conta Google.'
       );
     }
+
+    this.assertAllowed(decoded.email);
 
     const user = await this.usersService.findOrCreateGoogleUser({
       email: decoded.email,
