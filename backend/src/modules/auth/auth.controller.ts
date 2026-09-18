@@ -17,12 +17,19 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 
 const ACCESS_TOKEN_COOKIE = 'accessToken';
 
-function setAccessTokenCookie(res: Response, accessToken: string) {
-  res.cookie(ACCESS_TOKEN_COOKIE, accessToken, {
+function cookieOptions() {
+  const isProduction = process.env.NODE_ENV === 'production';
+  return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-  });
+    secure: isProduction,
+    // Em produção o frontend fica em outro domínio (ex.: Netlify),
+    // então o cookie precisa ser enviado cross-site.
+    sameSite: isProduction ? ('none' as const) : ('lax' as const),
+  };
+}
+
+function setAccessTokenCookie(res: Response, accessToken: string) {
+  res.cookie(ACCESS_TOKEN_COOKIE, accessToken, cookieOptions());
 }
 
 @Controller('auth')
@@ -79,11 +86,7 @@ export class AuthController {
   @Public()
   @Post('logout')
   async logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie(ACCESS_TOKEN_COOKIE, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-    });
+    res.clearCookie(ACCESS_TOKEN_COOKIE, cookieOptions());
     return { ok: true };
   }
 
