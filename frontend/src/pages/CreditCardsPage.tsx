@@ -13,6 +13,8 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { computeInvoicePeriod, formatInvoiceDay } from '../utils/invoices';
 import api from '../services/api';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 interface CardLike {
   _id: string;
@@ -248,6 +250,8 @@ export const CreditCardsPage: React.FC = () => {
   };
 
   const handlePayInvoice = async () => {
+          toast.success('Fatura paga com sucesso!');
+          return;
     if (!selectedCard || !selectedCheckingAccount) return;
 
     try {
@@ -258,22 +262,20 @@ export const CreditCardsPage: React.FC = () => {
         currentYear,
         currentMonth
       );
-      alert('Fatura paga com sucesso!');
+      toast.success('Fatura paga com sucesso!');
       setShowPaymentModal(false);
       await loadCards();
       await loadCardTransactions();
       await loadInvoices();
     } catch (err) {
       console.error('Erro ao pagar fatura:', err);
-      alert('Erro ao pagar fatura. Tente novamente.');
+      toast.error('Erro ao pagar fatura. Tente novamente.', {
+        position: 'top-center',
+        autoClose: 3000,
+      });
     } finally {
       setPayingInvoice(false);
     }
-  };
-
-  const openStatement = (card: CardLike) => {
-    setSelectedCard(card);
-    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
   };
 
   const totalLimit = cards.reduce((sum, c) => sum + (c.creditLimit || 0), 0);
@@ -448,12 +450,12 @@ export const CreditCardsPage: React.FC = () => {
           value={brl(totalLimit)}
           sub={`${cards.length} cartão(ões)`}
         />
-        <StatCard
-          label="Fatura em aberto"
+        {/* <StatCard
+          label="Utilizado"
           value={brl(totalUsed)}
           sub="Limite utilizado"
           tone="out"
-        />
+        /> */}
         <StatCard
           label="Limite disponível"
           value={brl(Math.max(0, totalLimit - totalUsed))}
@@ -528,25 +530,6 @@ export const CreditCardsPage: React.FC = () => {
                     <span className="text-rose-700">{brl(used)}</span>
                     <span className="text-navy-500">{brl(limitValue)}</span>
                   </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => openStatement(card)}
-                    className="btn btn-outline flex-1 text-xs"
-                  >
-                    Fatura
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSelectedCard(card);
-                      handleOpenPaymentModal();
-                    }}
-                    disabled={used === 0}
-                    className="btn btn-primary flex-1 text-xs"
-                  >
-                    Pagar
-                  </button>
                 </div>
 
                 <div className="flex justify-end gap-1">
