@@ -4,6 +4,7 @@ import { Category, CategoryType } from '../types';
 import { CategoryForm } from '../components/CategoryForm';
 import { CategoryCard } from '../components/CategoryCard';
 import { EmptyState } from '../components/EmptyState';
+import { PageHeading } from '../components/PageHeading';
 import { Loader2, Plus } from 'lucide-react';
 
 type CategoryPayload = {
@@ -97,18 +98,19 @@ export const CategoriesPage: React.FC = () => {
   ];
 
   return (
-    <div className="p-4 md:p-8 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <p className="text-sm text-navy-500">
-          Personalize a organização das suas finanças.
-        </p>
-        {!showForm && !editingCategory && (
-          <button onClick={() => setShowForm(true)} className="btn btn-primary">
-            <Plus className="w-4 h-4" />
-            Nova categoria
-          </button>
-        )}
-      </div>
+    <div className="mx-auto max-w-[1280px] space-y-6 px-4 pb-8 pt-8 md:px-[50px] md:pt-12">
+      <PageHeading
+        title="Categorias"
+        subtitle="Personalize a organização das suas finanças."
+        actions={
+          !showForm && !editingCategory ? (
+            <button onClick={() => setShowForm(true)} className="btn btn-primary">
+              <Plus className="w-4 h-4" />
+              Nova categoria
+            </button>
+          ) : undefined
+        }
+      />
 
       {(showForm || editingCategory) && (
         <CategoryForm
@@ -131,8 +133,8 @@ export const CategoriesPage: React.FC = () => {
                 onClick={() => setFilterActive(filter.key)}
                 className={`px-3 py-1.5 rounded-md transition-colors ${
                   filterActive === filter.key
-                    ? 'bg-white text-navy-900 shadow-sm'
-                    : 'text-navy-500 hover:text-navy-700'
+                    ? 'bg-gold-400 text-[#171916] font-semibold'
+                    : 'text-navy-500 hover:text-navy-900'
                 }`}
               >
                 {filter.label}

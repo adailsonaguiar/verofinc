@@ -6,25 +6,24 @@ export interface SummaryStat {
   value: string;
   sub?: string;
   tone?: 'navy' | 'in' | 'out';
+  highlight?: boolean;
+  trend?: string;
+  spark?: number[];
+  bar?: number;
+  barWarm?: boolean;
 }
 
 interface DashboardSummaryCardsProps {
   stats: SummaryStat[];
 }
 
-/** Row of four KPIs, mirroring the reference layout. */
+/** Row of KPIs in the nivo style, the first (saldo) carrying the hero treatment. */
 export const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({
   stats,
 }) => (
-  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
     {stats.map((stat) => (
-      <StatCard
-        key={stat.label}
-        label={stat.label}
-        value={stat.value}
-        sub={stat.sub}
-        tone={stat.tone}
-      />
+      <StatCard key={stat.label} {...stat} />
     ))}
   </div>
 );

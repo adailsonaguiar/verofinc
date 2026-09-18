@@ -229,10 +229,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
   return (
     <>
-      <ToastContainer theme="light" />
+      <ToastContainer theme="dark" />
       <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
         <div
-          className="fixed inset-0 bg-navy-900/50 backdrop-blur-sm"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm"
           onClick={onClose}
         />
 
@@ -275,8 +275,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   onClick={() => setType(TransactionType.INCOME)}
                   className={`flex-1 py-2.5 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
                     type === TransactionType.INCOME
-                      ? 'bg-white text-emerald-700 shadow-sm'
-                      : 'text-navy-500 hover:text-navy-700'
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : 'text-navy-500 hover:text-navy-900'
                   }`}
                 >
                   <TrendingUp className="w-4 h-4" />
@@ -287,8 +287,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   onClick={() => setType(TransactionType.EXPENSE)}
                   className={`flex-1 py-2.5 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
                     type === TransactionType.EXPENSE
-                      ? 'bg-white text-rose-700 shadow-sm'
-                      : 'text-navy-500 hover:text-navy-700'
+                      ? 'bg-rose-100 text-rose-700'
+                      : 'text-navy-500 hover:text-navy-900'
                   }`}
                 >
                   <TrendingDown className="w-4 h-4" />
@@ -402,8 +402,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   onClick={() => setStatus(TransactionStatus.PAID)}
                   className={`py-2.5 rounded-lg border text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
                     status === TransactionStatus.PAID
-                      ? 'bg-navy-700 text-white border-navy-700'
-                      : 'bg-white text-navy-500 border-bone-border hover:bg-bone-soft'
+                      ? 'bg-gold-400 text-[#171916] border-gold-400'
+                      : 'bg-transparent text-navy-500 border-navy-200 hover:bg-navy-100'
                   }`}
                 >
                   <CheckCircle2 className="w-4 h-4" />
@@ -414,8 +414,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   onClick={() => setStatus(TransactionStatus.UNPAID)}
                   className={`py-2.5 rounded-lg border text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
                     status === TransactionStatus.UNPAID
-                      ? 'bg-gold-500 text-navy-900 border-gold-500'
-                      : 'bg-white text-navy-500 border-bone-border hover:bg-bone-soft'
+                      ? 'bg-[#ca7251] text-[#211512] border-[#ca7251]'
+                      : 'bg-transparent text-navy-500 border-navy-200 hover:bg-navy-100'
                   }`}
                 >
                   <Clock className="w-4 h-4" />
@@ -438,7 +438,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   type="button"
                   onClick={() => setIsFixed(!isFixed)}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    isFixed ? 'bg-navy-700' : 'bg-navy-200'
+                    isFixed ? 'bg-gold-400' : 'bg-navy-200'
                   }`}
                   aria-label="Fixar transação"
                 >

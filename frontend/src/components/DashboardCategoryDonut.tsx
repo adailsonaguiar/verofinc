@@ -9,16 +9,16 @@ Chart.register(ArcElement, Tooltip);
 const brl = (value: number) =>
   value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-/** Navy / gold ramp taken from the reference design. */
+/** nivo ramp for category slices. */
 const CHART_COLORS = [
-  '#1f2a4d',
-  '#3c4d78',
-  '#c99a3b',
-  '#93a1c1',
-  '#a97d28',
-  '#162038',
-  '#d9b45a',
-  '#e2e6ef',
+  '#d7f36b',
+  '#7790d5',
+  '#ca7251',
+  '#a98fd0',
+  '#cb777b',
+  '#9cc16d',
+  '#c9e58a',
+  '#8298d6',
 ];
 
 interface DashboardCategoryDonutProps {
@@ -89,7 +89,9 @@ export const DashboardCategoryDonut: React.FC<DashboardCategoryDonutProps> = ({
                 plugins: {
                   legend: { display: false },
                   tooltip: {
-                    backgroundColor: '#0e1628',
+                    backgroundColor: '#171719',
+                    borderColor: '#2a2a2e',
+                    borderWidth: 1,
                     titleFont: { family: 'inherit', size: 13 },
                     bodyFont: { family: 'inherit', size: 13 },
                     padding: 12,

@@ -13,7 +13,7 @@ import { SectionTitle } from './SectionTitle';
 
 Chart.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
-const MONTH_COLORS = ['#1f2a4d', '#c99a3b', '#93a1c1'];
+const MONTH_COLORS = ['#d7f36b', '#ca7251', '#7790d5'];
 
 const brl = (value: number) =>
   value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -107,14 +107,16 @@ export const CategoryComparisonChart: React.FC<
                   position: 'top',
                   align: 'end',
                   labels: {
-                    color: '#3c4d78',
+                    color: '#929198',
                     font: { family: 'inherit', size: 12 },
                     usePointStyle: true,
                     boxWidth: 8,
                   },
                 },
                 tooltip: {
-                  backgroundColor: '#0e1628',
+                  backgroundColor: '#171719',
+                  borderColor: '#2a2a2e',
+                  borderWidth: 1,
                   padding: 12,
                   cornerRadius: 8,
                   callbacks: {
@@ -128,16 +130,16 @@ export const CategoryComparisonChart: React.FC<
                   grid: { display: false },
                   border: { display: false },
                   ticks: {
-                    color: '#93a1c1',
+                    color: '#77777d',
                     font: { family: 'inherit', size: 11 },
                   },
                 },
                 y: {
                   beginAtZero: true,
-                  grid: { color: '#eeece3' },
+                  grid: { color: '#242427' },
                   border: { display: false },
                   ticks: {
-                    color: '#93a1c1',
+                    color: '#77777d',
                     font: { family: 'inherit', size: 11 },
                     callback: (value) => brl(Number(value)),
                   },

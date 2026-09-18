@@ -101,7 +101,7 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
           </button>
 
           {showMenu && (
-            <div className="absolute right-0 mt-1 w-44 bg-white rounded-lg border border-bone-border shadow-lg py-1 z-50">
+            <div className="absolute right-0 mt-1 w-44 bg-[#171719] rounded-lg border border-bone-border shadow-lg py-1 z-50">
               {onEdit && (
                 <button
                   onClick={() => {

@@ -9,6 +9,7 @@ import { MonthSelector } from '../components/MonthSelector';
 import { SectionTitle } from '../components/SectionTitle';
 import { SparklineChart } from '../components/SparklineChart';
 import { EmptyState } from '../components/EmptyState';
+import { PageHeading } from '../components/PageHeading';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import api from '../services/api';
@@ -27,12 +28,12 @@ const brl = (cents: number) =>
 
 /** Deterministic palette: the backend has no per-bank color field. */
 const ACCOUNT_COLORS = [
-  '#1f2a4d',
-  '#c99a3b',
-  '#3c4d78',
-  '#a97d28',
-  '#162038',
-  '#93a1c1',
+  '#d7f36b',
+  '#ca7251',
+  '#7790d5',
+  '#a98fd0',
+  '#9cc16d',
+  '#cb777b',
 ];
 
 export const AccountsPage: React.FC = () => {
@@ -253,23 +254,24 @@ export const AccountsPage: React.FC = () => {
   }
 
   return (
-    <div className="p-4 md:p-8 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <p className="text-sm text-navy-500">
-          Saldo consolidado e extrato por conta corrente.
-        </p>
-        <button
-          onClick={() => {
-            setShowForm(true);
-            setEditing(null);
-            setName('');
-          }}
-          className="btn btn-primary"
-        >
-          <Plus className="w-4 h-4" />
-          Nova conta
-        </button>
-      </div>
+    <div className="mx-auto max-w-[1280px] space-y-6 px-4 pb-8 pt-8 md:px-[50px] md:pt-12">
+      <PageHeading
+        title="Contas"
+        subtitle="Saldo consolidado e extrato por conta corrente."
+        actions={
+          <button
+            onClick={() => {
+              setShowForm(true);
+              setEditing(null);
+              setName('');
+            }}
+            className="btn btn-primary"
+          >
+            <Plus className="w-4 h-4" />
+            Nova conta
+          </button>
+        }
+      />
 
       {showForm && (
         <form onSubmit={handleSubmit} className="card p-6">
@@ -302,12 +304,12 @@ export const AccountsPage: React.FC = () => {
 
       {error && <div className="card p-5 text-sm text-rose-700">{error}</div>}
 
-      <div className="card p-6 bg-gradient-to-br from-navy-900 to-navy-800 border-navy-800 text-white">
-        <div className="text-xs uppercase tracking-widest text-navy-200">
+      <div className="rounded-xl border border-[#3d4722] bg-gradient-to-br from-[#1c1f13] to-[#121214] p-6">
+        <div className="text-[0.68rem] uppercase tracking-[0.14em] text-navy-500">
           Saldo consolidado
         </div>
-        <div className="num text-4xl mt-2">{brl(totalBalance)}</div>
-        <div className="text-sm text-navy-200 mt-1">
+        <div className="num text-4xl mt-2 text-navy-900">{brl(totalBalance)}</div>
+        <div className="text-sm text-navy-500 mt-1">
           {accounts.length} conta(s) ativa(s) · atualizado agora
         </div>
       </div>

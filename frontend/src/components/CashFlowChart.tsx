@@ -98,8 +98,8 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({
                 {
                   label: 'Entradas',
                   data: income,
-                  borderColor: '#1f2a4d',
-                  backgroundColor: areaGradient('31, 42, 77', 0.35),
+                  borderColor: '#d7f36b',
+                  backgroundColor: areaGradient('215, 243, 107', 0.24),
                   borderWidth: 2,
                   fill: true,
                   tension: 0.35,
@@ -109,8 +109,8 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({
                 {
                   label: 'Saídas',
                   data: expense,
-                  borderColor: '#c99a3b',
-                  backgroundColor: areaGradient('201, 154, 59', 0.35),
+                  borderColor: '#ca7251',
+                  backgroundColor: areaGradient('202, 114, 81', 0.24),
                   borderWidth: 2,
                   fill: true,
                   tension: 0.35,
@@ -125,7 +125,9 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({
               plugins: {
                 legend: { display: false },
                 tooltip: {
-                  backgroundColor: '#0e1628',
+                  backgroundColor: '#171719',
+                  borderColor: '#2a2a2e',
+                  borderWidth: 1,
                   titleFont: { family: 'inherit', size: 13 },
                   bodyFont: { family: 'inherit', size: 13 },
                   padding: 12,
@@ -141,16 +143,16 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({
                   grid: { display: false },
                   border: { display: false },
                   ticks: {
-                    color: '#93a1c1',
+                    color: '#77777d',
                     font: { family: 'inherit', size: 12 },
                   },
                 },
                 y: {
                   beginAtZero: true,
-                  grid: { color: '#eeece3' },
+                  grid: { color: '#242427' },
                   border: { display: false },
                   ticks: {
-                    color: '#93a1c1',
+                    color: '#77777d',
                     font: { family: 'inherit', size: 12 },
                     callback: (value) => {
                       const n = Number(value);

@@ -10,8 +10,9 @@ import { TransactionsPage } from './pages/TransactionsPage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { AccountsPage } from './pages/AccountsPage';
-import { Sidebar } from './components/Sidebar';
+import { Menu } from './components/Menu';
 import { Header } from './components/Header';
+import { BottomBar } from './components/BottomBar';
 import './index.css';
 import { CreditCardsPage } from './pages/CreditCardsPage';
 import { BudgetsPage } from './pages/BudgetsPage';
@@ -20,7 +21,7 @@ import { RequireAuth } from './contexts/AuthContext';
 import { ToastContainer } from 'react-toastify';
 
 function App() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
@@ -35,22 +36,24 @@ function App() {
   }, []);
 
   const AppLayout = () => (
-    <div className="min-h-screen flex bg-bone text-navy-900">
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+    <div className="min-h-screen bg-bone text-navy-900">
+      <Menu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
 
-      <div className="flex-1 min-w-0 flex flex-col">
-        <Header onMenuClick={() => setIsSidebarOpen(true)} />
+      <div className="flex min-h-screen flex-col">
+        <Header onMenuClick={() => setIsMenuOpen(true)} />
 
         {!isOnline && (
-          <div className="flex items-center justify-center gap-2 bg-gold-400/15 border-b border-gold-400/40 text-gold-600 text-xs font-medium py-2 px-4 shrink-0">
-            <WifiOff className="w-3.5 h-3.5 shrink-0" />
+          <div className="flex shrink-0 items-center justify-center gap-2 border-b border-gold-400/30 bg-gold-400/10 px-4 py-2 text-xs font-medium text-gold-600">
+            <WifiOff className="h-3.5 w-3.5 shrink-0" />
             <span>Sem conexão — exibindo dados salvos localmente</span>
           </div>
         )}
 
-        <main className="flex-1">
+        <main className="flex-1 pb-20 lg:pb-0">
           <Outlet />
         </main>
+
+        <BottomBar onMenuClick={() => setIsMenuOpen(true)} />
       </div>
     </div>
   );

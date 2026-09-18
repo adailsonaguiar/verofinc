@@ -17,7 +17,9 @@ import { formatCurrency } from '../utils/transactions';
 import { MonthSelector } from '../components/MonthSelector';
 import { SectionTitle } from '../components/SectionTitle';
 import { EmptyState } from '../components/EmptyState';
+import { BudgetProgressBar } from '../components/BudgetProgressBar';
 import { Button } from '../components/Button';
+import { PageHeading } from '../components/PageHeading';
 
 const brl = (cents: number) => formatCurrency(cents);
 
@@ -56,25 +58,6 @@ function formatMoneyInput(digits: string): string {
 function parseMoneyInput(value: string): number {
   return Number(value.replace(/\D/g, '')) / 100;
 }
-
-function barTone(pct: number | null): string {
-  if (pct == null) return 'bg-navy-100';
-  if (pct >= 100) return 'bg-rose-600';
-  if (pct >= 80) return 'bg-gold-500';
-  return 'bg-navy-700';
-}
-
-const ProgressBar: React.FC<{ pct: number | null }> = ({ pct }) => {
-  const width = pct == null ? 0 : Math.min(100, pct);
-  return (
-    <div className="h-2 rounded-full bg-navy-100 overflow-hidden">
-      <div
-        className={`h-full rounded-full transition-all duration-500 ${barTone(pct)}`}
-        style={{ width: `${width}%` }}
-      />
-    </div>
-  );
-};
 
 interface LimitEditorProps {
   initial: number | null;
@@ -245,25 +228,26 @@ export const BudgetsPage: React.FC = () => {
   }
 
   return (
-    <div className="p-4 md:p-8 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <p className="text-sm text-navy-500">
-          Defina limites por categoria e acompanhe seu progresso.
-        </p>
-        <MonthSelector
-          label={monthLabel(month)}
-          hasPrevious
-          hasNext
-          onPrevious={() => {
-            resetEditing();
-            setMonth(shiftMonth(month, -1));
-          }}
-          onNext={() => {
-            resetEditing();
-            setMonth(shiftMonth(month, 1));
-          }}
-        />
-      </div>
+    <div className="mx-auto max-w-[1280px] space-y-6 px-4 pb-8 pt-8 md:px-[50px] md:pt-12">
+      <PageHeading
+        title="Orçamento"
+        subtitle="Defina limites por categoria e acompanhe seu progresso."
+        actions={
+          <MonthSelector
+            label={monthLabel(month)}
+            hasPrevious
+            hasNext
+            onPrevious={() => {
+              resetEditing();
+              setMonth(shiftMonth(month, -1));
+            }}
+            onNext={() => {
+              resetEditing();
+              setMonth(shiftMonth(month, 1));
+            }}
+          />
+        }
+      />
 
       {/* Total budget */}
       <div className="card p-5 md:p-6">
@@ -343,7 +327,7 @@ export const BudgetsPage: React.FC = () => {
               {totalPct != null ? `${totalPct}%` : 'sem limite definido'}
             </span>
           </div>
-          <ProgressBar pct={totalPct} />
+          <BudgetProgressBar pct={totalPct} />
         </div>
       </div>
 
@@ -437,7 +421,7 @@ export const BudgetsPage: React.FC = () => {
                           </span>
                         )}
                       </div>
-                      <ProgressBar pct={pct} />
+                      <BudgetProgressBar pct={pct} />
                     </div>
                   )}
                 </div>

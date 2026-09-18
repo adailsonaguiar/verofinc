@@ -94,7 +94,7 @@ export const DailySpendingChart: React.FC<DailySpendingChartProps> = ({
                     label: 'Despesas',
                     data: expenseData,
                     backgroundColor: weekendFlags.map((isWeekend) =>
-                      isWeekend ? '#162038' : '#3c4d78'
+                      isWeekend ? '#ca7251' : '#d7f36b'
                     ),
                     borderRadius: 4,
                     barPercentage: 0.8,
@@ -108,7 +108,9 @@ export const DailySpendingChart: React.FC<DailySpendingChartProps> = ({
                 plugins: {
                   legend: { display: false },
                   tooltip: {
-                    backgroundColor: '#0e1628',
+                    backgroundColor: '#171719',
+                    borderColor: '#2a2a2e',
+                    borderWidth: 1,
                     padding: 12,
                     cornerRadius: 8,
                     callbacks: {
@@ -122,17 +124,17 @@ export const DailySpendingChart: React.FC<DailySpendingChartProps> = ({
                     grid: { display: false },
                     border: { display: false },
                     ticks: {
-                      color: '#93a1c1',
+                      color: '#77777d',
                       font: { family: 'inherit', size: 10 },
                       maxRotation: 0,
                     },
                   },
                   y: {
                     beginAtZero: true,
-                    grid: { color: '#eeece3' },
+                    grid: { color: '#242427' },
                     border: { display: false },
                     ticks: {
-                      color: '#93a1c1',
+                      color: '#77777d',
                       font: { family: 'inherit', size: 11 },
                       callback: (value) => {
                         const n = Number(value);

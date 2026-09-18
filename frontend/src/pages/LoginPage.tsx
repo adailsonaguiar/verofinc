@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Lock, Mail } from 'lucide-react';
+import { Lock, Mail, Sparkles, TrendingUp, Wallet } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
@@ -31,39 +31,50 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-bone flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+    <div className="min-h-screen bg-bone text-navy-900">
+      <div className="mx-auto grid min-h-screen max-w-5xl grid-cols-1 items-center gap-12 px-6 py-12 lg:grid-cols-2">
         <div className="hidden lg:block">
-          <div className="font-display text-3xl tracking-wide text-navy-900">
-            Vero Finc
+          <div className="flex items-center gap-2.5 text-3xl font-bold tracking-[-0.06em]">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-gold-400 text-xl text-[#141414]">
+              ✦
+            </span>
+            nivo
           </div>
-          <div className="text-xs text-navy-500 tracking-widest uppercase mt-1">
-            Controle Financeiro
-          </div>
-
-          <h1 className="font-display text-4xl mt-10 text-navy-900 leading-tight">
-            Acesse sua plataforma financeira com segurança
-          </h1>
-          <p className="mt-4 text-navy-500 leading-relaxed">
-            Faça login para visualizar indicadores, controlar receitas e
-            despesas e manter seu fluxo de caixa em dia.
+          <p className="mt-3 text-[10px] uppercase tracking-[0.16em] text-navy-300">
+            Finanças pessoais
           </p>
 
-          <div className="mt-8 space-y-3">
-            <div className="card p-4 flex items-start gap-3">
-              <span className="w-2 h-2 rounded-full bg-gold-500 mt-2 shrink-0" />
+          <h1 className="mt-10 max-w-md text-4xl font-bold leading-tight tracking-[-0.04em]">
+            Sua vida financeira, em um só retrato.
+          </h1>
+          <p className="mt-4 max-w-sm text-sm leading-relaxed text-navy-500">
+            Registre entradas e saídas, acompanhe contas e cartões e veja para
+            onde o dinheiro vai — tudo em um lugar calmo e legível.
+          </p>
+
+          <div className="mt-10 space-y-3">
+            <div className="flex items-start gap-3 rounded-xl border border-bone-border bg-[#121214] p-4">
+              <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gold-400/15 text-gold-400">
+                <TrendingUp className="h-4 w-4" />
+              </span>
               <div>
-                <p className="text-sm text-navy-900">Insights em tempo real</p>
-                <p className="text-xs text-navy-500 mt-0.5">
-                  Dashboards claros para decisões rápidas.
+                <p className="text-sm font-medium text-navy-900">
+                  Insights em tempo real
+                </p>
+                <p className="mt-0.5 text-xs text-navy-500">
+                  Painéis claros para decisões rápidas.
                 </p>
               </div>
             </div>
-            <div className="card p-4 flex items-start gap-3">
-              <span className="w-2 h-2 rounded-full bg-gold-500 mt-2 shrink-0" />
+            <div className="flex items-start gap-3 rounded-xl border border-bone-border bg-[#121214] p-4">
+              <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gold-400/15 text-gold-400">
+                <Wallet className="h-4 w-4" />
+              </span>
               <div>
-                <p className="text-sm text-navy-900">Controle centralizado</p>
-                <p className="text-xs text-navy-500 mt-0.5">
+                <p className="text-sm font-medium text-navy-900">
+                  Controle centralizado
+                </p>
+                <p className="mt-0.5 text-xs text-navy-500">
                   Categorias, contas e cartões em um só lugar.
                 </p>
               </div>
@@ -71,24 +82,27 @@ export const LoginPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="card p-8">
-          <div className="lg:hidden mb-8">
-            <div className="font-display text-2xl text-navy-900">Vero Finc</div>
-            <div className="text-xs text-navy-500 tracking-widest uppercase mt-1">
-              Controle Financeiro
-            </div>
+        <div className="rounded-2xl border border-bone-border bg-[#121214] p-8">
+          <div className="mb-8 flex items-center gap-2.5 text-2xl font-bold tracking-[-0.06em] lg:hidden">
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-gold-400 text-base text-[#141414]">
+              ✦
+            </span>
+            nivo
           </div>
 
-          <h2 className="font-display text-2xl text-navy-900">Entrar</h2>
-          <p className="text-sm text-navy-500 mt-1">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-gold-400" />
+            <h2 className="text-2xl font-bold tracking-[-0.04em]">Entrar</h2>
+          </div>
+          <p className="mt-1 text-sm text-navy-500">
             Use seu email e senha para continuar
           </p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-5">
             <div>
               <label className="label">Email</label>
-              <div className="flex items-center gap-2 rounded-lg border border-bone-border bg-white px-3 focus-within:border-navy-700 focus-within:ring-1 focus-within:ring-navy-700">
-                <Mail className="w-4 h-4 text-navy-300 shrink-0" />
+              <div className="flex items-center gap-2 rounded-lg border border-navy-200 bg-[#171719] px-3 focus-within:border-gold-400 focus-within:ring-1 focus-within:ring-gold-400">
+                <Mail className="h-4 w-4 shrink-0 text-navy-300" />
                 <input
                   type="email"
                   required
@@ -102,8 +116,8 @@ export const LoginPage: React.FC = () => {
 
             <div>
               <label className="label">Senha</label>
-              <div className="flex items-center gap-2 rounded-lg border border-bone-border bg-white px-3 focus-within:border-navy-700 focus-within:ring-1 focus-within:ring-navy-700">
-                <Lock className="w-4 h-4 text-navy-300 shrink-0" />
+              <div className="flex items-center gap-2 rounded-lg border border-navy-200 bg-[#171719] px-3 focus-within:border-gold-400 focus-within:ring-1 focus-within:ring-gold-400">
+                <Lock className="h-4 w-4 shrink-0 text-navy-300" />
                 <input
                   type="password"
                   required

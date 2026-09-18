@@ -8,33 +8,68 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"IBM Plex Sans"', 'system-ui', 'sans-serif'],
-        display: ['"Playfair Display"', 'serif'],
-        mono: ['"IBM Plex Mono"', 'monospace'],
+        sans: ['"Inter"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['"Inter"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        mono: ['"Inter"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       colors: {
+        /*
+         * nivo dark palette.
+         * `navy` is a foreground ramp on a near-black ground (900 = brightest
+         * text, 50 = darkest container), `bone` is the surface/background ramp,
+         * and `gold` is the lime accent.
+         */
         navy: {
-          50: '#f2f4f8',
-          100: '#e2e6ef',
-          200: '#c2cadd',
-          300: '#93a1c1',
-          500: '#3c4d78',
-          700: '#1f2a4d',
-          800: '#162038',
-          900: '#0e1628',
-          950: '#080d1a',
+          50: '#171719',
+          100: '#1e1e21',
+          200: '#303036',
+          300: '#86868d',
+          500: '#77777d',
+          700: '#929198',
+          800: '#c6c4bf',
+          900: '#e9e7e2',
+          950: '#08080a',
         },
         gold: {
-          400: '#d9b45a',
-          500: '#c99a3b',
-          600: '#a97d28',
+          100: '#1a2110',
+          400: '#d7f36b',
+          500: '#d7f36b',
+          600: '#a8bd62',
+          800: '#c9e58a',
         },
         bone: {
-          DEFAULT: '#f7f6f2',
-          border: '#e6e3d9',
-          divider: '#eeece3',
-          soft: '#faf9f4',
+          DEFAULT: '#0d0d0f',
+          border: '#28282b',
+          divider: '#242427',
+          soft: '#1a1a1d',
         },
+        emerald: {
+          100: '#1d3022',
+          200: '#2a4231',
+          600: '#a9c56a',
+          700: '#9cc16d',
+          800: '#b5d68a',
+        },
+        rose: {
+          50: '#241a1d',
+          100: '#281b20',
+          200: '#3a2227',
+          600: '#e07a7e',
+          700: '#cb777b',
+          800: '#e08f92',
+        },
+        amber: {
+          100: '#2a2018',
+          600: '#ca9a5a',
+          800: '#d9b45a',
+        },
+      },
+      boxShadow: {
+        glow: '0 5px 18px #d7f36b22',
+        card: '0 13px 25px #00000055',
+      },
+      borderRadius: {
+        xl2: '15px',
       },
     },
   },

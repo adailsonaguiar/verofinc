@@ -9,6 +9,7 @@ import { MonthSelector } from '../components/MonthSelector';
 import { SectionTitle } from '../components/SectionTitle';
 import { StatCard } from '../components/StatCard';
 import { EmptyState } from '../components/EmptyState';
+import { PageHeading } from '../components/PageHeading';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { computeInvoicePeriod, formatInvoiceDay } from '../utils/invoices';
@@ -30,12 +31,12 @@ interface CardLike {
 const brl = (cents: number) =>
   (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-/** The backend has no brand/gradient field, so the plastic uses a navy ramp. */
+/** The backend has no brand/gradient field, so the plastic uses a dark ramp. */
 const CARD_GRADIENTS = [
-  'from-navy-800 to-navy-950',
-  'from-navy-900 to-navy-950',
-  'from-navy-700 to-navy-900',
-  'from-[#1b2a4a] to-navy-950',
+  'from-[#333239] to-[#17171a]',
+  'from-[#2a2a33] to-[#141416]',
+  'from-[#1e2a3a] to-[#131519]',
+  'from-[#332a2a] to-[#17171a]',
 ];
 
 function formatCurrencyInput(value: string) {
@@ -343,24 +344,25 @@ export const CreditCardsPage: React.FC = () => {
   }
 
   return (
-    <div className="p-4 md:p-8 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <p className="text-sm text-navy-500">
-          Limites, faturas e compras no cartão.
-        </p>
-        <button
-          onClick={() => {
-            setShowForm(true);
-            setEditing(null);
-            setName('');
-            setLimit('');
-          }}
-          className="btn btn-primary"
-        >
-          <Plus className="w-4 h-4" />
-          Novo cartão
-        </button>
-      </div>
+    <div className="mx-auto max-w-[1280px] space-y-6 px-4 pb-8 pt-8 md:px-[50px] md:pt-12">
+      <PageHeading
+        title="Cartões de Crédito"
+        subtitle="Limites, faturas e compras no cartão."
+        actions={
+          <button
+            onClick={() => {
+              setShowForm(true);
+              setEditing(null);
+              setName('');
+              setLimit('');
+            }}
+            className="btn btn-primary"
+          >
+            <Plus className="w-4 h-4" />
+            Novo cartão
+          </button>
+        }
+      />
 
       {showForm && (
         <form onSubmit={handleCreate} className="card p-6 space-y-4">
@@ -656,7 +658,7 @@ export const CreditCardsPage: React.FC = () => {
       {showPaymentModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
-            className="fixed inset-0 bg-navy-900/50 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setShowPaymentModal(false)}
           />
           <div className="relative z-10 w-full max-w-md card">

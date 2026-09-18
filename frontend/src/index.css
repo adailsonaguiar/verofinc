@@ -4,33 +4,53 @@
 
 @layer base {
   html {
-    background-color: #f7f6f2;
+    background-color: #0d0d0f;
+    color-scheme: dark;
   }
 
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #c2cadd;
-    border-radius: 4px;
+    background: #2a2a2e;
+    border-radius: 6px;
+    border: 2px solid #0d0d0f;
   }
-    
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #3a3a3f;
+  }
+
   body {
     @apply bg-bone text-navy-900 antialiased;
-    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    font-synthesis: none;
+  }
+
+  ::selection {
+    background: #d7f36b;
+    color: #171916;
   }
 
   * {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-700 focus-visible:ring-offset-2;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-400 focus-visible:ring-offset-2 focus-visible:ring-offset-bone;
   }
 }
 
 @layer components {
-  /* Classic surface: white, hairline border, no shadow */
+  /* Dark surface: hairline border, no shadow */
   .card {
-    @apply bg-white border border-bone-border rounded-lg;
+    @apply bg-[#121214] border border-bone-border rounded-xl;
+  }
+
+  .panel {
+    @apply bg-[#121214] border border-bone-border rounded-xl p-5 md:p-6;
   }
 
   /* Buttons */
@@ -39,15 +59,15 @@
   }
 
   .btn-primary {
-    @apply bg-navy-700 text-white hover:bg-navy-800;
+    @apply bg-gold-400 text-[#171916] font-semibold hover:bg-[#e2fb82];
   }
 
   .btn-ghost {
-    @apply bg-transparent text-navy-700 hover:bg-navy-100;
+    @apply bg-transparent text-navy-700 hover:bg-navy-100 hover:text-navy-900;
   }
 
   .btn-outline {
-    @apply bg-transparent border border-bone-border text-navy-700 hover:bg-bone-soft;
+    @apply bg-transparent border border-navy-200 text-navy-700 hover:bg-navy-100 hover:text-navy-900;
   }
 
   /* Chips */
@@ -55,17 +75,17 @@
     @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[0.72rem] font-medium whitespace-nowrap;
   }
 
-  /* Sidebar navigation */
+  /* Sidebar / menu navigation */
   .nav-link {
-    @apply flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-navy-200 text-sm cursor-pointer transition-colors duration-150;
+    @apply flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-navy-700 text-sm cursor-pointer transition-colors duration-150;
   }
 
   .nav-link:hover {
-    @apply bg-white/5 text-white;
+    @apply bg-navy-100 text-navy-900;
   }
 
   .nav-link.active {
-    @apply bg-gold-500 text-navy-900 font-semibold;
+    @apply bg-gold-400 text-[#171916] font-semibold;
   }
 
   /* Hairline dividers between list rows */
@@ -75,7 +95,7 @@
 
   /* Form controls */
   .input {
-    @apply w-full bg-white border border-bone-border rounded-lg px-3 py-2.5 text-sm text-navy-900 outline-none transition-colors duration-150 placeholder:text-navy-300 focus:border-navy-700 focus:ring-1 focus:ring-navy-700;
+    @apply w-full bg-[#171719] border border-navy-200 rounded-lg px-3 py-2.5 text-sm text-navy-900 outline-none transition-colors duration-150 placeholder:text-navy-300 focus:border-gold-400 focus:ring-1 focus:ring-gold-400;
   }
 
   .label {
@@ -83,11 +103,18 @@
   }
 
   .stat-label {
-    @apply text-xs uppercase tracking-widest text-navy-500;
+    @apply text-[0.68rem] uppercase tracking-[0.14em] text-navy-500;
   }
 
-  /* Numeric typography: IBM Plex Mono with tabular figures */
+  /* Numeric typography: tabular figures */
   .num {
-    @apply font-mono tabular-nums;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
   }
+}
+
+/* Display voice: Inter, tight tracking for headings */
+.font-display {
+  letter-spacing: -0.04em;
+  font-weight: 650;
 }

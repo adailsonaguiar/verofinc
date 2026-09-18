@@ -102,7 +102,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
               className={`py-2.5 rounded-lg border text-sm font-medium transition-colors ${
                 type === CategoryType.INCOME
                   ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                  : 'bg-white text-navy-500 border-bone-border hover:bg-bone-soft'
+                  : 'bg-transparent text-navy-500 border-navy-200 hover:bg-navy-100'
               }`}
             >
               💰 Receita
@@ -113,7 +113,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
               className={`py-2.5 rounded-lg border text-sm font-medium transition-colors ${
                 type === CategoryType.EXPENSE
                   ? 'bg-rose-100 text-rose-800 border-rose-200'
-                  : 'bg-white text-navy-500 border-bone-border hover:bg-bone-soft'
+                  : 'bg-transparent text-navy-500 border-navy-200 hover:bg-navy-100'
               }`}
             >
               💸 Despesa
@@ -141,7 +141,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
               onChange={(e) => setActive(e.target.checked)}
               className="sr-only peer"
             />
-            <span className="w-11 h-6 rounded-full bg-navy-200 relative transition-colors peer-checked:bg-navy-700 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5" />
+            <span className="w-11 h-6 rounded-full bg-navy-200 relative transition-colors peer-checked:bg-gold-400 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5" />
             <span className="text-sm text-navy-700">Categoria ativa</span>
           </label>
         </div>

@@ -13,6 +13,7 @@ import { TransactionModal } from '../components/TransactionModal';
 import { MonthSelector } from '../components/MonthSelector';
 import { StatCard } from '../components/StatCard';
 import { EmptyState } from '../components/EmptyState';
+import { PageHeading } from '../components/PageHeading';
 import {
   ArrowDown,
   ArrowUp,
@@ -264,19 +265,20 @@ export const TransactionsPage: React.FC = () => {
   const TABS: TabKey[] = ['todas', 'entradas', 'saidas'];
 
   return (
-    <div className="p-4 md:p-8 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <p className="text-sm text-navy-500">
-          Controle detalhado de cada movimentação.
-        </p>
-        <MonthSelector
-          label={currentMonthLabel}
-          hasPrevious={hasPrevious}
-          hasNext={hasNext}
-          onPrevious={handlePreviousMonth}
-          onNext={handleNextMonth}
-        />
-      </div>
+    <div className="mx-auto max-w-[1280px] space-y-6 px-4 pb-8 pt-8 md:px-[50px] md:pt-12">
+      <PageHeading
+        title="Transações"
+        subtitle="Controle detalhado de cada movimentação."
+        actions={
+          <MonthSelector
+            label={currentMonthLabel}
+            hasPrevious={hasPrevious}
+            hasNext={hasNext}
+            onPrevious={handlePreviousMonth}
+            onNext={handleNextMonth}
+          />
+        }
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard
@@ -307,8 +309,8 @@ export const TransactionsPage: React.FC = () => {
                 onClick={() => setTypeTab(tab)}
                 className={`px-3 py-1.5 rounded-md capitalize transition-colors ${
                   typeTab === tab
-                    ? 'bg-white text-navy-900 shadow-sm'
-                    : 'text-navy-500 hover:text-navy-700'
+                    ? 'bg-gold-400 text-[#171916] shadow-sm font-semibold'
+                    : 'text-navy-500 hover:text-navy-900'
                 }`}
               >
                 {tab}
@@ -316,7 +318,7 @@ export const TransactionsPage: React.FC = () => {
             ))}
           </div>
 
-          <div className="flex items-center gap-2 px-3 py-2 bg-white border border-bone-border rounded-lg lg:w-60">
+          <div className="flex items-center gap-2 px-3 py-2 bg-[#171719] border border-navy-200 rounded-lg lg:w-60">
             <Search className="w-4 h-4 text-navy-300 shrink-0" />
             <input
               value={query}
@@ -462,7 +464,7 @@ export const TransactionsPage: React.FC = () => {
                               className="fixed inset-0 z-20"
                               onClick={() => setOpenMenuId(null)}
                             />
-                            <div className="absolute right-4 top-12 w-40 bg-white rounded-lg border border-bone-border shadow-lg py-1 z-30">
+                            <div className="absolute right-4 top-12 w-40 bg-[#171719] rounded-lg border border-bone-border shadow-lg py-1 z-30">
                               <button
                                 onClick={() => handleEditTransaction(tx)}
                                 className="w-full px-3 py-2 text-left text-sm text-navy-700 hover:bg-bone-soft flex items-center gap-2"

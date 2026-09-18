@@ -104,10 +104,10 @@ export const CategoryEvolutionChart: React.FC<CategoryEvolutionChartProps> = ({
                 {
                   label: selectedCategory?.name ?? 'Categoria',
                   data: chartData,
-                  borderColor: '#1f2a4d',
-                  backgroundColor: 'rgba(31, 42, 77, 0.10)',
-                  pointBackgroundColor: '#1f2a4d',
-                  pointBorderColor: '#fff',
+                  borderColor: '#d7f36b',
+                  backgroundColor: 'rgba(215, 243, 107, 0.10)',
+                  pointBackgroundColor: '#d7f36b',
+                  pointBorderColor: '#121214',
                   pointBorderWidth: 2,
                   pointRadius: 4,
                   pointHoverRadius: 6,
@@ -123,7 +123,9 @@ export const CategoryEvolutionChart: React.FC<CategoryEvolutionChartProps> = ({
               plugins: {
                 legend: { display: false },
                 tooltip: {
-                  backgroundColor: '#0e1628',
+                  backgroundColor: '#171719',
+                  borderColor: '#2a2a2e',
+                  borderWidth: 1,
                   padding: 12,
                   cornerRadius: 8,
                   callbacks: {
@@ -136,16 +138,16 @@ export const CategoryEvolutionChart: React.FC<CategoryEvolutionChartProps> = ({
                   grid: { display: false },
                   border: { display: false },
                   ticks: {
-                    color: '#93a1c1',
+                    color: '#77777d',
                     font: { family: 'inherit', size: 12 },
                   },
                 },
                 y: {
                   beginAtZero: true,
-                  grid: { color: '#eeece3' },
+                  grid: { color: '#242427' },
                   border: { display: false },
                   ticks: {
-                    color: '#93a1c1',
+                    color: '#77777d',
                     font: { family: 'inherit', size: 12 },
                     callback: (value) => brl(Number(value)),
                   },

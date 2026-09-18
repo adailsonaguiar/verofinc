@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Activity, Loader2 } from 'lucide-react';
+import { Activity, Loader2, Plus } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import { categoryService } from '../services/categoryService';
 import { transactionService } from '../services/transactionService';
 import { accountService } from '../services/accountService';
@@ -11,6 +13,7 @@ import { CategoryComparisonChart } from '../components/CategoryComparisonChart';
 import { CategoryEvolutionChart } from '../components/CategoryEvolutionChart';
 import { DailySpendingChart } from '../components/DailySpendingChart';
 import { DashboardCategoryDonut } from '../components/DashboardCategoryDonut';
+import { DashboardBudgetSection } from '../components/DashboardBudgetSection';
 import { DashboardInsights } from '../components/DashboardInsights';
 import { DashboardRecentTransactions } from '../components/DashboardRecentTransactions';
 import { DashboardSummaryCards } from '../components/DashboardSummaryCards';
@@ -30,6 +33,8 @@ const brl = (cents: number) =>
   (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 export const DashboardPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -167,23 +172,55 @@ export const DashboardPage: React.FC = () => {
   );
   const recentGlobalTransactions = allTransactions.slice(0, 5);
 
+  const spark = useMemo(() => {
+    const map: Record<string, number> = {};
+    allTransactions
+      .filter((t) => !t.isPayment)
+      .forEach((t) => {
+        const [y, m] = t.date.split('T')[0].split('-');
+        const key = `${y}-${m}`;
+        const signed = t.type === 'income' ? t.amount : -t.amount;
+        map[key] = (map[key] ?? 0) + signed;
+      });
+    const values = Object.keys(map)
+      .sort()
+      .slice(-9)
+      .map((k) => map[k] / 100);
+    const max = Math.max(1, ...values.map((v) => Math.abs(v)));
+    return values.map((v) => Math.round(8 + (Math.abs(v) / max) * 17));
+  }, [allTransactions]);
+
+  const firstName = (user?.name || '').split(' ')[0] || '';
+  const hour = new Date().getHours();
+  const greeting =
+    hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+  const dateKicker = format(new Date(), 'EEEE, d \'de\' MMMM \'de\' yyyy', {
+    locale: ptBR,
+  }).toUpperCase();
+
   const stats: SummaryStat[] = [
     {
       label: 'Saldo consolidado',
       value: brl(totalCheckingBalance),
       sub: `${checkingAccounts.length} conta(s) ativa(s)`,
+      highlight: true,
+      trend: '+4,8%',
+      spark,
     },
     {
       label: `Entradas (${monthShort})`,
       value: brl(totalIncome),
       sub: `${incomeTx.length} lançamento(s)`,
       tone: 'in',
+      bar: 62,
     },
     {
       label: `Saídas (${monthShort})`,
       value: brl(totalExpense),
       sub: `${expenseTx.length} lançamento(s)`,
       tone: 'out',
+      bar: 38,
+      barWarm: true,
     },
     {
       label: 'Fatura aberta',
@@ -221,21 +258,42 @@ export const DashboardPage: React.FC = () => {
   }
 
   return (
-    <div className="p-4 md:p-8 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <p className="text-sm text-navy-500">
-          Acompanhe seus resultados e atinja suas metas.
-        </p>
-        <MonthSelector
-          label={currentMonthLabel}
-          hasPrevious={hasPrevious}
-          hasNext={hasNext}
-          onPrevious={handlePreviousMonth}
-          onNext={handleNextMonth}
-        />
-      </div>
+    <div className="mx-auto max-w-[1280px] space-y-6 px-4 pb-8 pt-8 md:px-[50px] md:pt-12">
+      <section className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="mb-3 text-[9px] font-medium uppercase tracking-[0.16em] text-navy-300">
+            {dateKicker}
+          </p>
+          <h1 className="text-2xl font-bold tracking-[-0.06em] md:text-[33px]">
+            {greeting}
+            {firstName ? `, ${firstName}` : ''}{' '}
+            <span className="align-top text-lg text-gold-400">✦</span>
+          </h1>
+          <p className="mt-2 text-xs text-navy-500">
+            Aqui está o retrato da sua vida financeira.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <MonthSelector
+            label={currentMonthLabel}
+            hasPrevious={hasPrevious}
+            hasNext={hasNext}
+            onPrevious={handlePreviousMonth}
+            onNext={handleNextMonth}
+          />
+          <button
+            onClick={() => navigate('/transactions?new=1')}
+            className="btn btn-primary"
+          >
+            <Plus className="h-4 w-4" />
+            Nova transação
+          </button>
+        </div>
+      </section>
 
       <DashboardSummaryCards stats={stats} />
+
+      <DashboardBudgetSection year={currentYear} month={currentMonth} />
 
       <div className="grid lg:grid-cols-3 gap-4">
         <div className="card p-5 lg:col-span-2">
