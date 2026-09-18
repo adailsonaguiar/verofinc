@@ -18,7 +18,7 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({
   return (
     <div className="flex items-center gap-3 py-3 px-1 transition-colors">
       <span
-        className={`w-9 h-9 rounded-full grid place-items-center shrink-0 ${
+        className={`w-9 h-9 rounded-lg grid place-items-center shrink-0 ${
           isIncome
             ? 'bg-emerald-100 text-emerald-700'
             : 'bg-rose-100 text-rose-700'

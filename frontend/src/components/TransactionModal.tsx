@@ -240,7 +240,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           <div className="px-6 py-5 flex items-center justify-between border-b border-bone-border">
             <div className="flex items-center gap-3">
               <div
-                className={`w-10 h-10 rounded-full grid place-items-center ${
+                className={`w-10 h-10 rounded-lg grid place-items-center ${
                   isEditing
                     ? 'bg-gold-400/20 text-gold-600'
                     : 'bg-navy-100 text-navy-700'

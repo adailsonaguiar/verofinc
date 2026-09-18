@@ -7,7 +7,7 @@ interface SectionTitleProps {
   className?: string;
 }
 
-/** Playfair heading + small navy caption, as used on every reference card. */
+/** Inter display heading + muted caption, as used on every reference card. */
 export const SectionTitle: React.FC<SectionTitleProps> = ({
   title,
   subtitle,

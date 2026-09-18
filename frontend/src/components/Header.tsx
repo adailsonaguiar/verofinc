@@ -54,7 +54,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
         </button>
 
         <nav
-          className="mx-auto hidden items-center gap-1 rounded-[15px] border border-bone-border bg-[#131315] p-1.5 lg:flex"
+          className="mx-auto hidden -rotate-1 items-center gap-1 rounded-[15px] border border-bone-border bg-[#131315] p-1.5 lg:flex"
           aria-label="Navegação principal"
         >
           {MAIN_NAV.map((item, index) => {

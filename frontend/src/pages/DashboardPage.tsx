@@ -244,7 +244,7 @@ export const DashboardPage: React.FC = () => {
     return (
       <div className="p-4 md:p-8">
         <div className="card p-8 max-w-md">
-          <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center mb-4">
+          <div className="w-12 h-12 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center mb-4">
             <Activity className="w-5 h-5" />
           </div>
           <h3 className="font-display text-lg text-navy-900 mb-2">
@@ -264,7 +264,7 @@ export const DashboardPage: React.FC = () => {
           <p className="mb-3 text-[9px] font-medium uppercase tracking-[0.16em] text-navy-300">
             {dateKicker}
           </p>
-          <h1 className="text-2xl font-bold tracking-[-0.06em] md:text-[33px]">
+          <h1 className="text-2xl font-[650] tracking-[-0.06em] md:text-[33px]">
             {greeting}
             {firstName ? `, ${firstName}` : ''}{' '}
             <span className="align-top text-lg text-gold-400">✦</span>

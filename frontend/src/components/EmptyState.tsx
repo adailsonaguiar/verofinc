@@ -14,7 +14,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   action,
 }) => (
   <div className="flex flex-col items-center justify-center text-center py-16 px-6">
-    <div className="w-16 h-16 rounded-full bg-bone-soft border border-bone-border flex items-center justify-center mb-4 text-navy-300">
+    <div className="w-16 h-16 rounded-xl bg-bone-soft border border-bone-border flex items-center justify-center mb-4 text-navy-300">
       {icon}
     </div>
     <p className="font-display text-lg text-navy-900">{title}</p>

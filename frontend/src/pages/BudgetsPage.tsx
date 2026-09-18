@@ -359,7 +359,7 @@ export const BudgetsPage: React.FC = () => {
               return (
                 <div key={item.category._id} className="py-4">
                   <div className="flex items-center gap-3">
-                    <span className="w-9 h-9 rounded-full bg-rose-100 text-rose-700 grid place-items-center shrink-0">
+                    <span className="w-9 h-9 rounded-lg bg-rose-100 text-rose-700 grid place-items-center shrink-0">
                       {item.category.icon ? (
                         <span className="text-base leading-none">
                           {item.category.icon}

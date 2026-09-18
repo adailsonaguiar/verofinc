@@ -14,7 +14,7 @@ export const PageHeading: React.FC<PageHeadingProps> = ({
 }) => (
   <section className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
     <div>
-      <h1 className="text-2xl font-bold tracking-[-0.06em] md:text-[30px]">
+      <h1 className="text-2xl font-[650] tracking-[-0.06em] md:text-[30px]">
         {title}
       </h1>
       {subtitle && <p className="mt-2 text-xs text-navy-500">{subtitle}</p>}

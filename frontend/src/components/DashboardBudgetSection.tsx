@@ -75,7 +75,7 @@ export const DashboardBudgetSection: React.FC<DashboardBudgetSectionProps> = ({
         </div>
       ) : !hasAnyBudget ? (
         <div className="flex flex-col items-center justify-center text-center py-10">
-          <div className="w-14 h-14 rounded-full bg-bone-soft border border-bone-border flex items-center justify-center mb-4 text-navy-300">
+          <div className="w-14 h-14 rounded-xl bg-bone-soft border border-bone-border flex items-center justify-center mb-4 text-navy-300">
             <Target className="w-6 h-6" />
           </div>
           <p className="font-display text-base text-navy-900">

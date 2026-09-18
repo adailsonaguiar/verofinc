@@ -64,7 +64,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
     <form onSubmit={handleSubmit} className="card p-6">
       <div className="flex items-center gap-3 mb-6">
         <div
-          className={`w-10 h-10 rounded-full grid place-items-center ${
+          className={`w-10 h-10 rounded-lg grid place-items-center ${
             isEditing
               ? 'bg-gold-400/20 text-gold-600'
               : 'bg-navy-100 text-navy-700'

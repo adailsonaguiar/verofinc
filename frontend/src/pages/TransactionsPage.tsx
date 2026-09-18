@@ -404,7 +404,7 @@ export const TransactionsPage: React.FC = () => {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <span
-                            className={`w-8 h-8 rounded-full grid place-items-center shrink-0 ${
+                            className={`w-8 h-8 rounded-lg grid place-items-center shrink-0 ${
                               isIncome
                                 ? 'bg-emerald-100 text-emerald-700'
                                 : 'bg-rose-100 text-rose-700'

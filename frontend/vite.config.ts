@@ -42,11 +42,12 @@ export default defineConfig({
         ],
       },
       manifest: {
-        name: 'VeroFinc - Gerenciador Financeiro',
-        short_name: 'VeroFinc',
-        description: 'Seu gerenciador financeiro pessoal de alta performance.',
-        theme_color: '#0e1628', // navy-900
-        background_color: '#f7f6f2', // bone
+        name: 'nivo — Finanças pessoais',
+        short_name: 'nivo',
+        description: 'Suas finanças pessoais em um só retrato.',
+        theme_color: '#0d0d0f',
+        background_color: '#0d0d0f',
+        lang: 'pt-BR',
         display: 'standalone',
         icons: [
           {
