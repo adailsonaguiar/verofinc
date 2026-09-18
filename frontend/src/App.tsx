@@ -16,6 +16,7 @@ import './index.css';
 import { CreditCardsPage } from './pages/CreditCardsPage';
 import { LoginPage } from './pages/LoginPage';
 import { RequireAuth } from './contexts/AuthContext';
+import { ToastContainer } from 'react-toastify';
 
 function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -55,6 +56,7 @@ function App() {
 
   return (
     <Router>
+      <ToastContainer position="bottom-right" theme="dark" />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route element={<RequireAuth />}>
