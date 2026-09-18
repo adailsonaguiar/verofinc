@@ -250,8 +250,6 @@ export const CreditCardsPage: React.FC = () => {
   };
 
   const handlePayInvoice = async () => {
-          toast.success('Fatura paga com sucesso!');
-          return;
     if (!selectedCard || !selectedCheckingAccount) return;
 
     try {
