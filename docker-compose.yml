@@ -8,14 +8,14 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: admin123
       MONGO_INITDB_DATABASE: vero_finc
     ports:
-      - '27017:27017'
+      - "27017:27017"
     volumes:
       - mongodb_data:/data/db
       - mongodb_config:/data/configdb
     networks:
       - app_network
     healthcheck:
-      test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"]
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -37,25 +37,10 @@ services:
       FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL:-}
       FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY:-}
     ports:
-      - '3030:3030'
+      - "3030:3030"
     depends_on:
       mongodb:
         condition: service_healthy
-    networks:
-      - app_network
-
-  frontend:
-    build:
-      context: ./ver_finc_frontend
-      dockerfile: Dockerfile
-      # VITE_API_URL não é definido intencionalmente: o .dockerignore exclui o .env,
-      # então api.ts usará o fallback '/api', proxiado pelo nginx para http://backend:3030/
-    container_name: app_finc_frontend
-    restart: unless-stopped
-    ports:
-      - '8080:8080'
-    depends_on:
-      - backend
     networks:
       - app_network
 
