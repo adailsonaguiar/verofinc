@@ -5,6 +5,7 @@ export interface AuthUser {
   name: string;
   email: string;
   role?: string;
+  avatarUrl?: string | null;
 }
 
 export interface AuthResponse {
@@ -21,6 +22,13 @@ export const authService = {
     return response.data;
   },
 
+  async loginWithGoogle(idToken: string): Promise<AuthResponse> {
+    const response = await api.post<AuthResponse>('/auth/google', {
+      idToken,
+    });
+    return response.data;
+  },
+
   async register(
     name: string,
     email: string,
@@ -32,6 +40,14 @@ export const authService = {
       password,
     });
     return response.data;
+  },
+
+  async logout(): Promise<void> {
+    try {
+      await api.post('/auth/logout');
+    } catch {
+      // Ignora falhas de rede no logout
+    }
   },
 
   async me(): Promise<AuthUser | null> {

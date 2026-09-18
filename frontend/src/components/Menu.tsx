@@ -17,8 +17,8 @@ export const Menu: React.FC<MenuProps> = ({ isOpen, onClose }) => {
 
   const initial = (user?.name || user?.email || 'n').charAt(0).toUpperCase();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     onClose();
     navigate('/login', { replace: true });
   };

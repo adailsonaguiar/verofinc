@@ -1,12 +1,22 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useMemo,
+  useState,
+} from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { authService, AuthUser } from '../services/authService';
+import {
+  signInWithGoogle,
+  signOutFromGoogle,
+} from '../services/googleAuth';
 
 interface AuthContextValue {
   user: AuthUser | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  loginWithGoogle: () => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -25,7 +35,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setUser(data.user);
   };
 
-  const logout = () => {
+  const loginWithGoogle = async () => {
+    const idToken = await signInWithGoogle();
+    const data = await authService.loginWithGoogle(idToken);
+    localStorage.setItem('authUser', JSON.stringify(data.user));
+    setUser(data.user);
+  };
+
+  const logout = async () => {
+    await signOutFromGoogle();
+    await authService.logout();
     localStorage.removeItem('authUser');
     setUser(null);
   };
@@ -35,6 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       user,
       isAuthenticated: Boolean(user),
       login,
+      loginWithGoogle,
       logout,
     }),
     [user]
