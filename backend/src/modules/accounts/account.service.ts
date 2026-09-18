@@ -13,6 +13,7 @@ import {
 } from '../../entities/transaction.entity';
 import { TransactionsService } from '../transactions/transactions.service';
 import { CategoriesService } from '../categories/categories.service';
+import { InvoicesService } from '../invoices/invoices.service';
 
 @Injectable()
 export class AccountService {
@@ -20,7 +21,8 @@ export class AccountService {
     private readonly accountRepository: AccountRepository,
     @Inject(forwardRef(() => TransactionsService))
     private readonly transactionsService: TransactionsService,
-    private readonly categoriesService: CategoriesService
+    private readonly categoriesService: CategoriesService,
+    private readonly invoicesService: InvoicesService
   ) {}
 
   async create(data: Partial<Account>) {
@@ -172,6 +174,12 @@ export class AccountService {
       },
       true
     ); // byPassCreditInvoiceCheck = true
+
+    await this.invoicesService.markPaidByReferenceMonth(
+      creditCardId,
+      `${year}-${String(month).padStart(2, '0')}`,
+      monthExpenses - monthPayments
+    );
 
     return {
       creditCardId,

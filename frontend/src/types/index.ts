@@ -13,6 +13,31 @@ export enum CategoryType {
   EXPENSE = 'expense',
 }
 
+export enum InvoiceStatus {
+  OPEN = 'open',
+  CLOSED = 'closed',
+  OVERDUE = 'overdue',
+  PAID = 'paid',
+  PARTIALLY_PAID = 'partially_paid',
+}
+
+export interface Invoice {
+  _id: string;
+  account: string;
+  referenceMonth: string;
+  startDate: string;
+  closingDate: string;
+  dueDate: string;
+  totalAmount: number;
+  paidAmount: number;
+  status: InvoiceStatus;
+  closedAt?: string;
+  paidAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  transactions?: Transaction[];
+}
+
 export interface Category {
   _id: string;
   name: string;
@@ -35,6 +60,7 @@ export interface Transaction {
   createdAt: string;
   updatedAt: string;
   account: string;
+  invoice?: string;
   isFixed?: boolean;
   isPayment?: boolean;
   sortOrder?: number;

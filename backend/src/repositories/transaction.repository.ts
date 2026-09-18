@@ -24,6 +24,7 @@ export class TransactionRepository {
       }
     }
     if (filters.account) query.account = filters.account;
+    console.log(filters);
     if (filters.status) query.status = filters.status;
     if (filters.description)
       query.description = { $regex: filters.description, $options: 'i' };

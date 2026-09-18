@@ -6,12 +6,14 @@ import { AccountsController } from './accounts.controller';
 import { AccountService } from './account.service';
 import { TransactionsModule } from '../transactions/transactions.module';
 import { CategoriesModule } from '../categories/categories.module';
+import { InvoicesModule } from '../invoices/invoices.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Account.name, schema: AccountSchema }]),
     forwardRef(() => TransactionsModule),
     CategoriesModule,
+    InvoicesModule,
   ],
   controllers: [AccountsController],
   providers: [AccountRepository, AccountService],

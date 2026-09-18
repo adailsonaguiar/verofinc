@@ -14,13 +14,21 @@ export const accountService = {
     type: string;
     initialBalance?: number;
     creditLimit?: number;
+    closingDay?: number;
+    dueDay?: number;
   }) {
     const res = await api.post('/accounts', data);
     return res.data;
   },
   async update(
     id: string,
-    data: { name: string; initialBalance?: number; creditLimit?: number }
+    data: {
+      name: string;
+      initialBalance?: number;
+      creditLimit?: number;
+      closingDay?: number;
+      dueDay?: number;
+    }
   ) {
     const res = await api.patch(`/accounts/${id}`, data);
     return res.data;

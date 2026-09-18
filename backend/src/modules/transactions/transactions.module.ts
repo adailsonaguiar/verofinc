@@ -12,6 +12,7 @@ import { Account, AccountSchema } from '../../entities/account.entity';
 
 import { AccountsModule } from '../accounts/accounts.module';
 import { LedgerModule } from '../ledger/ledger.module';
+import { InvoicesModule } from '../invoices/invoices.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { LedgerModule } from '../ledger/ledger.module';
     ]),
     forwardRef(() => AccountsModule),
     LedgerModule,
+    InvoicesModule,
   ],
   controllers: [TransactionsController],
   providers: [TransactionsService, TransactionRepository, AccountRepository],

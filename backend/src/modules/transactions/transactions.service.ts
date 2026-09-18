@@ -16,19 +16,22 @@ import { LedgerService } from '../ledger/ledger.service';
 import { LedgerOperationType } from '../../entities/ledger.entity';
 import { AccountRepository } from '../../repositories/account.repository';
 import { AccountType } from '@/entities/account.entity';
+import { InvoicesService } from '../invoices/invoices.service';
 
 @Injectable()
 export class TransactionsService {
   constructor(
     private readonly transactionRepository: TransactionRepository,
     private readonly ledgerService: LedgerService,
-    private readonly accountRepository: AccountRepository
+    private readonly accountRepository: AccountRepository,
+    private readonly invoicesService: InvoicesService
   ) {}
 
   private async filterIncomeCreditCardTransactionsToShow(
     transactions: Transaction[]
   ): Promise<Transaction[]> {
     const accounts = await this.accountRepository.findAll();
+    console.log({accounts})
     return transactions.filter((tx) => {
       const account = accounts.find(
         (acc) => (acc as any)._id.toString() === (tx.account as any).toString()
@@ -45,14 +48,34 @@ export class TransactionsService {
 
   private buildDateWithCurrentTime(date: string | Date): Date {
     const dateNow = new Date();
-    const transactionDate = new Date(date as any);
-    transactionDate.setHours(
+    let year: number;
+    let month: number;
+    let day: number;
+
+    if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(date)) {
+      // Date-only strings ("YYYY-MM-DD") are parsed as UTC by `new Date`,
+      // which shifts the day in negative-offset timezones. Read the parts
+      // explicitly and build a local date instead.
+      const [y, m, d] = date.split('T')[0].split('-').map(Number);
+      year = y;
+      month = m - 1;
+      day = d;
+    } else {
+      const parsed = new Date(date as any);
+      year = parsed.getFullYear();
+      month = parsed.getMonth();
+      day = parsed.getDate();
+    }
+
+    return new Date(
+      year,
+      month,
+      day,
       dateNow.getHours(),
       dateNow.getMinutes(),
       dateNow.getSeconds(),
       dateNow.getMilliseconds()
     );
-    return transactionDate;
   }
 
   private sortTransactionsByDate(transactions: Transaction[]): Transaction[] {
@@ -133,6 +156,15 @@ export class TransactionsService {
         txMonth
       );
 
+    const shouldLinkInvoice =
+      account.type === AccountType.CREDIT_CARD &&
+      createTransactionDto.type === TransactionType.EXPENSE &&
+      !createTransactionDto.isPayment;
+
+    const invoice = shouldLinkInvoice
+      ? await this.invoicesService.getOrCreateInvoice(account, transactionDate)
+      : null;
+
     const transaction: any = {
       description: createTransactionDto.description,
       amount: createTransactionDto.amount,
@@ -141,12 +173,20 @@ export class TransactionsService {
       category: new Types.ObjectId(createTransactionDto.categoryId),
       status: createTransactionDto.status,
       account: createTransactionDto.account,
+      invoice: invoice ? new Types.ObjectId((invoice as any)._id) : undefined,
       isFixed: createTransactionDto.isFixed || false,
       isPayment: createTransactionDto.isPayment || false,
       sortOrder: maxSortOrder + 1,
     };
 
     const created = await this.transactionRepository.create(transaction);
+
+    if (invoice) {
+      await this.invoicesService.incrementTotal(
+        (invoice as any)._id.toString(),
+        created.amount
+      );
+    }
 
     if (created.status === TransactionStatus.PAID) {
       try {
@@ -183,15 +223,29 @@ export class TransactionsService {
             ? TransactionStatus.PAID
             : TransactionStatus.UNPAID;
 
+        const nextInvoice = shouldLinkInvoice
+          ? await this.invoicesService.getOrCreateInvoice(account, nextDate)
+          : null;
+
         const nextTransaction: any = {
           ...transaction,
           date: nextDate,
           status: nextStatus,
           isPayment: transaction.isPayment,
+          invoice: nextInvoice
+            ? new Types.ObjectId((nextInvoice as any)._id)
+            : undefined,
         };
 
         const nextCreated =
           await this.transactionRepository.create(nextTransaction);
+
+        if (nextInvoice) {
+          await this.invoicesService.incrementTotal(
+            (nextInvoice as any)._id.toString(),
+            nextCreated.amount
+          );
+        }
 
         if (nextCreated.status === TransactionStatus.PAID) {
           try {
@@ -411,6 +465,13 @@ export class TransactionsService {
       throw new NotFoundException(`Transaction with ID ${id} not found`);
 
     await this.transactionRepository.delete(id);
+
+    if (original.invoice && original.type === TransactionType.EXPENSE) {
+      await this.invoicesService.decrementTotal(
+        original.invoice.toString(),
+        original.amount
+      );
+    }
 
     if (original.status === TransactionStatus.PAID) {
       try {

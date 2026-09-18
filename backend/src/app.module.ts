@@ -6,6 +6,7 @@ import { TransactionsModule } from './modules/transactions/transactions.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { AccountsModule } from './modules/accounts/accounts.module';
 import { LedgerModule } from './modules/ledger/ledger.module';
+import { InvoicesModule } from './modules/invoices/invoices.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
@@ -28,6 +29,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     TransactionsModule,
     AccountsModule,
     LedgerModule,
+    InvoicesModule,
     UsersModule,
     AuthModule,
     ThrottlerModule.forRoot([{

@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Document, Schema as MongooseSchema, Types } from 'mongoose';
 
 export type TransactionDocument = Transaction & Document;
 
@@ -40,6 +40,9 @@ export class Transaction {
 
   @Prop({ type: Types.ObjectId, ref: 'Account', required: true })
   account: Types.ObjectId;
+
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Invoice', required: false })
+  invoice?: Types.ObjectId;
 
   @Prop({ default: false })
   isReversal: boolean;

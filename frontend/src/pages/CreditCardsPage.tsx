@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Loader2, Pencil, Plus, Trash2, Wallet, X } from 'lucide-react';
 import { accountService } from '../services/accountService';
 import { transactionService } from '../services/transactionService';
-import { Transaction } from '../types';
+import { invoiceService } from '../services/invoiceService';
+import { Transaction, Invoice, InvoiceStatus } from '../types';
 import { TransactionCard } from '../components/TransactionCard';
 import { MonthSelector } from '../components/MonthSelector';
 import { SectionTitle } from '../components/SectionTitle';
@@ -10,6 +11,7 @@ import { StatCard } from '../components/StatCard';
 import { EmptyState } from '../components/EmptyState';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { computeInvoicePeriod, formatInvoiceDay } from '../utils/invoices';
 import api from '../services/api';
 
 interface CardLike {
@@ -19,6 +21,8 @@ interface CardLike {
   active?: boolean;
   initialBalance?: number;
   creditLimit?: number;
+  closingDay?: number;
+  dueDay?: number;
 }
 
 const brl = (cents: number) =>
@@ -48,9 +52,12 @@ export const CreditCardsPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [limit, setLimit] = useState('');
+  const [closingDay, setClosingDay] = useState('');
+  const [dueDay, setDueDay] = useState('');
   const [editing, setEditing] = useState<CardLike | null>(null);
   const [selectedCard, setSelectedCard] = useState<CardLike | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
   const [availableMonths, setAvailableMonths] = useState<
@@ -70,6 +77,7 @@ export const CreditCardsPage: React.FC = () => {
   useEffect(() => {
     if (selectedCard && currentYear && currentMonth) {
       loadCardTransactions();
+      loadInvoices();
     }
   }, [selectedCard, currentYear, currentMonth]);
 
@@ -109,19 +117,30 @@ export const CreditCardsPage: React.FC = () => {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     const numericLimit = Number(limit.replace(/\D/g, '')) / 100;
+    const closingDayValue = closingDay ? Number(closingDay) : undefined;
+    const dueDayValue = dueDay ? Number(dueDay) : undefined;
     try {
       if (editing) {
-        await accountService.update(editing._id, { name, creditLimit: numericLimit });
+        await accountService.update(editing._id, {
+          name,
+          creditLimit: numericLimit,
+          closingDay: closingDayValue,
+          dueDay: dueDayValue,
+        });
       } else {
         await accountService.create({
           name,
           type: 'credit_card',
           creditLimit: numericLimit,
           initialBalance: numericLimit,
+          closingDay: closingDayValue,
+          dueDay: dueDayValue,
         });
       }
       setName('');
       setLimit('');
+      setClosingDay('');
+      setDueDay('');
       setEditing(null);
       setShowForm(false);
       await loadCards();
@@ -134,6 +153,8 @@ export const CreditCardsPage: React.FC = () => {
     setEditing(card);
     setName(card.name);
     setLimit(formatCurrencyInput(Math.round(card.creditLimit || 0).toString()));
+    setClosingDay(card.closingDay ? String(card.closingDay) : '');
+    setDueDay(card.dueDay ? String(card.dueDay) : '');
     setShowForm(true);
   };
 
@@ -162,6 +183,15 @@ export const CreditCardsPage: React.FC = () => {
       );
     } catch (err) {
       console.error('Error loading available months:', err);
+    }
+  };
+
+  const loadInvoices = async () => {
+    if (!selectedCard) return;
+    try {
+      setInvoices(await invoiceService.listByAccount(selectedCard._id));
+    } catch (err) {
+      console.error('Error loading invoices:', err);
     }
   };
 
@@ -232,6 +262,7 @@ export const CreditCardsPage: React.FC = () => {
       setShowPaymentModal(false);
       await loadCards();
       await loadCardTransactions();
+      await loadInvoices();
     } catch (err) {
       console.error('Erro ao pagar fatura:', err);
       alert('Erro ao pagar fatura. Tente novamente.');
@@ -261,6 +292,18 @@ export const CreditCardsPage: React.FC = () => {
   const hasPrevious = currentIndex < availableMonths.length - 1;
   const hasNext = currentIndex > 0;
 
+  const currentRefMonth = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+  const currentInvoice = invoices.find(
+    (inv) => inv.referenceMonth === currentRefMonth
+  );
+  const invoicePeriod = selectedCard?.closingDay
+    ? computeInvoicePeriod(
+        selectedCard.closingDay,
+        selectedCard.dueDay ?? selectedCard.closingDay,
+        new Date(currentYear, currentMonth - 1, 1)
+      )
+    : null;
+
   // Invoice of the selected month: expenses minus payments already made
   const monthExpensesSum = transactions
     .filter((t) => t.type === 'expense' && !t.isPayment)
@@ -269,7 +312,24 @@ export const CreditCardsPage: React.FC = () => {
     .filter((t) => t.type === 'income' && t.isPayment)
     .reduce((sum, t) => sum + t.amount, 0);
   const monthInvoiceAmount = (monthExpensesSum - monthPaymentsSum) / 100;
-  const monthInvoicePaid = monthInvoiceAmount <= 0;
+  // "Paga" follows the invoice entity status when one exists; otherwise fall
+  // back to the transaction-sum heuristic.
+  const monthInvoicePaid = currentInvoice
+    ? currentInvoice.status === InvoiceStatus.PAID
+    : monthInvoiceAmount <= 0;
+
+  const invoiceStatusLabel = (status: InvoiceStatus) => {
+    switch (status) {
+      case InvoiceStatus.PAID:
+        return 'Paga';
+      case InvoiceStatus.CLOSED:
+        return 'Fechada';
+      case InvoiceStatus.OVERDUE:
+        return 'Vencida';
+      default:
+        return 'Aberta';
+    }
+  };
 
   if (loading && cards.length === 0) {
     return (
@@ -328,6 +388,36 @@ export const CreditCardsPage: React.FC = () => {
               maxLength={20}
             />
           </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label">Dia de fechamento</label>
+              <input
+                type="number"
+                min={1}
+                max={31}
+                className="input num"
+                value={closingDay}
+                onChange={(e) => setClosingDay(e.target.value)}
+                placeholder="Ex: 10"
+                inputMode="numeric"
+                autoComplete="off"
+              />
+            </div>
+            <div>
+              <label className="label">Dia de vencimento</label>
+              <input
+                type="number"
+                min={1}
+                max={31}
+                className="input num"
+                value={dueDay}
+                onChange={(e) => setDueDay(e.target.value)}
+                placeholder="Ex: 17"
+                inputMode="numeric"
+                autoComplete="off"
+              />
+            </div>
+          </div>
           <div className="flex gap-3 pt-2">
             <button type="submit" className="btn btn-primary flex-1">
               {editing ? 'Salvar' : 'Criar'}
@@ -340,6 +430,8 @@ export const CreditCardsPage: React.FC = () => {
                 setEditing(null);
                 setName('');
                 setLimit('');
+                setClosingDay('');
+                setDueDay('');
               }}
             >
               Cancelar
@@ -413,6 +505,13 @@ export const CreditCardsPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
+
+                {card.closingDay && (
+                  <div className="text-xs text-navy-500">
+                    Fecha dia {card.closingDay}
+                    {card.dueDay ? ` · Vence dia ${card.dueDay}` : ''}
+                  </div>
+                )}
 
                 <div>
                   <div className="flex justify-between text-xs text-navy-500">
@@ -499,6 +598,47 @@ export const CreditCardsPage: React.FC = () => {
               </button>
             </div>
           </div>
+
+          {(currentInvoice || invoicePeriod) && (
+            <div className="px-4 py-3 border-b border-bone-divider flex flex-wrap items-center justify-between gap-2 text-sm">
+              <span className="text-navy-500">
+                Período{' '}
+                <span className="num text-navy-800">
+                  {currentInvoice
+                    ? `${formatInvoiceDay(new Date(currentInvoice.startDate))} → ${formatInvoiceDay(new Date(currentInvoice.closingDate))}`
+                    : invoicePeriod
+                    ? `${formatInvoiceDay(invoicePeriod.startDate)} → ${formatInvoiceDay(invoicePeriod.closingDate)}`
+                    : '—'}
+                </span>
+                {(currentInvoice || invoicePeriod) && (
+                  <span className="text-navy-500">
+                    {' '}
+                    · vence em{' '}
+                    {formatInvoiceDay(
+                      new Date(
+                        currentInvoice?.dueDate ?? invoicePeriod!.dueDate
+                      )
+                    )}
+                  </span>
+                )}
+              </span>
+              {currentInvoice && (
+                <span
+                  className={`chip ${
+                    currentInvoice.status === InvoiceStatus.PAID
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : currentInvoice.status === InvoiceStatus.OVERDUE
+                      ? 'bg-rose-100 text-rose-700'
+                      : currentInvoice.status === InvoiceStatus.CLOSED
+                      ? 'bg-gold-100 text-gold-800'
+                      : 'bg-navy-100 text-navy-800'
+                  }`}
+                >
+                  {invoiceStatusLabel(currentInvoice.status)}
+                </span>
+              )}
+            </div>
+          )}
 
           <div className="px-4 py-3 border-b border-bone-divider flex items-center justify-between">
             <span className="stat-label">Valor da fatura</span>

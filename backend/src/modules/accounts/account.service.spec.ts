@@ -4,6 +4,7 @@ import { AccountService } from './account.service';
 import { AccountRepository } from '../../repositories/account.repository';
 import { TransactionsService } from '../transactions/transactions.service';
 import { CategoriesService } from '../categories/categories.service';
+import { InvoicesService } from '../invoices/invoices.service';
 import { AccountType } from '../../entities/account.entity';
 import {
   TransactionType,
@@ -23,6 +24,7 @@ describe('AccountService', () => {
   };
   let transactionsService: { create: Mock; findWithFilters: Mock };
   let categoriesService: { findByType: Mock; create: Mock };
+  let invoicesService: { markPaidByReferenceMonth: Mock };
 
   const makeId = () => new Types.ObjectId();
 
@@ -45,12 +47,17 @@ describe('AccountService', () => {
       create: vi.fn(),
     };
 
+    invoicesService = {
+      markPaidByReferenceMonth: vi.fn().mockResolvedValue(null),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AccountService,
         { provide: AccountRepository, useValue: accountRepo },
         { provide: TransactionsService, useValue: transactionsService },
         { provide: CategoriesService, useValue: categoriesService },
+        { provide: InvoicesService, useValue: invoicesService },
       ],
     }).compile();
 
@@ -433,6 +440,33 @@ describe('AccountService', () => {
       expect(result.invoiceAmount).toBe(400);
       expect(result.creditCardName).toBe(card.name);
       expect(result.checkingAccountName).toBe(checking.name);
+    });
+
+    it('should mark the invoice of the reference month as paid', async () => {
+      const card = buildCreditCard();
+      const checking = buildCheckingAccount();
+      accountRepo.findById.mockResolvedValueOnce(card);
+      accountRepo.findById.mockResolvedValueOnce(checking);
+      transactionsService.findWithFilters.mockResolvedValueOnce([
+        { type: TransactionType.EXPENSE, isPayment: false, amount: 40000 },
+      ]);
+      categoriesService.findByType.mockResolvedValue([
+        { _id: makeId(), name: 'Pagamento de Fatura', type: 'expense' },
+      ]);
+      transactionsService.create.mockResolvedValue({});
+
+      await service.payInvoice(
+        card._id.toString(),
+        checking._id.toString(),
+        2026,
+        5
+      );
+
+      expect(invoicesService.markPaidByReferenceMonth).toHaveBeenCalledWith(
+        card._id.toString(),
+        '2026-05',
+        40000
+      );
     });
   });
 });

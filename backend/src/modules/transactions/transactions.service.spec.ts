@@ -9,6 +9,7 @@ import {
   TransactionStatus,
 } from '../../entities/transaction.entity';
 import { AccountType } from '../../entities/account.entity';
+import { InvoicesService } from '../invoices/invoices.service';
 import { Types } from 'mongoose';
 import { describe, it, expect, beforeEach, vi, Mock, afterEach } from 'vitest';
 
@@ -37,6 +38,11 @@ describe('TransactionsService', () => {
     findByTransactionId: Mock;
   };
   let accountRepo: { findAll: Mock; findById: Mock; update: Mock };
+  let invoicesService: {
+    getOrCreateInvoice: Mock;
+    incrementTotal: Mock;
+    decrementTotal: Mock;
+  };
 
   const makeId = () => new Types.ObjectId();
   const makeCheckingAccount = (overrides: any = {}) => ({
@@ -91,12 +97,19 @@ describe('TransactionsService', () => {
       update: vi.fn(),
     };
 
+    invoicesService = {
+      getOrCreateInvoice: vi.fn().mockResolvedValue(null),
+      incrementTotal: vi.fn().mockResolvedValue(undefined),
+      decrementTotal: vi.fn().mockResolvedValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TransactionsService,
         { provide: TransactionRepository, useValue: transactionRepo },
         { provide: LedgerService, useValue: ledgerService },
         { provide: AccountRepository, useValue: accountRepo },
+        { provide: InvoicesService, useValue: invoicesService },
       ],
     }).compile();
 
@@ -413,6 +426,94 @@ describe('TransactionsService', () => {
   });
 
   // ---------------------------------------------------------------------------
+  // create – invoice assignment
+  // ---------------------------------------------------------------------------
+  describe('create – invoice assignment', () => {
+    it('links a credit-card expense to an invoice and increments its total', async () => {
+      const card = makeCreditCard({ closingDay: 10, dueDay: 17 });
+      accountRepo.findById.mockResolvedValue(card);
+      transactionRepo.findMaxSortOrderForMonth.mockResolvedValue(0);
+
+      const invoice = { _id: makeId() };
+      invoicesService.getOrCreateInvoice.mockResolvedValue(invoice);
+
+      const createdTx = makeTx({
+        account: card._id,
+        status: TransactionStatus.PAID,
+        amount: 5000,
+      });
+      transactionRepo.create.mockResolvedValue(createdTx);
+      ledgerService.logOperation.mockResolvedValue(undefined);
+
+      await service.create({
+        description: 'Compra',
+        amount: 50,
+        date: '2026-09-05',
+        type: TransactionType.EXPENSE,
+        categoryId: makeId().toString(),
+        status: TransactionStatus.PAID,
+        account: card._id.toString(),
+      });
+
+      const createArgs = transactionRepo.create.mock.calls[0][0];
+      expect(createArgs.invoice.toString()).toBe(invoice._id.toString());
+      expect(invoicesService.incrementTotal).toHaveBeenCalledWith(
+        invoice._id.toString(),
+        createdTx.amount
+      );
+    });
+
+    it('does not link a credit-card income (invoice payment receipt) to an invoice', async () => {
+      const card = makeCreditCard({ closingDay: 10, dueDay: 17 });
+      accountRepo.findById.mockResolvedValue(card);
+      transactionRepo.findMaxSortOrderForMonth.mockResolvedValue(0);
+      transactionRepo.create.mockResolvedValue(
+        makeTx({ status: TransactionStatus.PAID })
+      );
+      ledgerService.logOperation.mockResolvedValue(undefined);
+
+      await service.create(
+        {
+          description: 'Pagamento fatura',
+          amount: 50,
+          date: '2026-09-05',
+          type: TransactionType.INCOME,
+          categoryId: makeId().toString(),
+          status: TransactionStatus.PAID,
+          account: card._id.toString(),
+          isPayment: true,
+        },
+        true
+      );
+
+      expect(invoicesService.getOrCreateInvoice).not.toHaveBeenCalled();
+      const createArgs = transactionRepo.create.mock.calls[0][0];
+      expect(createArgs.invoice).toBeUndefined();
+    });
+
+    it('does not link an invoice for a checking account expense', async () => {
+      const checking = makeCheckingAccount();
+      accountRepo.findById.mockResolvedValue(checking);
+      transactionRepo.findMaxSortOrderForMonth.mockResolvedValue(0);
+      transactionRepo.create.mockResolvedValue(
+        makeTx({ status: TransactionStatus.UNPAID })
+      );
+
+      await service.create({
+        description: 'Aluguel',
+        amount: 100,
+        date: '2026-09-05',
+        type: TransactionType.EXPENSE,
+        categoryId: makeId().toString(),
+        status: TransactionStatus.UNPAID,
+        account: checking._id.toString(),
+      });
+
+      expect(invoicesService.getOrCreateInvoice).not.toHaveBeenCalled();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // findWithFilters
   // ---------------------------------------------------------------------------
   describe('findWithFilters', () => {
@@ -612,6 +713,25 @@ describe('TransactionsService', () => {
       expect(ledgerService.logOperation).not.toHaveBeenCalled();
     });
 
+    it('should decrement the invoice total when removing an invoiced expense', async () => {
+      const invoiceId = makeId();
+      const tx = makeTx({
+        status: TransactionStatus.UNPAID,
+        type: TransactionType.EXPENSE,
+        amount: 3000,
+        invoice: invoiceId,
+      });
+      transactionRepo.findById.mockResolvedValue(tx);
+      transactionRepo.delete.mockResolvedValue(tx);
+
+      await service.remove(tx._id.toString());
+
+      expect(invoicesService.decrementTotal).toHaveBeenCalledWith(
+        invoiceId.toString(),
+        3000
+      );
+    });
+
     it('should throw NotFoundException when transaction does not exist', async () => {
       transactionRepo.findById.mockResolvedValue(null);
 
@@ -655,12 +775,13 @@ describe('TransactionsService', () => {
 
     it('should preserve the date portion and inject the current time (string input)', () => {
       const input = '2026-03-15';
-      const expectedBase = new Date(input);
       const result = (service as any).buildDateWithCurrentTime(input);
 
-      expect(result.getFullYear()).toBe(expectedBase.getFullYear());
-      expect(result.getMonth()).toBe(expectedBase.getMonth());
-      expect(result.getDate()).toBe(expectedBase.getDate());
+      // A date-only string must be interpreted in local time (not UTC), so the
+      // day is preserved regardless of the machine timezone.
+      expect(result.getFullYear()).toBe(2026);
+      expect(result.getMonth()).toBe(2);
+      expect(result.getDate()).toBe(15);
       expect(result.getHours()).toBe(FIXED_NOW.getHours());
       expect(result.getMinutes()).toBe(FIXED_NOW.getMinutes());
       expect(result.getSeconds()).toBe(FIXED_NOW.getSeconds());
@@ -699,7 +820,7 @@ describe('TransactionsService', () => {
         account: acc._id.toString(),
       });
 
-      const expectedBase = new Date('2026-01-20');
+      const expectedBase = new Date(2026, 0, 20);
       expect(capturedDate!.getFullYear()).toBe(expectedBase.getFullYear());
       expect(capturedDate!.getMonth()).toBe(expectedBase.getMonth());
       expect(capturedDate!.getDate()).toBe(expectedBase.getDate());

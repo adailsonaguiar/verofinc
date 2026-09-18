@@ -24,6 +24,12 @@ export class Account {
 
   @Prop({ type: Number, default: 0 })
   creditLimit: number;
+
+  @Prop({ type: Number, min: 1, max: 31 })
+  closingDay?: number;
+
+  @Prop({ type: Number, min: 1, max: 31 })
+  dueDay?: number;
 }
 
 export const AccountSchema = SchemaFactory.createForClass(Account);
