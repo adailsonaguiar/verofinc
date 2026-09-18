@@ -53,6 +53,11 @@ export class AccountsController {
     @Body('year') year: number,
     @Body('month') month: number
   ) {
-    return this.accountService.payInvoice(creditCardId, checkingAccountId, year, month);
+    return this.accountService.payInvoice(
+      creditCardId,
+      checkingAccountId,
+      year,
+      month
+    );
   }
 }
