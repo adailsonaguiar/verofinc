@@ -19,6 +19,26 @@ export class UserRepository {
     return this.userModel.findOne({ email: email.toLowerCase() }).exec();
   }
 
+  async findByGoogleId(googleId: string): Promise<User | null> {
+    return this.userModel.findOne({ googleId }).exec();
+  }
+
+  async linkGoogleId(
+    email: string,
+    googleId: string,
+    avatarUrl?: string
+  ): Promise<User | null> {
+    const update: Record<string, unknown> = { googleId };
+    if (avatarUrl) update.avatarUrl = avatarUrl;
+    return this.userModel
+      .findOneAndUpdate(
+        { email: email.toLowerCase() },
+        { $set: update },
+        { new: true }
+      )
+      .exec();
+  }
+
   async findById(id: string): Promise<User | null> {
     return this.userModel.findById(id).exec();
   }

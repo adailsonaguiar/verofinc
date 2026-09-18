@@ -29,6 +29,39 @@ export class UsersService {
     return this.userRepository.findByEmail(email);
   }
 
+  async findOrCreateGoogleUser(data: {
+    email: string;
+    name: string;
+    googleId: string;
+    avatarUrl?: string;
+  }): Promise<User> {
+    const byGoogleId = await this.userRepository.findByGoogleId(data.googleId);
+    if (byGoogleId) {
+      return byGoogleId;
+    }
+
+    const byEmail = await this.userRepository.findByEmail(data.email);
+    if (byEmail) {
+      if (!byEmail.googleId) {
+        const linked = await this.userRepository.linkGoogleId(
+          data.email,
+          data.googleId,
+          data.avatarUrl
+        );
+        return linked ?? byEmail;
+      }
+      return byEmail;
+    }
+
+    return this.userRepository.create({
+      name: data.name,
+      email: data.email,
+      googleId: data.googleId,
+      avatarUrl: data.avatarUrl,
+      provider: 'google',
+    });
+  }
+
   async findById(id: string): Promise<User | null> {
     return this.userRepository.findById(id);
   }

@@ -11,8 +11,17 @@ export class User {
   @Prop({ required: true, trim: true })
   name: string;
 
-  @Prop({ required: true })
-  passwordHash: string;
+  @Prop()
+  passwordHash?: string;
+
+  @Prop({ unique: true, sparse: true })
+  googleId?: string;
+
+  @Prop()
+  avatarUrl?: string;
+
+  @Prop({ default: 'local' })
+  provider: string;
 
   @Prop({ default: 'user' })
   role: string;

@@ -10,9 +10,20 @@ import {
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { GoogleLoginDto } from './dto/google-login.dto';
 import { Public } from './public.decorator';
 import { Request, Response } from 'express';
 import { ThrottlerGuard } from '@nestjs/throttler';
+
+const ACCESS_TOKEN_COOKIE = 'accessToken';
+
+function setAccessTokenCookie(res: Response, accessToken: string) {
+  res.cookie(ACCESS_TOKEN_COOKIE, accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+  });
+}
 
 @Controller('auth')
 export class AuthController {
@@ -30,12 +41,23 @@ export class AuthController {
       body.password
     );
 
-    res.cookie('accessToken', accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      // maxAge: 60 * 60 * 1000, // 15 minutos
-    });
+    setAccessTokenCookie(res, accessToken);
+
+    return { user };
+  }
+
+  @Public()
+  @UseGuards(ThrottlerGuard)
+  @Post('google')
+  async google(
+    @Body() body: GoogleLoginDto,
+    @Res({ passthrough: true }) res: Response
+  ) {
+    const { accessToken, user } = await this.authService.loginWithGoogle(
+      body.idToken
+    );
+
+    setAccessTokenCookie(res, accessToken);
 
     return { user };
   }
@@ -49,14 +71,20 @@ export class AuthController {
   ) {
     const { accessToken, user } = await this.authService.register(body);
 
-    res.cookie('accessToken', accessToken, {
+    setAccessTokenCookie(res, accessToken);
+
+    return { user };
+  }
+
+  @Public()
+  @Post('logout')
+  async logout(@Res({ passthrough: true }) res: Response) {
+    res.clearCookie(ACCESS_TOKEN_COOKIE, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 15 * 60 * 1000, // 15 minutos
     });
-
-    return { user };
+    return { ok: true };
   }
 
   @Get('me')
