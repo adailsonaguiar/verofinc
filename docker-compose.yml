@@ -23,7 +23,7 @@ services:
 
   backend:
     build:
-      context: ./vero_finc_backend
+      context: ./backend
       dockerfile: Dockerfile
     container_name: app_finc_backend
     restart: unless-stopped
