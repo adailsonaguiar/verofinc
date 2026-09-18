@@ -24,7 +24,10 @@ describe('AccountService', () => {
   };
   let transactionsService: { create: Mock; findWithFilters: Mock };
   let categoriesService: { findByType: Mock; create: Mock };
-  let invoicesService: { markPaidByReferenceMonth: Mock };
+  let invoicesService: {
+    markPaidByReferenceMonth: Mock;
+    getOrCreateInvoice: Mock;
+  };
 
   const makeId = () => new Types.ObjectId();
 
@@ -49,6 +52,13 @@ describe('AccountService', () => {
 
     invoicesService = {
       markPaidByReferenceMonth: vi.fn().mockResolvedValue(null),
+      getOrCreateInvoice: vi.fn().mockResolvedValue({
+        _id: makeId(),
+        referenceMonth: '2026-05',
+        startDate: new Date(2026, 3, 11),
+        closingDate: new Date(2026, 4, 10),
+        dueDate: new Date(2026, 4, 17),
+      }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -440,6 +450,69 @@ describe('AccountService', () => {
       expect(result.invoiceAmount).toBe(400);
       expect(result.creditCardName).toBe(card.name);
       expect(result.checkingAccountName).toBe(checking.name);
+    });
+
+    it('should query transactions within invoice period using closing day and create invoice if needed', async () => {
+      const card = buildCreditCard({ closingDay: 10, dueDay: 17 });
+      const checking = buildCheckingAccount();
+      accountRepo.findById.mockResolvedValueOnce(card);
+      accountRepo.findById.mockResolvedValueOnce(checking);
+
+      const invoiceMock = {
+        _id: makeId(),
+        referenceMonth: '2026-05',
+        startDate: new Date(2026, 3, 11),
+        closingDate: new Date(2026, 4, 10),
+        dueDate: new Date(2026, 4, 17),
+      };
+      invoicesService.getOrCreateInvoice.mockResolvedValueOnce(invoiceMock);
+
+      transactionsService.findWithFilters.mockResolvedValueOnce([
+        { type: TransactionType.EXPENSE, isPayment: false, amount: 25000 },
+      ]);
+      categoriesService.findByType.mockResolvedValue([
+        { _id: makeId(), name: 'Pagamento de Fatura', type: 'expense' },
+      ]);
+      transactionsService.create.mockResolvedValue({});
+
+      await service.payInvoice(
+        card._id.toString(),
+        checking._id.toString(),
+        2026,
+        5
+      );
+
+      expect(invoicesService.getOrCreateInvoice).toHaveBeenCalledWith(
+        card,
+        new Date(2026, 4, 1)
+      );
+
+      const expectedEndDate = new Date(2026, 4, 10);
+      expectedEndDate.setHours(23, 59, 59, 999);
+
+      expect(transactionsService.findWithFilters).toHaveBeenCalledWith({
+        account: card._id.toString(),
+        startDate: invoiceMock.startDate,
+        endDate: expectedEndDate,
+        withCreditCardFilter: true,
+      });
+    });
+
+    it('should throw BadRequestException when getOrCreateInvoice returns null', async () => {
+      const card = buildCreditCard();
+      const checking = buildCheckingAccount();
+      accountRepo.findById.mockResolvedValueOnce(card);
+      accountRepo.findById.mockResolvedValueOnce(checking);
+      invoicesService.getOrCreateInvoice.mockResolvedValueOnce(null);
+
+      await expect(
+        service.payInvoice(
+          card._id.toString(),
+          checking._id.toString(),
+          2026,
+          5
+        )
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should mark the invoice of the reference month as paid', async () => {

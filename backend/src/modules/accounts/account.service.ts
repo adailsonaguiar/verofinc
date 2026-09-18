@@ -103,11 +103,26 @@ export class AccountService {
       throw new BadRequestException('Account must be a checking account');
     }
 
-    // Calcular fatura do mês com base nas transações do mês selecionado
+    // Obter ou criar fatura do período com base no dia de fechamento
+    const invoice = await this.invoicesService.getOrCreateInvoice(
+      creditCard,
+      new Date(year, month - 1, 1)
+    );
+    if (!invoice) {
+      throw new BadRequestException(
+        'Unable to resolve invoice for this period'
+      );
+    }
+
+    const startDate = invoice.startDate;
+    const endDate = new Date(invoice.closingDate);
+    endDate.setHours(23, 59, 59, 999);
+
+    // Calcular fatura do período com base nas transações da fatura
     const monthTransactions = await this.transactionsService.findWithFilters({
       account: creditCardId,
-      year,
-      month,
+      startDate,
+      endDate,
       withCreditCardFilter: true,
     });
 
@@ -177,7 +192,7 @@ export class AccountService {
 
     await this.invoicesService.markPaidByReferenceMonth(
       creditCardId,
-      `${year}-${String(month).padStart(2, '0')}`,
+      invoice.referenceMonth,
       monthExpenses - monthPayments
     );
 
