@@ -7,6 +7,7 @@ import {
   CreditCard,
   Banknote,
   BarChart,
+  Target,
   LogOut,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -23,6 +24,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
   const menuItems = [
     { path: '/', icon: BarChart, label: 'Visão Geral' },
+    { path: '/budgets', icon: Target, label: 'Orçamento' },
     { path: '/transactions', icon: DollarSign, label: 'Transações' },
     { path: '/accounts', icon: Banknote, label: 'Contas Correntes' },
     { path: '/credit-cards', icon: CreditCard, label: 'Cartões de Crédito' },

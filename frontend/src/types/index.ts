@@ -66,6 +66,19 @@ export interface Transaction {
   sortOrder?: number;
 }
 
+export interface BudgetCategoryItem {
+  category: Category;
+  limit: number | null;
+  spent: number;
+}
+
+export interface BudgetOverview {
+  month: string;
+  totalLimit: number | null;
+  totalSpent: number;
+  items: BudgetCategoryItem[];
+}
+
 export interface CreateTransactionDto {
   description: string;
   amount: number;

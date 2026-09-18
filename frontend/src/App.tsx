@@ -14,6 +14,7 @@ import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import './index.css';
 import { CreditCardsPage } from './pages/CreditCardsPage';
+import { BudgetsPage } from './pages/BudgetsPage';
 import { LoginPage } from './pages/LoginPage';
 import { RequireAuth } from './contexts/AuthContext';
 import { ToastContainer } from 'react-toastify';
@@ -62,6 +63,7 @@ function App() {
         <Route element={<RequireAuth />}>
           <Route element={<AppLayout />}>
             <Route path="/" element={<DashboardPage />} />
+            <Route path="/budgets" element={<BudgetsPage />} />
             <Route path="/categories" element={<CategoriesPage />} />
             <Route path="/transactions" element={<TransactionsPage />} />
             <Route path="/accounts" element={<AccountsPage />} />

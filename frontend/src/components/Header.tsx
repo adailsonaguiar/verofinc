@@ -4,6 +4,7 @@ import { Bell, Menu, Plus, Search } from 'lucide-react';
 
 const PAGE_TITLES: Record<string, string> = {
   '/': 'Visão Geral',
+  '/budgets': 'Orçamento',
   '/transactions': 'Transações',
   '/accounts': 'Contas Correntes',
   '/credit-cards': 'Cartões de Crédito',

@@ -7,6 +7,7 @@ import { CategoriesModule } from './modules/categories/categories.module';
 import { AccountsModule } from './modules/accounts/accounts.module';
 import { LedgerModule } from './modules/ledger/ledger.module';
 import { InvoicesModule } from './modules/invoices/invoices.module';
+import { BudgetsModule } from './modules/budgets/budgets.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
@@ -30,12 +31,15 @@ import { ThrottlerModule } from '@nestjs/throttler';
     AccountsModule,
     LedgerModule,
     InvoicesModule,
+    BudgetsModule,
     UsersModule,
     AuthModule,
-    ThrottlerModule.forRoot([{
-      ttl: 60000,
-      limit: 10,
-    }]),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 10,
+      },
+    ]),
   ],
   controllers: [],
   providers: [
