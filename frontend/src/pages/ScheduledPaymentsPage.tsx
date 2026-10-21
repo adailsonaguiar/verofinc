@@ -11,8 +11,7 @@ import {
   Trash2,
   AlertTriangle,
 } from 'lucide-react';
-import { format, isBefore, isToday, parseISO, startOfDay } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { format, isBefore, parseISO, startOfDay } from 'date-fns';
 import { toast } from 'react-toastify';
 import { accountService } from '../services/accountService';
 import { categoryService } from '../services/categoryService';
@@ -26,29 +25,12 @@ import {
   UpdateScheduledPaymentDto,
 } from '../types';
 import { formatCurrency } from '../utils/transactions';
+import { getScheduledPaymentDueState } from '../utils/scheduledPayments';
 import { PageHeading } from '../components/PageHeading';
 import { EmptyState } from '../components/EmptyState';
 import { ScheduledPaymentModal } from '../components/ScheduledPaymentModal';
 
 type ViewFilter = ScheduledPaymentStatus.PENDING | 'overdue';
-
-const dueState = (payment: ScheduledPayment) => {
-  const due = startOfDay(parseISO(payment.dueDate));
-  const now = startOfDay(new Date());
-  if (payment.status === ScheduledPaymentStatus.PAID) {
-    return { label: 'Pago', tone: 'text-emerald-400 bg-emerald-400/10' };
-  }
-  if (isBefore(due, now)) {
-    return { label: 'Vencido', tone: 'text-[#e58b6a] bg-[#ca7251]/10' };
-  }
-  if (isToday(due)) {
-    return { label: 'Vence hoje', tone: 'text-gold-400 bg-gold-400/10' };
-  }
-  return {
-    label: format(due, 'dd \'de\' MMM', { locale: ptBR }),
-    tone: 'text-navy-700 bg-navy-100',
-  };
-};
 
 const recurrenceLabel = (payment: ScheduledPayment) => {
   if (!payment.recurrence) return null;
@@ -236,7 +218,7 @@ export const ScheduledPaymentsPage: React.FC = () => {
         ) : (
           <ul className="divide-classic">
             {payments.map((payment) => {
-              const state = dueState(payment);
+              const state = getScheduledPaymentDueState(payment);
               const recurrence = recurrenceLabel(payment);
               const isPending = payment.status === ScheduledPaymentStatus.PENDING;
               return (

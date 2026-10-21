@@ -1,12 +1,19 @@
 import { format, parseISO } from 'date-fns';
-import type { Transaction } from '../types';
+import type { TransactionType } from '../types';
 
 const INVESTMENT_CATEGORY_NAME = 'Investimentos';
 
 const normalizeCategoryName = (name?: string): string =>
   (name ?? '').trim().toLocaleLowerCase('pt-BR');
 
-export const isInvestmentTransaction = (transaction: Transaction): boolean =>
+interface CategorizableExpense {
+  type: TransactionType;
+  category?: { name?: string } | null;
+}
+
+export const isInvestmentTransaction = (
+  transaction: CategorizableExpense
+): boolean =>
   transaction.type === 'expense' &&
   normalizeCategoryName(transaction.category?.name) ===
     normalizeCategoryName(INVESTMENT_CATEGORY_NAME);

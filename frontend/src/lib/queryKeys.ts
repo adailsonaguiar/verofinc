@@ -30,5 +30,7 @@ export const queryKeys = {
   scheduledPayments: {
     all: ['scheduled-payments'] as const,
     list: (status: string) => ['scheduled-payments', status] as const,
+    byMonth: (year: number, month: number) =>
+      ['scheduled-payments', 'month', year, month] as const,
   },
 };

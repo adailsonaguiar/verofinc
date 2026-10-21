@@ -1,13 +1,15 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { format } from 'date-fns';
+import { endOfMonth, format, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Activity, Loader2, Plus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { categoryService } from '../services/categoryService';
 import { transactionService } from '../services/transactionService';
 import { accountService } from '../services/accountService';
+import { scheduledPaymentService } from '../services/scheduledPaymentService';
+import { ScheduledPaymentStatus, TransactionType } from '../types';
 import { queryKeys } from '../lib/queryKeys';
 import { CashFlowChart } from '../components/CashFlowChart';
 import { CategoryComparisonChart } from '../components/CategoryComparisonChart';
@@ -17,6 +19,7 @@ import { DashboardCategoryDonut } from '../components/DashboardCategoryDonut';
 import { DashboardBudgetSection } from '../components/DashboardBudgetSection';
 import { DashboardInsights } from '../components/DashboardInsights';
 import { DashboardRecentTransactions } from '../components/DashboardRecentTransactions';
+import { DashboardScheduledPayments } from '../components/DashboardScheduledPayments';
 import { DashboardSummaryCards } from '../components/DashboardSummaryCards';
 import type { SummaryStat } from '../components/DashboardSummaryCards';
 import { MonthSelector } from '../components/MonthSelector';
@@ -86,6 +89,23 @@ export const DashboardPage: React.FC = () => {
     placeholderData: keepPreviousData,
   });
 
+  const scheduledPaymentsQuery = useQuery({
+    queryKey: queryKeys.scheduledPayments.byMonth(currentYear, currentMonth),
+    queryFn: () => {
+      const monthStart = startOfMonth(
+        new Date(currentYear, currentMonth - 1, 1)
+      );
+      const monthEnd = endOfMonth(monthStart);
+
+      return scheduledPaymentService.getAll({
+        status: ScheduledPaymentStatus.PENDING,
+        startDate: monthStart.toISOString(),
+        endDate: monthEnd.toISOString(),
+      });
+    },
+    placeholderData: keepPreviousData,
+  });
+
   const categories = categoriesQuery.data ?? [];
   const checkingAccounts = checkingAccountsQuery.data ?? [];
   const creditCards = creditCardsQuery.data ?? [];
@@ -96,7 +116,8 @@ export const DashboardPage: React.FC = () => {
     checkingAccountsQuery.isPending ||
     creditCardsQuery.isPending ||
     lastMonthsQuery.isPending ||
-    monthTransactionsQuery.isPending;
+    monthTransactionsQuery.isPending ||
+    scheduledPaymentsQuery.isPending;
   const error =
     monthTransactionsQuery.isError && !monthTransactionsQuery.data
       ? 'Erro ao carregar dados do dashboard.'
@@ -157,6 +178,36 @@ export const DashboardPage: React.FC = () => {
   );
   const recentGlobalTransactions = allTransactions.slice(0, 5);
 
+  const scheduledPayments = scheduledPaymentsQuery.isError
+    ? []
+    : scheduledPaymentsQuery.data ?? [];
+  const scheduledExpensePayments = scheduledPayments.filter(
+    (payment) => payment.type === TransactionType.EXPENSE
+  );
+  const scheduledCashOutflowPayments = scheduledExpensePayments.filter(
+    (payment) => !isInvestmentTransaction(payment)
+  );
+  const scheduledInvestmentPayments = scheduledExpensePayments.filter(
+    (payment) => isInvestmentTransaction(payment)
+  );
+  const scheduledIncomePayments = scheduledPayments.filter(
+    (payment) => payment.type === TransactionType.INCOME
+  );
+  const totalScheduledCashOutflow = scheduledCashOutflowPayments.reduce(
+    (sum, payment) => sum + payment.amount,
+    0
+  );
+  const totalScheduledInvestments = scheduledInvestmentPayments.reduce(
+    (sum, payment) => sum + payment.amount,
+    0
+  );
+  const totalScheduledIncome = scheduledIncomePayments.reduce(
+    (sum, payment) => sum + payment.amount,
+    0
+  );
+  const totalForecastOutflow = totalCashOutflow + totalScheduledCashOutflow;
+  const scheduledPaymentsUnavailable = scheduledPaymentsQuery.isError;
+
   const spark = useMemo(() => {
     const map: Record<string, number> = {};
     allTransactions
@@ -200,9 +251,13 @@ export const DashboardPage: React.FC = () => {
       bar: 62,
     },
     {
-      label: `Saídas (${monthShort})`,
-      value: brl(totalCashOutflow),
-      sub: `${cashOutflowTx.length} lançamento(s)`,
+      label: `Saídas previstas (${monthShort})`,
+      value: brl(totalForecastOutflow),
+      sub: scheduledPaymentsUnavailable
+        ? `${brl(totalCashOutflow)} pago · agendados indisponíveis`
+        : `${brl(totalCashOutflow)} pago + ${brl(
+            totalScheduledCashOutflow
+          )} agendado`,
       tone: 'out',
       bar: 38,
       barWarm: true,
@@ -284,6 +339,19 @@ export const DashboardPage: React.FC = () => {
       </section>
 
       <DashboardSummaryCards stats={stats} />
+
+      <div className="card p-5">
+        <DashboardScheduledPayments
+          payments={scheduledPayments}
+          scheduledOutflow={totalScheduledCashOutflow}
+          scheduledInvestments={totalScheduledInvestments}
+          scheduledIncome={totalScheduledIncome}
+          monthLabel={currentMonthLabel}
+          loading={scheduledPaymentsQuery.isPending}
+          error={scheduledPaymentsQuery.isError}
+          onRetry={() => scheduledPaymentsQuery.refetch()}
+        />
+      </div>
 
       <DashboardBudgetSection year={currentYear} month={currentMonth} />
 
