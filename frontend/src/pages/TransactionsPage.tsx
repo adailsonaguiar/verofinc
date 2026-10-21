@@ -86,7 +86,10 @@ export const TransactionsPage: React.FC = () => {
 
   const accounts = accountsQuery.data ?? [];
   const categories = categoriesQuery.data ?? [];
-  const transactions = transactionsQuery.data ?? [];
+  const transactions = useMemo(
+    () => transactionsQuery.data ?? [],
+    [transactionsQuery.data]
+  );
   const loading = transactionsQuery.isPending && !transactionsQuery.data;
 
   const availableMonths = useMemo(
@@ -196,19 +199,34 @@ export const TransactionsPage: React.FC = () => {
     accounts.find((acc) => acc._id === accountId)?.name ?? '—';
 
   const term = query.trim().toLowerCase();
-  const visibleTransactions = transactions.filter((t) => {
-    const matchesTab =
-      typeTab === 'todas'
-        ? true
-        : typeTab === 'entradas'
-          ? t.type === 'income'
-          : t.type === 'expense';
-    const matchesQuery =
-      term.length === 0 ||
-      t.description.toLowerCase().includes(term) ||
-      (t.category?.name ?? '').toLowerCase().includes(term);
-    return matchesTab && matchesQuery;
-  });
+  const visibleTransactions = useMemo(() => {
+    return transactions.filter((t) => {
+      const matchesTab =
+        typeTab === 'todas'
+          ? true
+          : typeTab === 'entradas'
+            ? t.type === 'income'
+            : t.type === 'expense';
+      const matchesQuery =
+        term.length === 0 ||
+        t.description.toLowerCase().includes(term) ||
+        (t.category?.name ?? '').toLowerCase().includes(term);
+      return matchesTab && matchesQuery;
+    });
+  }, [transactions, typeTab, term]);
+
+  const sortedVisibleTransactions = useMemo(
+    () =>
+      [...visibleTransactions].sort((a, b) => {
+        const dateDiff =
+          new Date(b.date).getTime() - new Date(a.date).getTime();
+        if (dateDiff !== 0) return dateDiff;
+        return (
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      }),
+    [visibleTransactions]
+  );
 
   if (loading && transactions.length === 0) {
     return (
@@ -351,7 +369,7 @@ export const TransactionsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-classic">
-                {visibleTransactions.map((tx) => {
+                {sortedVisibleTransactions.map((tx) => {
                   const isIncome = tx.type === 'income';
 
                   const canDrag = typeTab === 'todas' && term.length === 0;
@@ -449,7 +467,7 @@ export const TransactionsPage: React.FC = () => {
             </table>
 
             <div className="md:hidden divide-classic">
-              {visibleTransactions.map((tx) => (
+              {sortedVisibleTransactions.map((tx) => (
                 <TransactionCard
                   key={tx._id}
                   transaction={tx}
