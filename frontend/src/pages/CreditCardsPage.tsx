@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Loader2, Pencil, Plus, Trash2, Wallet, X } from 'lucide-react';
 import { accountService } from '../services/accountService';
 import { transactionService } from '../services/transactionService';
@@ -58,7 +58,7 @@ export const CreditCardsPage: React.FC = () => {
   const [closingDay, setClosingDay] = useState('');
   const [dueDay, setDueDay] = useState('');
   const [editing, setEditing] = useState<CardLike | null>(null);
-  const [selectedCard, setSelectedCard] = useState<CardLike | null>(null);
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
@@ -67,10 +67,17 @@ export const CreditCardsPage: React.FC = () => {
     { year: number; month: number; label: string }[]
   >([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
+  const [loadingInvoices, setLoadingInvoices] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [checkingAccounts, setCheckingAccounts] = useState<CardLike[]>([]);
   const [selectedCheckingAccount, setSelectedCheckingAccount] = useState('');
   const [payingInvoice, setPayingInvoice] = useState(false);
+
+  const selectedCardIdRef = useRef<string | null>(null);
+  const invoiceSectionRef = useRef<HTMLDivElement | null>(null);
+
+  const selectedCard =
+    cards.find((card) => card._id === selectedCardId) ?? null;
 
   useEffect(() => {
     loadCards();
@@ -78,17 +85,30 @@ export const CreditCardsPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (selectedCard && currentYear && currentMonth) {
-      loadCardTransactions();
-      loadInvoices();
+    if (cards.length === 0) {
+      if (selectedCardId !== null) setSelectedCardId(null);
+      return;
     }
-  }, [selectedCard, currentYear, currentMonth]);
+    if (!cards.some((card) => card._id === selectedCardId)) {
+      setSelectedCardId(cards[0]._id);
+    }
+  }, [cards, selectedCardId]);
 
   useEffect(() => {
-    if (cards.length > 0 && !selectedCard) {
-      setSelectedCard(cards[0]);
+    selectedCardIdRef.current = selectedCardId;
+  }, [selectedCardId]);
+
+  useEffect(() => {
+    if (!selectedCardId) {
+      setLoadingTransactions(false);
+      setLoadingInvoices(false);
+      return;
     }
-  }, [cards, selectedCard]);
+    setTransactions([]);
+    setInvoices([]);
+    loadCardTransactions(selectedCardId);
+    loadInvoices(selectedCardId);
+  }, [selectedCardId, currentYear, currentMonth]);
 
   const handleLimitChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const digits = e.target.value.replace(/\D/g, '').slice(0, 12);
@@ -165,11 +185,20 @@ export const CreditCardsPage: React.FC = () => {
     if (!window.confirm('Remover este cartão?')) return;
     try {
       await accountService.delete(card._id);
-      if (selectedCard?._id === card._id) setSelectedCard(null);
       await loadCards();
     } catch {
       alert('Erro ao remover cartão.');
     }
+  };
+
+  const handleSelectCard = (card: CardLike) => {
+    setSelectedCardId(card._id);
+    requestAnimationFrame(() => {
+      invoiceSectionRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
   };
 
   const loadAvailableMonths = async () => {
@@ -189,37 +218,43 @@ export const CreditCardsPage: React.FC = () => {
     }
   };
 
-  const loadInvoices = async () => {
-    if (!selectedCard) return;
+  const loadInvoices = async (cardId: string) => {
     try {
-      setInvoices(await invoiceService.listByAccount(selectedCard._id));
+      setLoadingInvoices(true);
+      const data = await invoiceService.listByAccount(cardId);
+      if (selectedCardIdRef.current !== cardId) return;
+      setInvoices(data);
     } catch (err) {
+      if (selectedCardIdRef.current === cardId) setInvoices([]);
       console.error('Error loading invoices:', err);
+    } finally {
+      if (selectedCardIdRef.current === cardId) setLoadingInvoices(false);
     }
   };
 
-  const loadCardTransactions = async () => {
-    if (!selectedCard) return;
+  const loadCardTransactions = async (cardId: string) => {
     try {
       setLoadingTransactions(true);
       const params = {
         year: currentYear,
         month: currentMonth,
-        account: selectedCard._id,
+        account: cardId,
         withCreditCardFilter: true,
       };
       const query = Object.entries(params)
         .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
         .join('&');
       const res = await api.get(`/transactions?${query}`);
+      if (selectedCardIdRef.current !== cardId) return;
       const sorted = [...(res.data as Transaction[])].sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
       );
       setTransactions(sorted);
     } catch (err) {
+      if (selectedCardIdRef.current === cardId) setTransactions([]);
       console.error('Error loading card transactions:', err);
     } finally {
-      setLoadingTransactions(false);
+      if (selectedCardIdRef.current === cardId) setLoadingTransactions(false);
     }
   };
 
@@ -253,10 +288,12 @@ export const CreditCardsPage: React.FC = () => {
   const handlePayInvoice = async () => {
     if (!selectedCard || !selectedCheckingAccount) return;
 
+    const cardId = selectedCard._id;
+
     try {
       setPayingInvoice(true);
       await accountService.payInvoice(
-        selectedCard._id,
+        cardId,
         selectedCheckingAccount,
         currentYear,
         currentMonth
@@ -264,8 +301,8 @@ export const CreditCardsPage: React.FC = () => {
       toast.success('Fatura paga com sucesso!');
       setShowPaymentModal(false);
       await loadCards();
-      await loadCardTransactions();
-      await loadInvoices();
+      await loadCardTransactions(cardId);
+      await loadInvoices(cardId);
     } catch (err) {
       console.error('Erro ao pagar fatura:', err);
       toast.error('Erro ao pagar fatura. Tente novamente.', {
@@ -481,8 +518,14 @@ export const CreditCardsPage: React.FC = () => {
               limitValue > 0
                 ? Math.min(100, Math.round((used / limitValue) * 100))
                 : 0;
+            const isSelected = selectedCardId === card._id;
             return (
-              <div key={card._id} className="card p-5 space-y-4">
+              <div
+                key={card._id}
+                className={`card p-5 space-y-4 transition-colors ${
+                  isSelected ? 'border-gold-400 ring-1 ring-gold-400' : ''
+                }`}
+              >
                 <div
                   className={`rounded-xl p-5 h-40 text-white bg-gradient-to-br ${
                     CARD_GRADIENTS[index % CARD_GRADIENTS.length]
@@ -532,21 +575,37 @@ export const CreditCardsPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-1">
+                <div className="flex items-center gap-2">
                   <button
-                    onClick={() => handleEdit(card)}
-                    className="p-2 rounded-lg text-navy-300 hover:text-navy-700 hover:bg-navy-100 transition-colors"
-                    title="Editar cartão"
+                    type="button"
+                    onClick={() => handleSelectCard(card)}
+                    aria-pressed={isSelected}
+                    aria-controls="invoice-panel"
+                    className={`btn flex-1 text-xs whitespace-nowrap ${
+                      isSelected
+                        ? 'border border-gold-400 bg-gold-100 text-gold-800'
+                        : 'btn-outline'
+                    }`}
                   >
-                    <Pencil className="w-4 h-4" />
+                    <Wallet className="w-4 h-4" />
+                    {isSelected ? 'Fatura em exibição' : 'Ver fatura'}
                   </button>
-                  <button
-                    onClick={() => handleDelete(card)}
-                    className="p-2 rounded-lg text-navy-300 hover:text-rose-700 hover:bg-rose-50 transition-colors"
-                    title="Excluir cartão"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => handleEdit(card)}
+                      className="p-2 rounded-lg text-navy-300 hover:text-navy-700 hover:bg-navy-100 transition-colors"
+                      title="Editar cartão"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(card)}
+                      className="p-2 rounded-lg text-navy-300 hover:text-rose-700 hover:bg-rose-50 transition-colors"
+                      title="Excluir cartão"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -555,7 +614,11 @@ export const CreditCardsPage: React.FC = () => {
       )}
 
       {selectedCard && (
-        <div className="card">
+        <div
+          id="invoice-panel"
+          ref={invoiceSectionRef}
+          className="card scroll-mt-6"
+        >
           <div className="p-4 border-b border-bone-divider flex flex-col md:flex-row md:items-center justify-between gap-3">
             <SectionTitle
               title={`Fatura — ${selectedCard.name}`}
@@ -573,7 +636,11 @@ export const CreditCardsPage: React.FC = () => {
               />
               <button
                 onClick={handleOpenPaymentModal}
-                disabled={monthInvoicePaid}
+                disabled={
+                  monthInvoicePaid ||
+                  loadingTransactions ||
+                  loadingInvoices
+                }
                 className="btn btn-primary"
               >
                 <Wallet className="w-4 h-4" />
@@ -627,10 +694,18 @@ export const CreditCardsPage: React.FC = () => {
             <span className="stat-label">Valor da fatura</span>
             <span
               className={`num ${
-                monthInvoicePaid ? 'text-emerald-700' : 'text-rose-700'
+                loadingInvoices
+                  ? 'text-navy-500'
+                  : monthInvoicePaid
+                  ? 'text-emerald-700'
+                  : 'text-rose-700'
               }`}
             >
-              {monthInvoicePaid ? 'Paga' : brl(monthInvoiceAmount * 100)}
+              {loadingInvoices
+                ? '—'
+                : monthInvoicePaid
+                ? 'Paga'
+                : brl(monthInvoiceAmount * 100)}
             </span>
           </div>
 

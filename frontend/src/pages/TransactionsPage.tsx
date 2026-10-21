@@ -301,8 +301,8 @@ export const TransactionsPage: React.FC = () => {
       </div>
 
       <div className="card">
-        <div className="flex flex-col lg:flex-row lg:items-center gap-3 p-4 border-b border-bone-divider">
-          <div className="flex gap-1 bg-navy-50 p-1 rounded-lg text-sm">
+        <div className="flex flex-col gap-3 p-4 border-b border-bone-divider lg:flex-row lg:flex-wrap lg:items-center">
+          <div className="flex shrink-0 gap-1 bg-navy-50 p-1 rounded-lg text-sm">
             {TABS.map((tab) => (
               <button
                 key={tab}
@@ -318,7 +318,7 @@ export const TransactionsPage: React.FC = () => {
             ))}
           </div>
 
-          <div className="flex items-center gap-2 px-3 py-2 bg-[#171719] border border-navy-200 rounded-lg lg:w-60">
+          <div className="flex min-w-0 items-center gap-2 px-3 py-2 bg-[#171719] border border-navy-200 rounded-lg lg:w-52">
             <Search className="w-4 h-4 text-navy-300 shrink-0" />
             <input
               value={query}
@@ -331,7 +331,7 @@ export const TransactionsPage: React.FC = () => {
           <select
             value={selectedAccount}
             onChange={(e) => setSelectedAccount(e.target.value)}
-            className="input !w-auto !py-2 text-sm"
+            className="input !w-auto min-w-0 max-w-full !py-2 text-sm"
             aria-label="Filtrar por conta"
           >
             <option value="all">Todas as contas</option>
@@ -346,7 +346,7 @@ export const TransactionsPage: React.FC = () => {
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="input !w-auto !py-2 text-sm"
+            className="input !w-auto min-w-0 max-w-full !py-2 text-sm"
             aria-label="Filtrar por categoria"
           >
             <option value="all">Todas as categorias</option>
@@ -360,7 +360,7 @@ export const TransactionsPage: React.FC = () => {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="input !w-auto !py-2 text-sm"
+            className="input !w-auto min-w-0 max-w-full !py-2 text-sm"
             aria-label="Filtrar por situação"
           >
             <option value="all">Todas as situações</option>
@@ -370,7 +370,7 @@ export const TransactionsPage: React.FC = () => {
 
           <button
             onClick={() => setIsModalOpen(true)}
-            className="btn btn-primary lg:ml-auto"
+            className="btn btn-primary shrink-0 lg:ml-auto"
           >
             <Plus className="w-4 h-4" />
             Adicionar
