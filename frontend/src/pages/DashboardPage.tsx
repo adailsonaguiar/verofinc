@@ -18,7 +18,6 @@ import { DailySpendingChart } from '../components/DailySpendingChart';
 import { DashboardCategoryDonut } from '../components/DashboardCategoryDonut';
 import { DashboardBudgetSection } from '../components/DashboardBudgetSection';
 import { DashboardInsights } from '../components/DashboardInsights';
-import { DashboardRecentTransactions } from '../components/DashboardRecentTransactions';
 import { DashboardScheduledPayments } from '../components/DashboardScheduledPayments';
 import { DashboardSummaryCards } from '../components/DashboardSummaryCards';
 import type { SummaryStat } from '../components/DashboardSummaryCards';
@@ -212,11 +211,10 @@ export const DashboardPage: React.FC = () => {
       sum + Math.max(0, (card.creditLimit || 0) - (card.initialBalance || 0)),
     0
   );
-  const recentGlobalTransactions = allTransactionsForView.slice(0, 5);
 
   const scheduledPayments = scheduledPaymentsQuery.isError
     ? []
-    : scheduledPaymentsQuery.data ?? [];
+    : (scheduledPaymentsQuery.data ?? []);
   const scheduledExpensePayments = scheduledPayments.filter(
     (payment) => payment.type === TransactionType.EXPENSE
   );
@@ -246,13 +244,12 @@ export const DashboardPage: React.FC = () => {
 
   const spark = useMemo(() => {
     const map: Record<string, number> = {};
-    allTransactionsForView
-      .forEach((t) => {
-        const [y, m] = t.date.split('T')[0].split('-');
-        const key = `${y}-${m}`;
-        const signed = t.type === 'income' ? t.amount : -t.amount;
-        map[key] = (map[key] ?? 0) + signed;
-      });
+    allTransactionsForView.forEach((t) => {
+      const [y, m] = t.date.split('T')[0].split('-');
+      const key = `${y}-${m}`;
+      const signed = t.type === 'income' ? t.amount : -t.amount;
+      map[key] = (map[key] ?? 0) + signed;
+    });
     const values = Object.keys(map)
       .sort()
       .slice(-9)
@@ -265,7 +262,7 @@ export const DashboardPage: React.FC = () => {
   const hour = new Date().getHours();
   const greeting =
     hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
-  const dateKicker = format(new Date(), 'EEEE, d \'de\' MMMM \'de\' yyyy', {
+  const dateKicker = format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", {
     locale: ptBR,
   }).toUpperCase();
 
@@ -402,11 +399,17 @@ export const DashboardPage: React.FC = () => {
               : 'Mostra somente o dinheiro que entrou ou saiu das suas contas, incluindo faturas pagas.'}
           </p>
         </div>
-        <div className="flex shrink-0 gap-1 rounded-lg bg-navy-50 p-1" role="group" aria-label="Selecionar visão financeira">
-          {([
-            ['consumption', 'Consumo'],
-            ['cashFlow', 'Fluxo de caixa'],
-          ] as const).map(([value, label]) => (
+        <div
+          className="flex shrink-0 gap-1 rounded-lg bg-navy-50 p-1"
+          role="group"
+          aria-label="Selecionar visão financeira"
+        >
+          {(
+            [
+              ['consumption', 'Consumo'],
+              ['cashFlow', 'Fluxo de caixa'],
+            ] as const
+          ).map(([value, label]) => (
             <button
               key={value}
               type="button"
@@ -439,25 +442,24 @@ export const DashboardPage: React.FC = () => {
 
       <DashboardBudgetSection year={currentYear} month={currentMonth} />
 
-      <div className="grid lg:grid-cols-3 gap-4">
-        <div className="card p-5 lg:col-span-2">
-          <CashFlowChart
-            allTransactions={allTransactionsForView}
-            includeInvestments={financialView === 'cashFlow'}
-            subtitle={
-              financialView === 'cashFlow'
-                ? 'Movimentações efetivas · últimos 7 meses'
-                : 'Receitas e despesas · últimos 7 meses'
-            }
-          />
-        </div>
-        <div className="card p-5">
-          <DashboardCategoryDonut
-            categories={categories}
-            transactions={transactions}
-            currentMonthLabel={currentMonthLabel}
-          />
-        </div>
+      <div className="card p-5 lg:col-span-2">
+        <CashFlowChart
+          allTransactions={allTransactionsForView}
+          includeInvestments={financialView === 'cashFlow'}
+          subtitle={
+            financialView === 'cashFlow'
+              ? 'Movimentações efetivas · últimos 7 meses'
+              : 'Receitas e despesas · últimos 7 meses'
+          }
+        />
+      </div>
+
+      <div className="card p-5">
+        <DashboardCategoryDonut
+          categories={categories}
+          transactions={transactions}
+          currentMonthLabel={currentMonthLabel}
+        />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-4">
@@ -478,16 +480,11 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid min-w-0 lg:grid-cols-3 gap-4">
-        <div className="card min-w-0 p-5">
-          <DashboardRecentTransactions transactions={recentGlobalTransactions} />
-        </div>
-        <div className="min-w-0 lg:col-span-2">
-          <CategoryEvolutionChart
-            allTransactions={allTransactions}
-            categories={categories}
-          />
-        </div>
+      <div className="min-w-0">
+        <CategoryEvolutionChart
+          allTransactions={allTransactions}
+          categories={categories}
+        />
       </div>
 
       <CategoryComparisonChart

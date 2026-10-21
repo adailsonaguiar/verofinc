@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1290 2796" role="img" aria-labelledby="title">
+  <title id="title">nivo</title>
+  <rect width="1290" height="2796" fill="#0d0d0f"/>
+  <g transform="translate(405 1158) scale(.46875)">
+    <rect width="1024" height="1024" rx="224" fill="#171719"/>
+    <path
+      d="M292 704V366M292 522c0-132 89-218 218-218 138 0 222 89 222 232v168"
+      fill="none"
+      stroke="#d7f36b"
+      stroke-width="112"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </g>
+</svg>
