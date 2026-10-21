@@ -14,7 +14,11 @@ import {
   CreateTransactionDto,
   UpdateTransactionDto,
 } from '../types';
-import { formatCurrency } from '../utils/transactions';
+import {
+  FinancialView,
+  formatCurrency,
+  matchesFinancialView,
+} from '../utils/transactions';
 import { TransactionCard } from '../components/TransactionCard';
 import { TransactionModal } from '../components/TransactionModal';
 import { MonthSelector } from '../components/MonthSelector';
@@ -44,6 +48,8 @@ export const TransactionsPage: React.FC = () => {
   const [query, setQuery] = useState(searchParams.get('q') ?? '');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [financialView, setFinancialView] =
+    useState<FinancialView>('consumption');
   const [selectedAccount, setSelectedAccount] = useState<string>('all');
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
@@ -84,7 +90,7 @@ export const TransactionsPage: React.FC = () => {
     placeholderData: keepPreviousData,
   });
 
-  const accounts = accountsQuery.data ?? [];
+  const accounts = useMemo(() => accountsQuery.data ?? [], [accountsQuery.data]);
   const categories = categoriesQuery.data ?? [];
   const transactions = useMemo(
     () => transactionsQuery.data ?? [],
@@ -183,13 +189,19 @@ export const TransactionsPage: React.FC = () => {
       (m) => m.year === currentYear && m.month === currentMonth
     )?.label || '';
 
-  const transactionsForTotals = transactions.filter((t) => !t.isPayment);
+  const transactionsForView = useMemo(
+    () =>
+      transactions.filter((transaction) =>
+        matchesFinancialView(transaction, financialView, accounts)
+      ),
+    [transactions, financialView, accounts]
+  );
 
-  const totalIncome = transactionsForTotals
+  const totalIncome = transactionsForView
     .filter((t) => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalExpense = transactionsForTotals
+  const totalExpense = transactionsForView
     .filter((t) => t.type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0);
 
@@ -200,7 +212,7 @@ export const TransactionsPage: React.FC = () => {
 
   const term = query.trim().toLowerCase();
   const visibleTransactions = useMemo(() => {
-    return transactions.filter((t) => {
+    return transactionsForView.filter((t) => {
       const matchesTab =
         typeTab === 'todas'
           ? true
@@ -213,7 +225,7 @@ export const TransactionsPage: React.FC = () => {
         (t.category?.name ?? '').toLowerCase().includes(term);
       return matchesTab && matchesQuery;
     });
-  }, [transactions, typeTab, term]);
+  }, [transactionsForView, typeTab, term]);
 
   const sortedVisibleTransactions = useMemo(
     () =>
@@ -265,7 +277,7 @@ export const TransactionsPage: React.FC = () => {
           tone="in"
         />
         <StatCard
-          label="Saídas"
+          label={financialView === 'consumption' ? 'Despesas' : 'Saídas'}
           value={formatCurrency(totalExpense)}
           sub={currentMonthLabel}
           tone="out"
@@ -279,6 +291,24 @@ export const TransactionsPage: React.FC = () => {
 
       <div className="card">
         <div className="flex flex-col gap-3 p-4 border-b border-bone-divider lg:flex-row lg:flex-wrap lg:items-center">
+          <div className="min-w-0 lg:w-52">
+            <label htmlFor="financial-view" className="sr-only">
+              Visão financeira
+            </label>
+            <select
+              id="financial-view"
+              value={financialView}
+              onChange={(e) =>
+                setFinancialView(e.target.value as FinancialView)
+              }
+              className="input !py-2 text-sm"
+            >
+              <option value="consumption">Visão: consumo</option>
+              <option value="cashFlow">Visão: fluxo de caixa</option>
+              <option value="all">Todas as movimentações</option>
+            </select>
+          </div>
+
           <div className="flex shrink-0 gap-1 bg-navy-50 p-1 rounded-lg text-sm">
             {TABS.map((tab) => (
               <button
@@ -352,6 +382,14 @@ export const TransactionsPage: React.FC = () => {
             <Plus className="w-4 h-4" />
             Adicionar
           </button>
+        </div>
+
+        <div className="border-b border-bone-divider px-4 py-2.5 text-xs text-navy-500">
+          {financialView === 'consumption'
+            ? 'Compras e despesas do período; pagamentos de fatura não são contados novamente.'
+            : financialView === 'cashFlow'
+              ? 'Somente valores efetivamente movimentados nas contas, incluindo pagamentos de fatura.'
+              : 'Histórico completo, incluindo compras no cartão e pagamentos de fatura.'}
         </div>
 
         {/* Desktop table */}

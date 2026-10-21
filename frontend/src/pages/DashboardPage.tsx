@@ -24,7 +24,11 @@ import { DashboardSummaryCards } from '../components/DashboardSummaryCards';
 import type { SummaryStat } from '../components/DashboardSummaryCards';
 import { MonthSelector } from '../components/MonthSelector';
 import { Button } from '../components/Button';
-import { isInvestmentTransaction } from '../utils/transactions';
+import {
+  FinancialView,
+  isInvestmentTransaction,
+  matchesFinancialView,
+} from '../utils/transactions';
 
 const brl = (cents: number) =>
   (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -34,6 +38,8 @@ export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
+  const [financialView, setFinancialView] =
+    useState<FinancialView>('consumption');
 
   const availableMonthsQuery = useQuery({
     queryKey: queryKeys.transactions.availableMonths,
@@ -107,9 +113,18 @@ export const DashboardPage: React.FC = () => {
   });
 
   const categories = categoriesQuery.data ?? [];
-  const checkingAccounts = checkingAccountsQuery.data ?? [];
-  const creditCards = creditCardsQuery.data ?? [];
-  const transactions = monthTransactionsQuery.data ?? [];
+  const checkingAccounts = useMemo(
+    () => checkingAccountsQuery.data ?? [],
+    [checkingAccountsQuery.data]
+  );
+  const creditCards = useMemo(
+    () => creditCardsQuery.data ?? [],
+    [creditCardsQuery.data]
+  );
+  const transactions = useMemo(
+    () => monthTransactionsQuery.data ?? [],
+    [monthTransactionsQuery.data]
+  );
   const loading =
     availableMonthsQuery.isPending ||
     categoriesQuery.isPending ||
@@ -159,13 +174,34 @@ export const DashboardPage: React.FC = () => {
   };
 
   // Computed values
-  const transactionsForTotals = transactions.filter((t) => !t.isPayment);
+  const accounts = useMemo(
+    () => [...checkingAccounts, ...creditCards],
+    [checkingAccounts, creditCards]
+  );
+  const transactionsForTotals = useMemo(
+    () =>
+      transactions.filter((transaction) =>
+        matchesFinancialView(transaction, financialView, accounts)
+      ),
+    [transactions, financialView, accounts]
+  );
+  const allTransactionsForView = useMemo(
+    () =>
+      allTransactions.filter((transaction) =>
+        matchesFinancialView(transaction, financialView, accounts)
+      ),
+    [allTransactions, financialView, accounts]
+  );
   const incomeTx = transactionsForTotals.filter((t) => t.type === 'income');
   const expenseTx = transactionsForTotals.filter((t) => t.type === 'expense');
   const investmentTx = expenseTx.filter(isInvestmentTransaction);
   const cashOutflowTx = expenseTx.filter((t) => !isInvestmentTransaction(t));
   const totalIncome = incomeTx.reduce((sum, t) => sum + t.amount, 0);
+  const totalExpense = expenseTx.reduce((sum, t) => sum + t.amount, 0);
   const totalCashOutflow = cashOutflowTx.reduce((sum, t) => sum + t.amount, 0);
+  const totalInvoicePayments = transactionsForTotals
+    .filter((transaction) => transaction.isPayment)
+    .reduce((sum, transaction) => sum + transaction.amount, 0);
   const totalInvestments = investmentTx.reduce((sum, t) => sum + t.amount, 0);
   const totalCheckingBalance = checkingAccounts.reduce(
     (sum, acc) => sum + (acc.initialBalance || 0),
@@ -176,7 +212,7 @@ export const DashboardPage: React.FC = () => {
       sum + Math.max(0, (card.creditLimit || 0) - (card.initialBalance || 0)),
     0
   );
-  const recentGlobalTransactions = allTransactions.slice(0, 5);
+  const recentGlobalTransactions = allTransactionsForView.slice(0, 5);
 
   const scheduledPayments = scheduledPaymentsQuery.isError
     ? []
@@ -210,8 +246,7 @@ export const DashboardPage: React.FC = () => {
 
   const spark = useMemo(() => {
     const map: Record<string, number> = {};
-    allTransactions
-      .filter((t) => !t.isPayment)
+    allTransactionsForView
       .forEach((t) => {
         const [y, m] = t.date.split('T')[0].split('-');
         const key = `${y}-${m}`;
@@ -224,7 +259,7 @@ export const DashboardPage: React.FC = () => {
       .map((k) => map[k] / 100);
     const max = Math.max(1, ...values.map((v) => Math.abs(v)));
     return values.map((v) => Math.round(8 + (Math.abs(v) / max) * 17));
-  }, [allTransactions]);
+  }, [allTransactionsForView]);
 
   const firstName = (user?.name || '').split(' ')[0] || '';
   const hour = new Date().getHours();
@@ -251,21 +286,39 @@ export const DashboardPage: React.FC = () => {
       bar: 62,
     },
     {
-      label: `Saídas previstas (${monthShort})`,
-      value: brl(totalForecastOutflow),
-      sub: scheduledPaymentsUnavailable
-        ? `${brl(totalCashOutflow)} pago · agendados indisponíveis`
-        : `${brl(totalCashOutflow)} pago + ${brl(
-            totalScheduledCashOutflow
-          )} agendado`,
+      label:
+        financialView === 'cashFlow'
+          ? `Saídas efetivas (${monthShort})`
+          : `Despesas previstas (${monthShort})`,
+      value:
+        financialView === 'cashFlow'
+          ? brl(totalExpense)
+          : brl(totalForecastOutflow),
+      sub:
+        financialView === 'cashFlow'
+          ? 'Movimentadas nas contas'
+          : scheduledPaymentsUnavailable
+            ? `${brl(totalCashOutflow)} realizado · agendados indisponíveis`
+            : `${brl(totalCashOutflow)} realizado + ${brl(
+                totalScheduledCashOutflow
+              )} agendado`,
       tone: 'out',
       bar: 38,
       barWarm: true,
     },
     {
-      label: `Investimentos (${monthShort})`,
-      value: brl(totalInvestments),
-      sub: `${investmentTx.length} aporte(s)`,
+      label:
+        financialView === 'cashFlow'
+          ? `Faturas pagas (${monthShort})`
+          : `Investimentos (${monthShort})`,
+      value:
+        financialView === 'cashFlow'
+          ? brl(totalInvoicePayments)
+          : brl(totalInvestments),
+      sub:
+        financialView === 'cashFlow'
+          ? 'Incluídas nas saídas efetivas'
+          : `${investmentTx.length} aporte(s)`,
     },
     {
       label: 'Fatura aberta',
@@ -340,6 +393,37 @@ export const DashboardPage: React.FC = () => {
 
       <DashboardSummaryCards stats={stats} />
 
+      <div className="flex flex-col gap-3 border-y border-bone-divider py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-medium text-navy-900">Visão financeira</p>
+          <p className="mt-1 text-xs text-navy-500">
+            {financialView === 'consumption'
+              ? 'Mostra quando você comprou ou assumiu uma despesa, sem duplicar o pagamento da fatura.'
+              : 'Mostra somente o dinheiro que entrou ou saiu das suas contas, incluindo faturas pagas.'}
+          </p>
+        </div>
+        <div className="flex shrink-0 gap-1 rounded-lg bg-navy-50 p-1" role="group" aria-label="Selecionar visão financeira">
+          {([
+            ['consumption', 'Consumo'],
+            ['cashFlow', 'Fluxo de caixa'],
+          ] as const).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setFinancialView(value)}
+              aria-pressed={financialView === value}
+              className={`rounded-md px-3 py-2 text-sm transition-colors ${
+                financialView === value
+                  ? 'bg-gold-400 font-semibold text-[#171916]'
+                  : 'text-navy-500 hover:text-navy-900'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="card p-5">
         <DashboardScheduledPayments
           payments={scheduledPayments}
@@ -357,7 +441,15 @@ export const DashboardPage: React.FC = () => {
 
       <div className="grid lg:grid-cols-3 gap-4">
         <div className="card p-5 lg:col-span-2">
-          <CashFlowChart allTransactions={allTransactions} />
+          <CashFlowChart
+            allTransactions={allTransactionsForView}
+            includeInvestments={financialView === 'cashFlow'}
+            subtitle={
+              financialView === 'cashFlow'
+                ? 'Movimentações efetivas · últimos 7 meses'
+                : 'Receitas e despesas · últimos 7 meses'
+            }
+          />
         </div>
         <div className="card p-5">
           <DashboardCategoryDonut

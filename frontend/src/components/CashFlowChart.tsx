@@ -49,16 +49,20 @@ const areaGradient =
 
 interface CashFlowChartProps {
   allTransactions: Transaction[];
+  subtitle?: string;
+  includeInvestments?: boolean;
 }
 
 export const CashFlowChart: React.FC<CashFlowChartProps> = ({
   allTransactions,
+  subtitle = 'Últimos 7 meses',
+  includeInvestments = false,
 }) => {
   const { labels, income, expense } = useMemo(() => {
     const monthly: Record<string, { income: number; expense: number }> = {};
 
     allTransactions
-      .filter((t) => !t.isPayment && !isInvestmentTransaction(t))
+      .filter((t) => includeInvestments || !isInvestmentTransaction(t))
       .forEach((t) => {
         const [year, month] = t.date.split('T')[0].split('-');
         const key = `${year}-${month}`;
@@ -74,13 +78,13 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({
       income: keys.map((key) => monthly[key].income),
       expense: keys.map((key) => monthly[key].expense),
     };
-  }, [allTransactions]);
+  }, [allTransactions, includeInvestments]);
 
   return (
     <>
       <SectionTitle
         title="Fluxo de caixa"
-        subtitle="Últimos 7 meses"
+        subtitle={subtitle}
         className="mb-4"
         action={
           <div className="flex gap-2">

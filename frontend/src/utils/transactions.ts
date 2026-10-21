@@ -1,5 +1,7 @@
 import { format, parseISO } from 'date-fns';
-import type { TransactionType } from '../types';
+import type { Account, Transaction, TransactionType } from '../types';
+
+export type FinancialView = 'all' | 'consumption' | 'cashFlow';
 
 const INVESTMENT_CATEGORY_NAME = 'Investimentos';
 
@@ -17,6 +19,29 @@ export const isInvestmentTransaction = (
   transaction.type === 'expense' &&
   normalizeCategoryName(transaction.category?.name) ===
     normalizeCategoryName(INVESTMENT_CATEGORY_NAME);
+
+export const isConsumptionTransaction = (transaction: Transaction): boolean =>
+  !transaction.isPayment;
+
+export const isCashFlowTransaction = (
+  transaction: Transaction,
+  accounts: Account[]
+): boolean => {
+  if (transaction.isPayment) return true;
+
+  const account = accounts.find((item) => item._id === transaction.account);
+  return account?.type !== 'credit_card' && transaction.status === 'paid';
+};
+
+export const matchesFinancialView = (
+  transaction: Transaction,
+  view: FinancialView,
+  accounts: Account[]
+): boolean => {
+  if (view === 'consumption') return isConsumptionTransaction(transaction);
+  if (view === 'cashFlow') return isCashFlowTransaction(transaction, accounts);
+  return true;
+};
 
 export const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat('pt-BR', {
