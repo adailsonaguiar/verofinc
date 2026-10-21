@@ -12,6 +12,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { ScheduledPaymentsModule } from './modules/scheduled-payments/scheduled-payments.module';
+import { ExportModule } from './modules/export/export.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { ScheduledPaymentsModule } from './modules/scheduled-payments/scheduled-
     UsersModule,
     AuthModule,
     ScheduledPaymentsModule,
+    ExportModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
