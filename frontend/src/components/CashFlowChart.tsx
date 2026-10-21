@@ -11,6 +11,7 @@ import {
 } from 'chart.js';
 import type { ScriptableContext } from 'chart.js';
 import { Transaction } from '../types';
+import { isInvestmentTransaction } from '../utils/transactions';
 import { SectionTitle } from './SectionTitle';
 import { Chip } from './Chip';
 
@@ -57,7 +58,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({
     const monthly: Record<string, { income: number; expense: number }> = {};
 
     allTransactions
-      .filter((t) => !t.isPayment)
+      .filter((t) => !t.isPayment && !isInvestmentTransaction(t))
       .forEach((t) => {
         const [year, month] = t.date.split('T')[0].split('-');
         const key = `${year}-${month}`;

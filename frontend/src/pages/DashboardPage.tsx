@@ -21,6 +21,7 @@ import { DashboardSummaryCards } from '../components/DashboardSummaryCards';
 import type { SummaryStat } from '../components/DashboardSummaryCards';
 import { MonthSelector } from '../components/MonthSelector';
 import { Button } from '../components/Button';
+import { isInvestmentTransaction } from '../utils/transactions';
 
 const brl = (cents: number) =>
   (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -140,8 +141,11 @@ export const DashboardPage: React.FC = () => {
   const transactionsForTotals = transactions.filter((t) => !t.isPayment);
   const incomeTx = transactionsForTotals.filter((t) => t.type === 'income');
   const expenseTx = transactionsForTotals.filter((t) => t.type === 'expense');
+  const investmentTx = expenseTx.filter(isInvestmentTransaction);
+  const cashOutflowTx = expenseTx.filter((t) => !isInvestmentTransaction(t));
   const totalIncome = incomeTx.reduce((sum, t) => sum + t.amount, 0);
-  const totalExpense = expenseTx.reduce((sum, t) => sum + t.amount, 0);
+  const totalCashOutflow = cashOutflowTx.reduce((sum, t) => sum + t.amount, 0);
+  const totalInvestments = investmentTx.reduce((sum, t) => sum + t.amount, 0);
   const totalCheckingBalance = checkingAccounts.reduce(
     (sum, acc) => sum + (acc.initialBalance || 0),
     0
@@ -197,11 +201,16 @@ export const DashboardPage: React.FC = () => {
     },
     {
       label: `Saídas (${monthShort})`,
-      value: brl(totalExpense),
-      sub: `${expenseTx.length} lançamento(s)`,
+      value: brl(totalCashOutflow),
+      sub: `${cashOutflowTx.length} lançamento(s)`,
       tone: 'out',
       bar: 38,
       barWarm: true,
+    },
+    {
+      label: `Investimentos (${monthShort})`,
+      value: brl(totalInvestments),
+      sub: `${investmentTx.length} aporte(s)`,
     },
     {
       label: 'Fatura aberta',

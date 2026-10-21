@@ -1,4 +1,15 @@
 import { format, parseISO } from 'date-fns';
+import type { Transaction } from '../types';
+
+const INVESTMENT_CATEGORY_NAME = 'Investimentos';
+
+const normalizeCategoryName = (name?: string): string =>
+  (name ?? '').trim().toLocaleLowerCase('pt-BR');
+
+export const isInvestmentTransaction = (transaction: Transaction): boolean =>
+  transaction.type === 'expense' &&
+  normalizeCategoryName(transaction.category?.name) ===
+    normalizeCategoryName(INVESTMENT_CATEGORY_NAME);
 
 export const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat('pt-BR', {
