@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Pencil, Plus, Trash2, Wallet } from 'lucide-react';
 import { accountService } from '../services/accountService';
 import { transactionService } from '../services/transactionService';
-import { Transaction } from '../types';
+import { queryKeys } from '../lib/queryKeys';
+import { Account, Transaction } from '../types';
 import { TransactionCard } from '../components/TransactionCard';
 import { MonthSelector } from '../components/MonthSelector';
 import { SectionTitle } from '../components/SectionTitle';
@@ -12,16 +14,6 @@ import { EmptyState } from '../components/EmptyState';
 import { PageHeading } from '../components/PageHeading';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import api from '../services/api';
-
-interface AccountLike {
-  _id: string;
-  name: string;
-  type: string;
-  active?: boolean;
-  initialBalance?: number;
-  creditLimit?: number;
-}
 
 const brl = (cents: number) =>
   (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -38,118 +30,100 @@ const ACCOUNT_COLORS = [
 
 export const AccountsPage: React.FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const [accounts, setAccounts] = useState<AccountLike[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
-  const [editing, setEditing] = useState<AccountLike | null>(null);
-  const [selectedAccount, setSelectedAccount] = useState<AccountLike | null>(
-    null
-  );
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [editing, setEditing] = useState<Account | null>(null);
+  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
-  const [availableMonths, setAvailableMonths] = useState<
-    { year: number; month: number; label: string }[]
-  >([]);
-  const [loadingTransactions, setLoadingTransactions] = useState(false);
-  const [nets, setNets] = useState<Record<string, Record<string, number>>>({});
-  const [monthKeys, setMonthKeys] = useState<string[]>([]);
+
+  const accountsQuery = useQuery({
+    queryKey: queryKeys.accounts.byType('checking'),
+    queryFn: () => accountService.getByType('checking'),
+  });
+
+  const availableMonthsQuery = useQuery({
+    queryKey: queryKeys.transactions.availableMonths,
+    queryFn: () => transactionService.getAvailableMonths(),
+  });
+
+  const historyQuery = useQuery({
+    queryKey: queryKeys.transactions.lastMonths(6),
+    queryFn: () => transactionService.getLastMonths(6),
+  });
+
+  const transactionsQuery = useQuery({
+    queryKey: queryKeys.transactions.list({
+      year: currentYear,
+      month: currentMonth,
+      account: selectedAccount?._id,
+    }),
+    queryFn: () =>
+      transactionService.getFiltered({
+        year: currentYear,
+        month: currentMonth,
+        account: selectedAccount?._id,
+      }),
+    enabled: Boolean(selectedAccount),
+  });
+
+  const accounts = useMemo(
+    () => accountsQuery.data ?? [],
+    [accountsQuery.data]
+  );
+  const loading =
+    accountsQuery.isPending ||
+    availableMonthsQuery.isPending ||
+    historyQuery.isPending;
+  const error =
+    accountsQuery.isError && !accountsQuery.data
+      ? 'Erro ao carregar contas.'
+      : null;
+  const transactions: Transaction[] = transactionsQuery.data ?? [];
+  const loadingTransactions = transactionsQuery.isLoading;
+
+  const availableMonths = useMemo(
+    () =>
+      (availableMonthsQuery.data ?? []).map((m) => ({
+        year: m.year,
+        month: m.month,
+        label: format(new Date(m.year, m.month - 1), 'MMMM yyyy', {
+          locale: ptBR,
+        }),
+      })),
+    [availableMonthsQuery.data]
+  );
+
+  const { nets, monthKeys } = useMemo(() => {
+    const map: Record<string, Record<string, number>> = {};
+    const keys = new Set<string>();
+
+    (historyQuery.data ?? [])
+      .filter((t) => !t.isPayment)
+      .forEach((t) => {
+        const [year, month] = t.date.split('T')[0].split('-');
+        const monthKey = `${year}-${month}`;
+        keys.add(monthKey);
+        if (!t.account) return;
+        if (!map[t.account]) map[t.account] = {};
+        const signed = t.type === 'income' ? t.amount : -t.amount;
+        map[t.account][monthKey] = (map[t.account][monthKey] ?? 0) + signed;
+      });
+
+    return { nets: map, monthKeys: Array.from(keys).sort() };
+  }, [historyQuery.data]);
 
   useEffect(() => {
-    loadAccounts();
-    loadAvailableMonths();
-    loadHistory();
-  }, []);
-
-  useEffect(() => {
-    if (selectedAccount && currentYear && currentMonth) {
-      loadAccountTransactions();
+    if (accounts.length === 0) {
+      if (selectedAccount) setSelectedAccount(null);
+      return;
     }
-  }, [selectedAccount, currentYear, currentMonth]);
-
-  useEffect(() => {
-    if (accounts.length > 0 && !selectedAccount) {
+    if (!accounts.some((account) => account._id === selectedAccount?._id)) {
       setSelectedAccount(accounts[0]);
     }
   }, [accounts, selectedAccount]);
-
-  const loadAccounts = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      setAccounts(await accountService.getByType('checking'));
-    } catch (err) {
-      setError('Erro ao carregar contas.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadHistory = async () => {
-    try {
-      const all = await transactionService.getLastMonths(6);
-      const map: Record<string, Record<string, number>> = {};
-      const keys = new Set<string>();
-
-      all
-        .filter((t) => !t.isPayment)
-        .forEach((t) => {
-          const [year, month] = t.date.split('T')[0].split('-');
-          const monthKey = `${year}-${month}`;
-          keys.add(monthKey);
-          if (!t.account) return;
-          if (!map[t.account]) map[t.account] = {};
-          const signed = t.type === 'income' ? t.amount : -t.amount;
-          map[t.account][monthKey] = (map[t.account][monthKey] ?? 0) + signed;
-        });
-
-      setNets(map);
-      setMonthKeys(Array.from(keys).sort());
-    } catch (err) {
-      console.error('Erro ao carregar histórico:', err);
-    }
-  };
-
-  const loadAvailableMonths = async () => {
-    try {
-      const months = await transactionService.getAvailableMonths();
-      setAvailableMonths(
-        months.map((m) => ({
-          year: m.year,
-          month: m.month,
-          label: format(new Date(m.year, m.month - 1), 'MMMM yyyy', {
-            locale: ptBR,
-          }),
-        }))
-      );
-    } catch (err) {
-      console.error('Error loading available months:', err);
-    }
-  };
-
-  const loadAccountTransactions = async () => {
-    if (!selectedAccount) return;
-    try {
-      setLoadingTransactions(true);
-      const params = {
-        year: currentYear,
-        month: currentMonth,
-        account: selectedAccount._id,
-      };
-      const query = Object.entries(params)
-        .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
-        .join('&');
-      const res = await api.get(`/transactions?${query}`);
-      setTransactions(res.data);
-    } catch (err) {
-      console.error('Error loading account transactions:', err);
-    } finally {
-      setLoadingTransactions(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,24 +136,28 @@ export const AccountsPage: React.FC = () => {
       setName('');
       setEditing(null);
       setShowForm(false);
-      await loadAccounts();
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.accounts.all,
+      });
     } catch {
       alert('Erro ao salvar conta.');
     }
   };
 
-  const handleEdit = (acc: AccountLike) => {
+  const handleEdit = (acc: Account) => {
     setEditing(acc);
     setName(acc.name);
     setShowForm(true);
   };
 
-  const handleDelete = async (acc: AccountLike) => {
+  const handleDelete = async (acc: Account) => {
     if (!window.confirm('Remover esta conta?')) return;
     try {
       await accountService.delete(acc._id);
       if (selectedAccount?._id === acc._id) setSelectedAccount(null);
-      await loadAccounts();
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.accounts.all,
+      });
     } catch {
       alert('Erro ao remover conta.');
     }
@@ -207,7 +185,7 @@ export const AccountsPage: React.FC = () => {
     }
   };
 
-  const openStatement = (acc: AccountLike) => {
+  const openStatement = (acc: Account) => {
     setSelectedAccount(acc);
     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
   };

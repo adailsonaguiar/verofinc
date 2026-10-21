@@ -1,24 +1,35 @@
 import api from './api';
 import {
   Transaction,
+  TransactionFilters,
   CreateTransactionDto,
   UpdateTransactionDto,
 } from '../types';
 
+async function fetchTransactions(
+  filters: TransactionFilters = {}
+): Promise<Transaction[]> {
+  const response = await api.get<Transaction[]>('/transactions', {
+    params: filters,
+  });
+  return response.data;
+}
+
 export const transactionService = {
+  async getFiltered(filters: TransactionFilters = {}): Promise<Transaction[]> {
+    return fetchTransactions(filters);
+  },
+
   async getByMonthAndAccount(
     year: number,
     month: number,
     accountId: string
   ): Promise<Transaction[]> {
-    const response = await api.get<Transaction[]>(
-      `/transactions?year=${year}&month=${month}&account=${accountId}`
-    );
-    return response.data;
+    return fetchTransactions({ year, month, account: accountId });
   },
+
   async getAll(): Promise<Transaction[]> {
-    const response = await api.get<Transaction[]>('/transactions');
-    return response.data;
+    return fetchTransactions();
   },
 
   async getLastMonths(months: number = 6): Promise<Transaction[]> {
@@ -28,10 +39,7 @@ export const transactionService = {
     const endDate = new Date(end.getFullYear(), end.getMonth() + 1, 0)
       .toISOString()
       .split('T')[0];
-    const response = await api.get<Transaction[]>(
-      `/transactions?startDate=${startDate}&endDate=${endDate}`
-    );
-    return response.data;
+    return fetchTransactions({ startDate, endDate });
   },
 
   async getById(id: string): Promise<Transaction> {
@@ -54,25 +62,18 @@ export const transactionService = {
   },
 
   async getByType(type: string): Promise<Transaction[]> {
-    const response = await api.get<Transaction[]>(`/transactions?type=${type}`);
-    return response.data;
+    return fetchTransactions({ type });
   },
 
   async getByDateRange(
     startDate: string,
     endDate: string
   ): Promise<Transaction[]> {
-    const response = await api.get<Transaction[]>(
-      `/transactions?startDate=${startDate}&endDate=${endDate}`
-    );
-    return response.data;
+    return fetchTransactions({ startDate, endDate });
   },
 
   async getByMonth(year: number, month: number): Promise<Transaction[]> {
-    const response = await api.get<Transaction[]>(
-      `/transactions?year=${year}&month=${month}`
-    );
-    return response.data;
+    return fetchTransactions({ year, month });
   },
 
   async getAvailableMonths(): Promise<{ year: number; month: number }[]> {

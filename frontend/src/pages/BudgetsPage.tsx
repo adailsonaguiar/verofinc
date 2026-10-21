@@ -1,5 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  keepPreviousData,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -12,7 +17,8 @@ import {
   X,
 } from 'lucide-react';
 import { budgetService } from '../services/budgetService';
-import { BudgetCategoryItem, BudgetOverview } from '../types';
+import { queryKeys } from '../lib/queryKeys';
+import type { BudgetCategoryItem } from '../types';
 import { formatCurrency } from '../utils/transactions';
 import { MonthSelector } from '../components/MonthSelector';
 import { SectionTitle } from '../components/SectionTitle';
@@ -133,30 +139,26 @@ const LimitEditor: React.FC<LimitEditorProps> = ({
 };
 
 export const BudgetsPage: React.FC = () => {
+  const queryClient = useQueryClient();
   const [month, setMonth] = useState(currentMonthKey());
-  const [overview, setOverview] = useState<BudgetOverview | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [editingTotal, setEditingTotal] = useState(false);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadOverview();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month]);
+  const budgetQuery = useQuery({
+    queryKey: queryKeys.budgets.overview(month),
+    queryFn: () => budgetService.getOverview(month),
+    placeholderData: keepPreviousData,
+  });
 
-  const loadOverview = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      setOverview(await budgetService.getOverview(month));
-    } catch (err) {
-      console.error('Error loading budget:', err);
-      setError('Erro ao carregar o orçamento.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const overview = budgetQuery.data ?? null;
+  const loading = budgetQuery.isPending;
+  const error =
+    budgetQuery.isError && !budgetQuery.data
+      ? 'Erro ao carregar o orçamento.'
+      : null;
+
+  const invalidateBudget = () =>
+    queryClient.invalidateQueries({ queryKey: queryKeys.budgets.all });
 
   const resetEditing = () => {
     setEditingTotal(false);
@@ -166,25 +168,25 @@ export const BudgetsPage: React.FC = () => {
   const handleSaveTotal = async (limit: number) => {
     await budgetService.upsert(month, null, limit);
     resetEditing();
-    await loadOverview();
+    await invalidateBudget();
   };
 
   const handleSaveCategory = async (categoryId: string, limit: number) => {
     await budgetService.upsert(month, categoryId, limit);
     resetEditing();
-    await loadOverview();
+    await invalidateBudget();
   };
 
   const handleRemoveTotal = async () => {
     await budgetService.remove(month, null);
     resetEditing();
-    await loadOverview();
+    await invalidateBudget();
   };
 
   const handleRemoveCategory = async (categoryId: string) => {
     await budgetService.remove(month, categoryId);
     resetEditing();
-    await loadOverview();
+    await invalidateBudget();
   };
 
   const totalLimit = overview?.totalLimit ?? null;
@@ -221,7 +223,9 @@ export const BudgetsPage: React.FC = () => {
             Ops, algo deu errado
           </h3>
           <p className="text-sm text-navy-500 mb-6">{error}</p>
-          <Button onClick={loadOverview}>Tentar novamente</Button>
+          <Button onClick={() => budgetQuery.refetch()}>
+            Tentar novamente
+          </Button>
         </div>
       </div>
     );

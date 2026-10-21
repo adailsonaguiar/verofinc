@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { categoryService } from '../services/categoryService';
+import { queryKeys } from '../lib/queryKeys';
 import { Category, CategoryType } from '../types';
 import { CategoryForm } from '../components/CategoryForm';
 import { CategoryCard } from '../components/CategoryCard';
@@ -16,28 +18,27 @@ type CategoryPayload = {
 };
 
 export const CategoriesPage: React.FC = () => {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [filterActive, setFilterActive] = useState<
     'all' | 'active' | 'inactive'
   >('all');
 
-  useEffect(() => {
-    loadCategories();
-  }, []);
+  const categoriesQuery = useQuery({
+    queryKey: queryKeys.categories.all,
+    queryFn: () => categoryService.getAll(),
+  });
 
-  const loadCategories = async () => {
-    try {
-      setLoading(true);
-      setCategories(await categoryService.getAll());
-    } catch (err) {
-      console.error('Error loading categories:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const categories = categoriesQuery.data ?? [];
+  const loading = categoriesQuery.isPending;
+
+  const invalidateCategoryData = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.categories.all }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.budgets.all }),
+    ]);
 
   const handleSubmit = async (data: CategoryPayload) => {
     try {
@@ -48,7 +49,7 @@ export const CategoriesPage: React.FC = () => {
         await categoryService.create(data);
         setShowForm(false);
       }
-      await loadCategories();
+      await invalidateCategoryData();
     } catch (err) {
       console.error('Error saving category:', err);
       alert('Falha ao salvar categoria.');
@@ -59,7 +60,7 @@ export const CategoriesPage: React.FC = () => {
     if (!confirm(`Deseja realmente excluir "${category.name}"?`)) return;
     try {
       await categoryService.delete(category._id);
-      await loadCategories();
+      await invalidateCategoryData();
     } catch (err) {
       console.error('Error deleting category:', err);
       alert(

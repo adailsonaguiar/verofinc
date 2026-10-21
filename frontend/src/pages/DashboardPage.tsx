@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Activity, Loader2, Plus } from 'lucide-react';
@@ -7,7 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { categoryService } from '../services/categoryService';
 import { transactionService } from '../services/transactionService';
 import { accountService } from '../services/accountService';
-import { Category, Transaction } from '../types';
+import { queryKeys } from '../lib/queryKeys';
 import { CashFlowChart } from '../components/CashFlowChart';
 import { CategoryComparisonChart } from '../components/CategoryComparisonChart';
 import { CategoryEvolutionChart } from '../components/CategoryEvolutionChart';
@@ -21,104 +22,84 @@ import type { SummaryStat } from '../components/DashboardSummaryCards';
 import { MonthSelector } from '../components/MonthSelector';
 import { Button } from '../components/Button';
 
-interface AccountLike {
-  _id: string;
-  name: string;
-  type: string;
-  initialBalance?: number;
-  creditLimit?: number;
-}
-
 const brl = (cents: number) =>
   (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
-  const [checkingAccounts, setCheckingAccounts] = useState<AccountLike[]>([]);
-  const [creditCards, setCreditCards] = useState<AccountLike[]>([]);
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
-  const [availableMonths, setAvailableMonths] = useState<
-    { year: number; month: number; label: string }[]
-  >([]);
 
-  useEffect(() => {
-    loadAvailableMonths();
-    loadAccounts();
-    loadCategories();
-    loadAllTransactions();
-  }, []);
+  const availableMonthsQuery = useQuery({
+    queryKey: queryKeys.transactions.availableMonths,
+    queryFn: () => transactionService.getAvailableMonths(),
+  });
 
-  useEffect(() => {
-    if (currentYear && currentMonth) loadMonthTransactions();
-  }, [currentYear, currentMonth]);
+  const availableMonths = useMemo(
+    () =>
+      (availableMonthsQuery.data ?? []).map((m) => ({
+        year: m.year,
+        month: m.month,
+        label: format(new Date(m.year, m.month - 1), 'MMMM yyyy', {
+          locale: ptBR,
+        }),
+      })),
+    [availableMonthsQuery.data]
+  );
 
-  const loadAvailableMonths = async () => {
-    try {
-      const months = await transactionService.getAvailableMonths();
-      setAvailableMonths(
-        months.map((m) => ({
-          year: m.year,
-          month: m.month,
-          label: format(new Date(m.year, m.month - 1), 'MMMM yyyy', {
-            locale: ptBR,
-          }),
-        }))
-      );
-    } catch (err) {
-      console.error('Erro ao carregar meses disponíveis:', err);
-    }
-  };
+  const categoriesQuery = useQuery({
+    queryKey: queryKeys.categories.all,
+    queryFn: () => categoryService.getAll(),
+  });
 
-  const loadCategories = async () => {
-    try {
-      setCategories(await categoryService.getAll());
-    } catch (err) {
-      console.error('Erro ao carregar categorias:', err);
-    }
-  };
+  const checkingAccountsQuery = useQuery({
+    queryKey: queryKeys.accounts.byType('checking'),
+    queryFn: () => accountService.getByType('checking'),
+  });
 
-  const loadAccounts = async () => {
-    try {
-      setCheckingAccounts(await accountService.getByType('checking'));
-      setCreditCards(await accountService.getByType('credit_card'));
-    } catch (err) {
-      console.error('Erro ao carregar contas:', err);
-    }
-  };
+  const creditCardsQuery = useQuery({
+    queryKey: queryKeys.accounts.byType('credit_card'),
+    queryFn: () => accountService.getByType('credit_card'),
+  });
 
-  const loadAllTransactions = async () => {
-    try {
-      const all = await transactionService.getLastMonths(6);
-      setAllTransactions(
-        [...all].sort(
-          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-        )
-      );
-    } catch (err) {
-      console.error('Erro ao carregar transações:', err);
-    }
-  };
+  const lastMonthsQuery = useQuery({
+    queryKey: queryKeys.transactions.lastMonths(6),
+    queryFn: () => transactionService.getLastMonths(6),
+  });
 
-  const loadMonthTransactions = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      setTransactions(
-        await transactionService.getByMonth(currentYear, currentMonth)
-      );
-    } catch (err) {
-      setError('Erro ao carregar dados do dashboard.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const allTransactions = useMemo(
+    () =>
+      [...(lastMonthsQuery.data ?? [])].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      ),
+    [lastMonthsQuery.data]
+  );
+
+  const monthTransactionsQuery = useQuery({
+    queryKey: queryKeys.transactions.list({
+      year: currentYear,
+      month: currentMonth,
+    }),
+    queryFn: () => transactionService.getByMonth(currentYear, currentMonth),
+    placeholderData: keepPreviousData,
+  });
+
+  const categories = categoriesQuery.data ?? [];
+  const checkingAccounts = checkingAccountsQuery.data ?? [];
+  const creditCards = creditCardsQuery.data ?? [];
+  const transactions = monthTransactionsQuery.data ?? [];
+  const loading =
+    availableMonthsQuery.isPending ||
+    categoriesQuery.isPending ||
+    checkingAccountsQuery.isPending ||
+    creditCardsQuery.isPending ||
+    lastMonthsQuery.isPending ||
+    monthTransactionsQuery.isPending;
+  const error =
+    monthTransactionsQuery.isError && !monthTransactionsQuery.data
+      ? 'Erro ao carregar dados do dashboard.'
+      : null;
 
   // Month navigation
   const currentIndex = availableMonths.findIndex(
@@ -251,7 +232,9 @@ export const DashboardPage: React.FC = () => {
             Ops, algo deu errado
           </h3>
           <p className="text-sm text-navy-500 mb-6">{error}</p>
-          <Button onClick={loadMonthTransactions}>Tentar novamente</Button>
+          <Button onClick={() => monthTransactionsQuery.refetch()}>
+            Tentar novamente
+          </Button>
         </div>
       </div>
     );

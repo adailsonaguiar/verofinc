@@ -21,6 +21,29 @@ export enum InvoiceStatus {
   PARTIALLY_PAID = 'partially_paid',
 }
 
+export interface Account {
+  _id: string;
+  name: string;
+  type: string;
+  active?: boolean;
+  initialBalance?: number;
+  creditLimit?: number;
+  closingDay?: number;
+  dueDay?: number;
+}
+
+export interface TransactionFilters {
+  year?: number;
+  month?: number;
+  account?: string;
+  category?: string;
+  status?: string;
+  type?: string;
+  startDate?: string;
+  endDate?: string;
+  withCreditCardFilter?: boolean;
+}
+
 export interface Invoice {
   _id: string;
   account: string;

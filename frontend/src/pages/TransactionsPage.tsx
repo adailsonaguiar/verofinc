@@ -1,7 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import {
+  keepPreviousData,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { accountService } from '../services/accountService';
+import { categoryService } from '../services/categoryService';
 import { transactionService } from '../services/transactionService';
+import { queryKeys } from '../lib/queryKeys';
 import {
   Transaction,
   CreateTransactionDto,
@@ -26,140 +33,93 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import api from '../services/api';
 
 type TabKey = 'todas' | 'entradas' | 'saidas';
 
-interface AccountOption {
-  _id: string;
-  name: string;
-  type: string;
-}
-
-interface CategoryOption {
-  _id: string;
-  name: string;
-}
-
 export const TransactionsPage: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const queryClient = useQueryClient();
 
   const [typeTab, setTypeTab] = useState<TabKey>('todas');
   const [query, setQuery] = useState(searchParams.get('q') ?? '');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [categories, setCategories] = useState<CategoryOption[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [accounts, setAccounts] = useState<AccountOption[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<string>('all');
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
-  const [availableMonths, setAvailableMonths] = useState<
-    { year: number; month: number; label: string }[]
-  >([]);
-  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] =
     useState<Transaction | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
-  // drag-and-drop secondary ordering
-  const [orderedTransactions, setOrderedTransactions] = useState<Transaction[]>(
-    []
+  const accountsQuery = useQuery({
+    queryKey: queryKeys.accounts.all,
+    queryFn: () => accountService.getAll(),
+  });
+
+  const categoriesQuery = useQuery({
+    queryKey: queryKeys.categories.all,
+    queryFn: () => categoryService.getAll(),
+  });
+
+  const availableMonthsQuery = useQuery({
+    queryKey: queryKeys.transactions.availableMonths,
+    queryFn: () => transactionService.getAvailableMonths(),
+  });
+
+  const filters = useMemo(
+    () => ({
+      year: currentYear,
+      month: currentMonth,
+      account: selectedAccount === 'all' ? undefined : selectedAccount,
+      category: filterCategory === 'all' ? undefined : filterCategory,
+      status: filterStatus === 'all' ? undefined : filterStatus,
+    }),
+    [currentYear, currentMonth, selectedAccount, filterCategory, filterStatus]
   );
 
-  useEffect(() => {
-    loadCategories();
-    loadAvailableMonths();
-    loadAccounts();
-  }, []);
+  const transactionsQuery = useQuery({
+    queryKey: queryKeys.transactions.list(filters),
+    queryFn: () => transactionService.getFiltered(filters),
+    placeholderData: keepPreviousData,
+  });
+
+  const accounts = accountsQuery.data ?? [];
+  const categories = categoriesQuery.data ?? [];
+  const transactions = transactionsQuery.data ?? [];
+  const loading = transactionsQuery.isPending && !transactionsQuery.data;
+
+  const availableMonths = useMemo(
+    () =>
+      (availableMonthsQuery.data ?? []).map((m) => ({
+        year: m.year,
+        month: m.month,
+        label: format(new Date(m.year, m.month - 1), 'MMMM yyyy', {
+          locale: ptBR,
+        }),
+      })),
+    [availableMonthsQuery.data]
+  );
 
   useEffect(() => {
     if (searchParams.get('new') === '1') setIsModalOpen(true);
   }, [searchParams]);
 
-  useEffect(() => {
-    if (currentYear && currentMonth) {
-      loadMonthTransactions();
-    }
-  }, [
-    currentYear,
-    currentMonth,
-    selectedAccount,
-    filterCategory,
-    filterStatus,
-  ]);
-
-  const loadAccounts = async () => {
-    try {
-      setAccounts(await accountService.getAll());
-    } catch (err) {
-      console.error('Erro ao carregar contas:', err);
-    }
-  };
-
-  const loadCategories = async () => {
-    try {
-      const res = await api.get('/categories');
-      setCategories(res?.data);
-    } catch (err) {
-      console.error('Erro ao carregar categorias:', err);
-    }
-  };
-
-  const loadAvailableMonths = async () => {
-    try {
-      const months = await transactionService.getAvailableMonths();
-      setAvailableMonths(
-        months.map((m) => ({
-          year: m.year,
-          month: m.month,
-          label: format(new Date(m.year, m.month - 1), 'MMMM yyyy', {
-            locale: ptBR,
-          }),
-        }))
-      );
-    } catch (err) {
-      console.error('Error loading available months:', err);
-    }
-  };
-
-  const loadMonthTransactions = async () => {
-    try {
-      setLoading(true);
-      const params: Record<string, string | number> = {
-        year: currentYear,
-        month: currentMonth,
-      };
-      if (selectedAccount !== 'all') params.account = selectedAccount;
-      if (filterCategory !== 'all') params.category = filterCategory;
-      if (filterStatus !== 'all') params.status = filterStatus;
-
-      const queryString = Object.entries(params)
-        .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
-        .join('&');
-
-      const res = await api.get(`/transactions?${queryString}`);
-      setTransactions(res?.data);
-      setOrderedTransactions(res?.data ?? []);
-    } catch (err) {
-      console.error('Error loading transactions:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const invalidateTransactionData = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.budgets.all }),
+    ]);
 
   const handleCreateTransaction = async (data: CreateTransactionDto) => {
     await transactionService.create(data);
-    await loadAvailableMonths();
-    await loadMonthTransactions();
+    await invalidateTransactionData();
   };
 
   const handleUpdateTransaction = async (data: UpdateTransactionDto) => {
     if (!editingTransaction) return;
     await transactionService.update(editingTransaction._id, data);
-    await loadAvailableMonths();
-    await loadMonthTransactions();
+    await invalidateTransactionData();
   };
 
   const handleEditTransaction = (transaction: Transaction) => {
@@ -176,8 +136,7 @@ export const TransactionsPage: React.FC = () => {
 
     try {
       await transactionService.delete(transaction._id);
-      await loadAvailableMonths();
-      await loadMonthTransactions();
+      await invalidateTransactionData();
     } catch (error) {
       console.error('Error deleting transaction:', error);
       alert('Falha ao excluir transação.');
@@ -237,7 +196,7 @@ export const TransactionsPage: React.FC = () => {
     accounts.find((acc) => acc._id === accountId)?.name ?? '—';
 
   const term = query.trim().toLowerCase();
-  const visibleTransactions = orderedTransactions.filter((t) => {
+  const visibleTransactions = transactions.filter((t) => {
     const matchesTab =
       typeTab === 'todas'
         ? true

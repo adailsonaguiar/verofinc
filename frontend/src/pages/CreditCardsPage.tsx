@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Pencil, Plus, Trash2, Wallet, X } from 'lucide-react';
 import { accountService } from '../services/accountService';
 import { transactionService } from '../services/transactionService';
 import { invoiceService } from '../services/invoiceService';
-import { Transaction, Invoice, InvoiceStatus } from '../types';
+import { queryKeys } from '../lib/queryKeys';
+import { Account, Transaction, Invoice, InvoiceStatus } from '../types';
 import { TransactionCard } from '../components/TransactionCard';
 import { MonthSelector } from '../components/MonthSelector';
 import { SectionTitle } from '../components/SectionTitle';
@@ -13,19 +15,12 @@ import { PageHeading } from '../components/PageHeading';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { computeInvoicePeriod, formatInvoiceDay } from '../utils/invoices';
-import api from '../services/api';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-interface CardLike {
-  _id: string;
-  name: string;
-  type: string;
-  active?: boolean;
-  initialBalance?: number;
-  creditLimit?: number;
-  closingDay?: number;
-  dueDay?: number;
+interface InvoiceData {
+  invoices: Invoice[];
+  transactions: Transaction[];
 }
 
 const brl = (cents: number) =>
@@ -52,42 +47,118 @@ function formatCurrencyInput(value: string) {
   });
 }
 
+async function fetchInvoiceData(
+  card: Account,
+  year: number,
+  month: number
+): Promise<InvoiceData> {
+  const invoiceList = await invoiceService.listByAccount(card._id);
+  const referenceMonth = `${year}-${String(month).padStart(2, '0')}`;
+  const invoice = invoiceList.find(
+    (item) => item.referenceMonth === referenceMonth
+  );
+  const period = invoice
+    ? {
+        startDate: new Date(invoice.startDate),
+        closingDate: new Date(invoice.closingDate),
+      }
+    : computeInvoicePeriod(
+        card.closingDay ?? DEFAULT_CLOSING_DAY,
+        card.dueDay ?? DEFAULT_DUE_DAY,
+        new Date(year, month - 1, 1)
+      );
+
+  const startDate = new Date(period.startDate);
+  const endDate = new Date(period.closingDate);
+  endDate.setHours(23, 59, 59, 999);
+
+  const transactions = await transactionService.getFiltered({
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
+    account: card._id,
+    withCreditCardFilter: true,
+  });
+
+  return {
+    invoices: invoiceList,
+    transactions: [...transactions].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    ),
+  };
+}
+
 export const CreditCardsPage: React.FC = () => {
-  const [cards, setCards] = useState<CardLike[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [limit, setLimit] = useState('');
   const [closingDay, setClosingDay] = useState('');
   const [dueDay, setDueDay] = useState('');
-  const [editing, setEditing] = useState<CardLike | null>(null);
+  const [editing, setEditing] = useState<Account | null>(null);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
-  const [availableMonths, setAvailableMonths] = useState<
-    { year: number; month: number; label: string }[]
-  >([]);
-  const [loadingTransactions, setLoadingTransactions] = useState(false);
-  const [loadingInvoices, setLoadingInvoices] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [checkingAccounts, setCheckingAccounts] = useState<CardLike[]>([]);
   const [selectedCheckingAccount, setSelectedCheckingAccount] = useState('');
   const [payingInvoice, setPayingInvoice] = useState(false);
 
-  const selectedCardIdRef = useRef<string | null>(null);
   const invoiceSectionRef = useRef<HTMLDivElement | null>(null);
-  const invoiceDataRequestRef = useRef(0);
+
+  const cardsQuery = useQuery({
+    queryKey: queryKeys.accounts.byType('credit_card'),
+    queryFn: () => accountService.getByType('credit_card'),
+  });
+
+  const availableMonthsQuery = useQuery({
+    queryKey: queryKeys.transactions.availableMonths,
+    queryFn: () => transactionService.getAvailableMonths(),
+  });
+
+  const checkingAccountsQuery = useQuery({
+    queryKey: queryKeys.accounts.byType('checking'),
+    queryFn: () => accountService.getByType('checking'),
+    enabled: showPaymentModal,
+  });
+
+  const cards = useMemo(() => cardsQuery.data ?? [], [cardsQuery.data]);
+  const loading = cardsQuery.isPending || availableMonthsQuery.isPending;
+  const error =
+    cardsQuery.isError && !cardsQuery.data
+      ? 'Erro ao carregar cartões.'
+      : null;
+  const availableMonths = (availableMonthsQuery.data ?? []).map((m) => ({
+    year: m.year,
+    month: m.month,
+    label: format(new Date(m.year, m.month - 1), 'MMMM yyyy', {
+      locale: ptBR,
+    }),
+  }));
 
   const selectedCard =
     cards.find((card) => card._id === selectedCardId) ?? null;
 
-  useEffect(() => {
-    loadCards();
-    loadAvailableMonths();
-  }, []);
+  const invoiceQuery = useQuery({
+    queryKey: queryKeys.invoices.detail(
+      selectedCard?._id ?? 'none',
+      currentYear,
+      currentMonth
+    ),
+    queryFn: () => {
+      if (!selectedCard) throw new Error('Cartão não selecionado.');
+      return fetchInvoiceData(selectedCard, currentYear, currentMonth);
+    },
+    enabled: Boolean(selectedCard),
+  });
+
+  const invoices = invoiceQuery.data?.invoices ?? [];
+  const transactions = invoiceQuery.data?.transactions ?? [];
+  const loadingInvoices = invoiceQuery.isPending;
+  const loadingTransactions = invoiceQuery.isPending;
+  const checkingAccounts = useMemo(
+    () => checkingAccountsQuery.data ?? [],
+    [checkingAccountsQuery.data]
+  );
 
   useEffect(() => {
     if (cards.length === 0) {
@@ -100,45 +171,14 @@ export const CreditCardsPage: React.FC = () => {
   }, [cards, selectedCardId]);
 
   useEffect(() => {
-    selectedCardIdRef.current = selectedCardId;
-  }, [selectedCardId]);
-
-  useEffect(() => {
-    if (!selectedCard) {
-      setLoadingTransactions(false);
-      setLoadingInvoices(false);
-      return;
+    if (checkingAccounts.length > 0 && !selectedCheckingAccount) {
+      setSelectedCheckingAccount(checkingAccounts[0]._id);
     }
-    setTransactions([]);
-    setInvoices([]);
-    loadInvoiceData(selectedCard);
-  }, [selectedCard, currentYear, currentMonth]);
+  }, [checkingAccounts, selectedCheckingAccount]);
 
   const handleLimitChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const digits = e.target.value.replace(/\D/g, '').slice(0, 12);
     setLimit(formatCurrencyInput(digits));
-  };
-
-  const loadCards = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      setCards(await accountService.getByType('credit_card'));
-    } catch (err) {
-      setError('Erro ao carregar cartões.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadCheckingAccounts = async () => {
-    try {
-      const data = await accountService.getByType('checking');
-      setCheckingAccounts(data);
-      if (data.length > 0) setSelectedCheckingAccount(data[0]._id);
-    } catch (err) {
-      console.error('Erro ao carregar contas correntes:', err);
-    }
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -170,13 +210,16 @@ export const CreditCardsPage: React.FC = () => {
       setDueDay('');
       setEditing(null);
       setShowForm(false);
-      await loadCards();
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.accounts.all }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all }),
+      ]);
     } catch {
       alert('Erro ao salvar cartão.');
     }
   };
 
-  const handleEdit = (card: CardLike) => {
+  const handleEdit = (card: Account) => {
     setEditing(card);
     setName(card.name);
     setLimit(formatCurrencyInput(Math.round(card.creditLimit || 0).toString()));
@@ -185,17 +228,20 @@ export const CreditCardsPage: React.FC = () => {
     setShowForm(true);
   };
 
-  const handleDelete = async (card: CardLike) => {
+  const handleDelete = async (card: Account) => {
     if (!window.confirm('Remover este cartão?')) return;
     try {
       await accountService.delete(card._id);
-      await loadCards();
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.accounts.all }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all }),
+      ]);
     } catch {
       alert('Erro ao remover cartão.');
     }
   };
 
-  const handleSelectCard = (card: CardLike) => {
+  const handleSelectCard = (card: Account) => {
     setSelectedCardId(card._id);
     requestAnimationFrame(() => {
       invoiceSectionRef.current?.scrollIntoView({
@@ -203,90 +249,6 @@ export const CreditCardsPage: React.FC = () => {
         block: 'start',
       });
     });
-  };
-
-  const loadAvailableMonths = async () => {
-    try {
-      const months = await transactionService.getAvailableMonths();
-      setAvailableMonths(
-        months.map((m) => ({
-          year: m.year,
-          month: m.month,
-          label: format(new Date(m.year, m.month - 1), 'MMMM yyyy', {
-            locale: ptBR,
-          }),
-        }))
-      );
-    } catch (err) {
-      console.error('Error loading available months:', err);
-    }
-  };
-
-  const loadInvoiceData = async (card: CardLike) => {
-    const cardId = card._id;
-    const requestId = ++invoiceDataRequestRef.current;
-    const isCurrentRequest = () =>
-      selectedCardIdRef.current === cardId &&
-      invoiceDataRequestRef.current === requestId;
-
-    setLoadingInvoices(true);
-    setLoadingTransactions(true);
-
-    try {
-      const invoiceList = await invoiceService.listByAccount(cardId);
-      if (!isCurrentRequest()) return;
-      setInvoices(invoiceList);
-
-      const referenceMonth = `${currentYear}-${String(currentMonth).padStart(
-        2,
-        '0'
-      )}`;
-      const invoice = invoiceList.find(
-        (item) => item.referenceMonth === referenceMonth
-      );
-      const period = invoice
-        ? {
-            startDate: new Date(invoice.startDate),
-            closingDate: new Date(invoice.closingDate),
-          }
-        : computeInvoicePeriod(
-            card.closingDay ?? DEFAULT_CLOSING_DAY,
-            card.dueDay ?? DEFAULT_DUE_DAY,
-            new Date(currentYear, currentMonth - 1, 1)
-          );
-
-      const startDate = new Date(period.startDate);
-      const endDate = new Date(period.closingDate);
-      endDate.setHours(23, 59, 59, 999);
-
-      const params = {
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        account: cardId,
-        withCreditCardFilter: true,
-      };
-      const query = Object.entries(params)
-        .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
-        .join('&');
-      const res = await api.get(`/transactions?${query}`);
-      if (!isCurrentRequest()) return;
-
-      const sorted = [...(res.data as Transaction[])].sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-      );
-      setTransactions(sorted);
-    } catch (err) {
-      if (isCurrentRequest()) {
-        setInvoices([]);
-        setTransactions([]);
-      }
-      console.error('Error loading invoice data:', err);
-    } finally {
-      if (isCurrentRequest()) {
-        setLoadingInvoices(false);
-        setLoadingTransactions(false);
-      }
-    }
   };
 
   const handlePreviousMonth = () => {
@@ -311,8 +273,7 @@ export const CreditCardsPage: React.FC = () => {
     }
   };
 
-  const handleOpenPaymentModal = async () => {
-    await loadCheckingAccounts();
+  const handleOpenPaymentModal = () => {
     setShowPaymentModal(true);
   };
 
@@ -331,7 +292,12 @@ export const CreditCardsPage: React.FC = () => {
       );
       toast.success('Fatura paga com sucesso!');
       setShowPaymentModal(false);
-      await loadCards();
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.accounts.all }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.budgets.all }),
+      ]);
     } catch (err) {
       console.error('Erro ao pagar fatura:', err);
       toast.error('Erro ao pagar fatura. Tente novamente.', {
@@ -802,7 +768,11 @@ export const CreditCardsPage: React.FC = () => {
                   className="input"
                   required
                 >
-                  {checkingAccounts.length === 0 ? (
+                  {checkingAccountsQuery.isPending ? (
+                    <option value="" disabled>
+                      Carregando contas...
+                    </option>
+                  ) : checkingAccounts.length === 0 ? (
                     <option value="" disabled>
                       Nenhuma conta disponível
                     </option>

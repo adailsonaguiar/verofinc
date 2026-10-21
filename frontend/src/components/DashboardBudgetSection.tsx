@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { ArrowRight, Loader2, Target } from 'lucide-react';
 import { budgetService } from '../services/budgetService';
-import { BudgetCategoryItem, BudgetOverview } from '../types';
+import { queryKeys } from '../lib/queryKeys';
+import type { BudgetCategoryItem } from '../types';
 import { formatCurrency } from '../utils/transactions';
 import { SectionTitle } from './SectionTitle';
 import { BudgetProgressBar } from './BudgetProgressBar';
@@ -19,28 +21,15 @@ export const DashboardBudgetSection: React.FC<DashboardBudgetSectionProps> = ({
   year,
   month,
 }) => {
-  const [overview, setOverview] = useState<BudgetOverview | null>(null);
-  const [loading, setLoading] = useState(true);
+  const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+  const budgetQuery = useQuery({
+    queryKey: queryKeys.budgets.overview(monthKey),
+    queryFn: () => budgetService.getOverview(monthKey),
+    placeholderData: keepPreviousData,
+  });
 
-  useEffect(() => {
-    let active = true;
-    const monthKey = `${year}-${String(month).padStart(2, '0')}`;
-    setLoading(true);
-    budgetService
-      .getOverview(monthKey)
-      .then((data) => {
-        if (active) setOverview(data);
-      })
-      .catch((err) => {
-        console.error('Erro ao carregar orçamento:', err);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [year, month]);
+  const overview = budgetQuery.data ?? null;
+  const loading = budgetQuery.isPending;
 
   const totalLimit = overview?.totalLimit ?? null;
   const totalSpent = overview?.totalSpent ?? 0;

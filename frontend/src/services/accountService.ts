@@ -1,12 +1,13 @@
 import api from './api';
+import { Account } from '../types';
 
 export const accountService = {
-  async getAll() {
-    const res = await api.get('/accounts');
+  async getAll(): Promise<Account[]> {
+    const res = await api.get<Account[]>('/accounts');
     return res.data;
   },
-  async getByType(type: string) {
-    const res = await api.get(`/accounts?type=${type}`);
+  async getByType(type: string): Promise<Account[]> {
+    const res = await api.get<Account[]>('/accounts', { params: { type } });
     return res.data;
   },
   async create(data: {
@@ -16,8 +17,8 @@ export const accountService = {
     creditLimit?: number;
     closingDay?: number;
     dueDay?: number;
-  }) {
-    const res = await api.post('/accounts', data);
+  }): Promise<Account> {
+    const res = await api.post<Account>('/accounts', data);
     return res.data;
   },
   async update(
@@ -29,21 +30,24 @@ export const accountService = {
       closingDay?: number;
       dueDay?: number;
     }
-  ) {
-    const res = await api.patch(`/accounts/${id}`, data);
+  ): Promise<Account> {
+    const res = await api.patch<Account>(`/accounts/${id}`, data);
     return res.data;
   },
-  async delete(id: string) {
-    const res = await api.delete(`/accounts/${id}`);
-    return res.data;
+  async delete(id: string): Promise<void> {
+    await api.delete(`/accounts/${id}`);
   },
-  async payInvoice(creditCardId: string, checkingAccountId: string, year: number, month: number) {
-    const res = await api.post('/accounts/pay-invoice', {
+  async payInvoice(
+    creditCardId: string,
+    checkingAccountId: string,
+    year: number,
+    month: number
+  ): Promise<void> {
+    await api.post('/accounts/pay-invoice', {
       creditCardId,
       checkingAccountId,
       year,
       month,
     });
-    return res.data;
   },
 };

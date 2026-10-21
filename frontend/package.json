@@ -10,6 +10,7 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.104.5",
     "axios": "^1.6.2",
     "chart.js": "^4.5.1",
     "date-fns": "^3.0.6",

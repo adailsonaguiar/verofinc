@@ -24,6 +24,16 @@ function saveToCache(key: string, data: unknown): void {
   }
 }
 
+export function clearOfflineCache(): void {
+  try {
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith(CACHE_PREFIX))
+      .forEach((key) => localStorage.removeItem(key));
+  } catch {
+    // Storage unavailable — nothing to clear
+  }
+}
+
 function loadFromCache(key: string): unknown | null {
   try {
     const raw = localStorage.getItem(CACHE_PREFIX + key);

@@ -1,5 +1,6 @@
 import React, {
   createContext,
+  useCallback,
   useContext,
   useMemo,
   useState,
@@ -10,6 +11,8 @@ import {
   signInWithGoogle,
   signOutFromGoogle,
 } from '../services/googleAuth';
+import { clearOfflineCache } from '../services/api';
+import { queryClient } from '../lib/queryClient';
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -29,25 +32,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     return raw ? JSON.parse(raw) : null;
   });
 
-  const login = async (email: string, password: string) => {
-    const data = await authService.login(email, password);
-    localStorage.setItem('authUser', JSON.stringify(data.user));
-    setUser(data.user);
-  };
+  const resetCaches = useCallback(() => {
+    queryClient.clear();
+    clearOfflineCache();
+  }, []);
 
-  const loginWithGoogle = async () => {
+  const login = useCallback(
+    async (email: string, password: string) => {
+      const data = await authService.login(email, password);
+      resetCaches();
+      localStorage.setItem('authUser', JSON.stringify(data.user));
+      setUser(data.user);
+    },
+    [resetCaches]
+  );
+
+  const loginWithGoogle = useCallback(async () => {
     const idToken = await signInWithGoogle();
     const data = await authService.loginWithGoogle(idToken);
+    resetCaches();
     localStorage.setItem('authUser', JSON.stringify(data.user));
     setUser(data.user);
-  };
+  }, [resetCaches]);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     await signOutFromGoogle();
     await authService.logout();
+    resetCaches();
     localStorage.removeItem('authUser');
     setUser(null);
-  };
+  }, [resetCaches]);
 
   const value = useMemo(
     () => ({
@@ -57,7 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       loginWithGoogle,
       logout,
     }),
-    [user]
+    [user, login, loginWithGoogle, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
