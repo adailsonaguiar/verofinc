@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Bell, Menu, Search } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { Menu, Search } from 'lucide-react';
 import { MAIN_NAV } from '../navigation';
 
 interface HeaderProps {
@@ -15,7 +14,6 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [query, setQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
 
@@ -28,8 +26,6 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
     setQuery('');
     setSearchOpen(false);
   };
-
-  const initial = (user?.name || user?.email || 'n').charAt(0).toUpperCase();
 
   return (
     <header className="sticky top-0 z-30 border-b border-bone-border bg-bone/85 backdrop-blur hidden md:block">
