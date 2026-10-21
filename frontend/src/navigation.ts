@@ -6,6 +6,7 @@ import {
   CreditCard,
   Target,
   FolderOpen,
+  CalendarClock,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -26,6 +27,7 @@ export const MAIN_NAV: NavItem[] = [
 export const ALL_NAV: NavItem[] = [
   { path: '/', label: 'Visão geral', icon: LayoutDashboard },
   { path: '/transactions', label: 'Transações', icon: ArrowLeftRight },
+  { path: '/scheduled-payments', label: 'Vencimentos', icon: CalendarClock },
   { path: '/budgets', label: 'Orçamento', icon: Target },
   { path: '/accounts', label: 'Contas', icon: Wallet },
   { path: '/credit-cards', label: 'Cartões', icon: CreditCard },

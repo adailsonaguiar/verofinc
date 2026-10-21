@@ -19,6 +19,7 @@ import { BudgetsPage } from './pages/BudgetsPage';
 import { LoginPage } from './pages/LoginPage';
 import { RequireAuth } from './contexts/AuthContext';
 import { ToastContainer } from 'react-toastify';
+import { ScheduledPaymentsPage } from './pages/ScheduledPaymentsPage';
 
 interface AppLayoutProps {
   isMenuOpen: boolean;
@@ -94,6 +95,7 @@ function App() {
             <Route path="/budgets" element={<BudgetsPage />} />
             <Route path="/categories" element={<CategoriesPage />} />
             <Route path="/transactions" element={<TransactionsPage />} />
+            <Route path="/scheduled-payments" element={<ScheduledPaymentsPage />} />
             <Route path="/accounts" element={<AccountsPage />} />
             <Route path="/credit-cards" element={<CreditCardsPage />} />
           </Route>

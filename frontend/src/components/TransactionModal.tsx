@@ -65,7 +65,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [status, setStatus] = useState<TransactionStatus>(
     TransactionStatus.UNPAID
   );
-  const [isFixed, setIsFixed] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingCategories, setLoadingCategories] = useState(false);
@@ -99,7 +98,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           setCategoryId(initialData.category._id);
           setStatus(initialData.status);
           setAccountId(initialData.account || '');
-          setIsFixed(initialData.isFixed || false);
           loadCategories(initialData.category._id);
         } else {
           setAmount('');
@@ -107,7 +105,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           setDate(new Date().toISOString().split('T')[0]);
           setType(TransactionType.EXPENSE);
           setStatus(TransactionStatus.UNPAID);
-          setIsFixed(false);
           loadCategories();
         }
       };
@@ -214,7 +211,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         categoryId,
         status,
         account: accountId,
-        isFixed,
       });
       onClose();
     } catch (error) {
@@ -420,33 +416,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 >
                   <Clock className="w-4 h-4" />
                   Pendente
-                </button>
-              </div>
-            )}
-
-            {!isEditing && (
-              <div className="flex items-center gap-3 p-4 rounded-lg bg-bone-soft border border-bone-border">
-                <div className="flex-1">
-                  <h3 className="text-sm font-medium text-navy-900">
-                    Fixar transação
-                  </h3>
-                  <p className="text-xs text-navy-500 mt-0.5">
-                    Criará lançamentos para os próximos 11 meses
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsFixed(!isFixed)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    isFixed ? 'bg-gold-400' : 'bg-navy-200'
-                  }`}
-                  aria-label="Fixar transação"
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      isFixed ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
                 </button>
               </div>
             )}

@@ -12,6 +12,7 @@ import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { ScheduledPaymentsModule } from './modules/scheduled-payments/scheduled-payments.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     BudgetsModule,
     UsersModule,
     AuthModule,
+    ScheduledPaymentsModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
