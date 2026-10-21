@@ -302,7 +302,9 @@ describe('ScheduledPaymentsService', () => {
       },
     });
     transactions.create.mockResolvedValue({ _id: new Types.ObjectId() });
-    repository.update.mockResolvedValue({ status: ScheduledPaymentStatus.PAID });
+    repository.update.mockResolvedValue({
+      status: ScheduledPaymentStatus.PAID,
+    });
 
     await service.pay('schedule-id', {});
 
@@ -327,7 +329,9 @@ describe('ScheduledPaymentsService', () => {
       },
     });
     transactions.create.mockResolvedValue({ _id: new Types.ObjectId() });
-    repository.update.mockResolvedValue({ status: ScheduledPaymentStatus.PAID });
+    repository.update.mockResolvedValue({
+      status: ScheduledPaymentStatus.PAID,
+    });
 
     await service.pay('schedule-id', {});
 
@@ -354,11 +358,11 @@ describe('ScheduledPaymentsService', () => {
       category: new Types.ObjectId(categoryId),
       account: new Types.ObjectId(accountId),
     });
-    transactions.create.mockRejectedValue(new Error('ledger unavailable'));
+    transactions.create.mockRejectedValue(new Error('balance unavailable'));
     repository.update.mockResolvedValue({});
 
     await expect(service.pay('schedule-id', {})).rejects.toThrow(
-      'ledger unavailable'
+      'balance unavailable'
     );
     expect(repository.update).toHaveBeenCalledWith(
       'schedule-id',

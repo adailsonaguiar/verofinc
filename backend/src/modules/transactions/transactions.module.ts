@@ -11,7 +11,6 @@ import { AccountRepository } from '../../repositories/account.repository';
 import { Account, AccountSchema } from '../../entities/account.entity';
 
 import { AccountsModule } from '../accounts/accounts.module';
-import { LedgerModule } from '../ledger/ledger.module';
 import { InvoicesModule } from '../invoices/invoices.module';
 
 @Module({
@@ -21,7 +20,6 @@ import { InvoicesModule } from '../invoices/invoices.module';
       { name: Account.name, schema: AccountSchema },
     ]),
     forwardRef(() => AccountsModule),
-    LedgerModule,
     InvoicesModule,
   ],
   controllers: [TransactionsController],

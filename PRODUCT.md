@@ -49,8 +49,7 @@ pillar. Treat both as open, not decided.
   (checking / credit_card, with `creditLimit`, `closingDay`, `dueDay`), transactions
   (income/expense, paid/unpaid, with `isReversal`, `isFixed`, `isPayment`,
   `sortOrder`), invoices (open/closed/overdue/paid/partially_paid, period-based
-  `startDate`/`closingDate`/`dueDate`, `totalAmount`/`paidAmount`), and a ledger of
-  create/update/delete/reversal operations.
+  `startDate`/`closingDate`/`dueDate`, `totalAmount`/`paidAmount`).
 - **Credit-card invoice rules** (from `invoices.md`): a purchase belongs to the
   invoice whose period contains its date; invoices are created on demand
   (get-or-create); closing consolidates totals; paying an invoice creates a

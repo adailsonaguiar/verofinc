@@ -37,6 +37,19 @@ export class AccountService {
     return this.accountRepository.findAll();
   }
 
+  async updateAccountBalance(accountId: string, amount: number): Promise<void> {
+    const account = await this.findById(accountId);
+    const newBalance = (account.initialBalance || 0) + amount;
+
+    if (newBalance < 0) {
+      throw new Error(`Insufficient funds in account ID ${accountId}`);
+    }
+
+    await this.accountRepository.update(accountId, {
+      initialBalance: newBalance,
+    });
+  }
+
   async findById(id: string) {
     const account = await this.accountRepository.findById(id);
     if (!account)

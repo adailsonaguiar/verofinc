@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
 import { TransactionRepository } from '../../repositories/transaction.repository';
-import { LedgerService } from '../ledger/ledger.service';
+import { AccountService } from '../accounts/account.service';
 import { AccountRepository } from '../../repositories/account.repository';
 import {
   TransactionType,
@@ -32,10 +32,8 @@ describe('TransactionsService', () => {
     reorder: Mock;
     findMaxSortOrderForMonth: Mock;
   };
-  let ledgerService: {
-    logOperation: Mock;
+  let accountService: {
     updateAccountBalance: Mock;
-    findByTransactionId: Mock;
   };
   let accountRepo: { findAll: Mock; findById: Mock; update: Mock };
   let invoicesService: {
@@ -86,10 +84,8 @@ describe('TransactionsService', () => {
       reorder: vi.fn(),
       findMaxSortOrderForMonth: vi.fn().mockResolvedValue(0),
     };
-    ledgerService = {
-      logOperation: vi.fn(),
-      updateAccountBalance: vi.fn(),
-      findByTransactionId: vi.fn(),
+    accountService = {
+      updateAccountBalance: vi.fn().mockResolvedValue(undefined),
     };
     accountRepo = {
       findAll: vi.fn(),
@@ -107,7 +103,7 @@ describe('TransactionsService', () => {
       providers: [
         TransactionsService,
         { provide: TransactionRepository, useValue: transactionRepo },
-        { provide: LedgerService, useValue: ledgerService },
+        { provide: AccountService, useValue: accountService },
         { provide: AccountRepository, useValue: accountRepo },
         { provide: InvoicesService, useValue: invoicesService },
       ],
@@ -153,7 +149,7 @@ describe('TransactionsService', () => {
       expect(createArgs.amount).toBe(2500); // 25 * 100
     });
 
-    it('should log operation if status is PAID and rollback if ledger throws error', async () => {
+    it('should update the account balance if status is PAID and rollback if balance update throws', async () => {
       const mockAccount = {
         _id: new Types.ObjectId(),
         type: AccountType.CHECKING,
@@ -167,19 +163,19 @@ describe('TransactionsService', () => {
         type: TransactionType.EXPENSE,
         status: TransactionStatus.PAID,
         account: mockAccount._id,
-        description: 'Test Ledger Rollback',
+        description: 'Test Balance Rollback',
       };
 
       transactionRepo.create.mockResolvedValue(createdTx);
 
-      // Simulate ledger error (e.g. insufficient funds)
-      ledgerService.logOperation.mockRejectedValue(
+      // Simulate balance error (e.g. insufficient funds)
+      accountService.updateAccountBalance.mockRejectedValue(
         new Error('Insufficient funds')
       );
 
       await expect(
         service.create({
-          description: 'Test Ledger Rollback',
+          description: 'Test Balance Rollback',
           amount: 30,
           date: '2026-05-01',
           type: TransactionType.EXPENSE,
@@ -189,6 +185,10 @@ describe('TransactionsService', () => {
         })
       ).rejects.toThrow('Insufficient funds');
 
+      expect(accountService.updateAccountBalance).toHaveBeenCalledWith(
+        mockAccount._id.toString(),
+        -3000
+      );
       // Ensure transaction was deleted
       expect(transactionRepo.delete).toHaveBeenCalledWith(
         createdTx._id.toString()
@@ -276,12 +276,16 @@ describe('TransactionsService', () => {
         amount: 150, // becomes 15000
       });
 
-      expect(ledgerService.logOperation).toHaveBeenCalled();
-      const logArgs = ledgerService.logOperation.mock.calls[0];
+      expect(transactionRepo.update).toHaveBeenCalledWith(
+        oldTx._id,
+        expect.objectContaining({ amount: 15000 })
+      );
+      expect(accountService.updateAccountBalance).toHaveBeenCalledTimes(1);
+      const balanceArgs = accountService.updateAccountBalance.mock.calls[0];
       // Old was 10000 (expense is negated so -10000)
       // New is 15000 (expense is negated so -15000)
-      // Difference -> -15000 - (-10000) = -5000. So logOperation should be called with -5000.
-      expect(logArgs[1]).toBe(-5000);
+      // Difference -> -15000 - (-10000) = -5000.
+      expect(balanceArgs).toEqual([mockAccount._id.toString(), -5000]);
     });
 
     it('should fully process a cross-account transfer update safely', async () => {
@@ -321,26 +325,22 @@ describe('TransactionsService', () => {
       });
 
       // It should revert the old account and apply to the new account
-      expect(ledgerService.logOperation).toHaveBeenCalledTimes(2);
+      expect(accountService.updateAccountBalance).toHaveBeenCalledTimes(2);
 
-      // The order might vary depending on whether it's subtracting first to prevent overdrafts.
-      // Since it's an INCOME, reverting it means subtracting.
-      const calls = ledgerService.logOperation.mock.calls;
+      const calls = accountService.updateAccountBalance.mock.calls;
 
       // the revert on the old account
       expect(
         calls.some(
-          (args) =>
-            args[2].toString() === mockAccountOld._id.toString() &&
-            args[1] === -2000
+          ([accountId, amount]) =>
+            accountId === mockAccountOld._id.toString() && amount === -2000
         )
       ).toBe(true);
       // the application on the new account
       expect(
         calls.some(
-          (args) =>
-            args[2].toString() === mockAccountNew._id.toString() &&
-            args[1] === 2000
+          ([accountId, amount]) =>
+            accountId === mockAccountNew._id.toString() && amount === 2000
         )
       ).toBe(true);
     });
@@ -406,7 +406,6 @@ describe('TransactionsService', () => {
         status: TransactionStatus.PAID,
       });
       transactionRepo.create.mockResolvedValue(tx);
-      ledgerService.logOperation.mockResolvedValue(undefined);
 
       await expect(
         service.create(
@@ -443,7 +442,6 @@ describe('TransactionsService', () => {
         amount: 5000,
       });
       transactionRepo.create.mockResolvedValue(createdTx);
-      ledgerService.logOperation.mockResolvedValue(undefined);
 
       await service.create({
         description: 'Compra',
@@ -470,7 +468,6 @@ describe('TransactionsService', () => {
       transactionRepo.create.mockResolvedValue(
         makeTx({ status: TransactionStatus.PAID })
       );
-      ledgerService.logOperation.mockResolvedValue(undefined);
 
       await service.create(
         {
@@ -651,7 +648,7 @@ describe('TransactionsService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should rollback to original when ledger update throws', async () => {
+    it('should rollback to original when balance update throws', async () => {
       const acc = makeCheckingAccount();
       const originalTx = makeTx({
         account: acc._id,
@@ -665,11 +662,13 @@ describe('TransactionsService', () => {
         ...originalTx,
         amount: 20000,
       });
-      ledgerService.logOperation.mockRejectedValue(new Error('ledger fail'));
+      accountService.updateAccountBalance.mockRejectedValue(
+        new Error('balance fail')
+      );
 
       await expect(
         service.update(originalTx._id.toString(), { amount: 200 })
-      ).rejects.toThrow('ledger fail');
+      ).rejects.toThrow('balance fail');
 
       // Should have called update again to restore original
       expect(transactionRepo.update).toHaveBeenCalledTimes(2);
@@ -682,7 +681,7 @@ describe('TransactionsService', () => {
   // remove
   // ---------------------------------------------------------------------------
   describe('remove', () => {
-    it('should delete a PAID transaction and log the reversal', async () => {
+    it('should delete a PAID transaction and reverse its balance', async () => {
       const acc = makeCheckingAccount();
       const tx = makeTx({
         account: acc._id,
@@ -692,17 +691,19 @@ describe('TransactionsService', () => {
       });
       transactionRepo.findById.mockResolvedValue(tx);
       transactionRepo.delete.mockResolvedValue(tx);
-      ledgerService.logOperation.mockResolvedValue(undefined);
 
       await service.remove(tx._id.toString());
 
       expect(transactionRepo.delete).toHaveBeenCalledWith(tx._id.toString());
-      expect(ledgerService.logOperation).toHaveBeenCalledTimes(1);
+      expect(accountService.updateAccountBalance).toHaveBeenCalledTimes(1);
       // expense reversal: positive amount
-      expect(ledgerService.logOperation.mock.calls[0][1]).toBe(5000);
+      expect(accountService.updateAccountBalance).toHaveBeenCalledWith(
+        acc._id.toString(),
+        5000
+      );
     });
 
-    it('should delete an UNPAID transaction without logging to ledger', async () => {
+    it('should delete an UNPAID transaction without changing the balance', async () => {
       const tx = makeTx({ status: TransactionStatus.UNPAID });
       transactionRepo.findById.mockResolvedValue(tx);
       transactionRepo.delete.mockResolvedValue(tx);
@@ -710,7 +711,7 @@ describe('TransactionsService', () => {
       await service.remove(tx._id.toString());
 
       expect(transactionRepo.delete).toHaveBeenCalled();
-      expect(ledgerService.logOperation).not.toHaveBeenCalled();
+      expect(accountService.updateAccountBalance).not.toHaveBeenCalled();
     });
 
     it('should decrement the invoice total when removing an invoiced expense', async () => {
@@ -740,7 +741,7 @@ describe('TransactionsService', () => {
       );
     });
 
-    it('should rollback (re-create) transaction if ledger throws after deletion', async () => {
+    it('should rollback (re-create) transaction if balance update throws after deletion', async () => {
       const tx = makeTx({
         status: TransactionStatus.PAID,
         type: TransactionType.EXPENSE,
@@ -748,10 +749,12 @@ describe('TransactionsService', () => {
       transactionRepo.findById.mockResolvedValue(tx);
       transactionRepo.delete.mockResolvedValue(tx);
       transactionRepo.create.mockResolvedValue(tx);
-      ledgerService.logOperation.mockRejectedValue(new Error('ledger fail'));
+      accountService.updateAccountBalance.mockRejectedValue(
+        new Error('balance fail')
+      );
 
       await expect(service.remove(tx._id.toString())).rejects.toThrow(
-        'ledger fail'
+        'balance fail'
       );
 
       expect(transactionRepo.create).toHaveBeenCalledWith(tx);
