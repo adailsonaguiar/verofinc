@@ -27,6 +27,7 @@ describe('AccountService', () => {
   let invoicesService: {
     markPaidByReferenceMonth: Mock;
     getOrCreateInvoice: Mock;
+    reconcileAccountInvoices: Mock;
   };
 
   const makeId = () => new Types.ObjectId();
@@ -52,6 +53,7 @@ describe('AccountService', () => {
 
     invoicesService = {
       markPaidByReferenceMonth: vi.fn().mockResolvedValue(null),
+      reconcileAccountInvoices: vi.fn().mockResolvedValue(undefined),
       getOrCreateInvoice: vi.fn().mockResolvedValue({
         _id: makeId(),
         referenceMonth: '2026-05',
@@ -169,7 +171,9 @@ describe('AccountService', () => {
   describe('update', () => {
     it('should update account without multiplying amounts when isFromApi is false (default)', async () => {
       const id = makeId().toString();
+      const current = { _id: id, name: 'Conta', type: AccountType.CHECKING };
       const updated = { _id: id, name: 'Novo Nome', initialBalance: 10000 };
+      accountRepo.findById.mockResolvedValue(current);
       accountRepo.update.mockResolvedValue(updated);
 
       const result = await service.update(id, {
@@ -180,11 +184,14 @@ describe('AccountService', () => {
       const args = accountRepo.update.mock.calls[0][1];
       expect(args.initialBalance).toBe(10000); // não multiplicado
       expect(result).toEqual(updated);
+      expect(invoicesService.reconcileAccountInvoices).not.toHaveBeenCalled();
     });
 
     it('should multiply initialBalance and creditLimit by 100 when isFromApi is true', async () => {
       const id = makeId().toString();
+      const current = { _id: id, name: 'Conta', type: AccountType.CHECKING };
       const updated = { _id: id, initialBalance: 20000, creditLimit: 50000 };
+      accountRepo.findById.mockResolvedValue(current);
       accountRepo.update.mockResolvedValue(updated);
 
       await service.update(id, { initialBalance: 200, creditLimit: 500 }, true);
@@ -192,14 +199,70 @@ describe('AccountService', () => {
       const args = accountRepo.update.mock.calls[0][1];
       expect(args.initialBalance).toBe(20000);
       expect(args.creditLimit).toBe(50000);
+      expect(invoicesService.reconcileAccountInvoices).not.toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when account does not exist', async () => {
-      accountRepo.update.mockResolvedValue(null);
+      accountRepo.findById.mockResolvedValue(null);
 
       await expect(
         service.update('bad-id', { name: 'X' }, true)
       ).rejects.toThrow(NotFoundException);
+      expect(accountRepo.update).not.toHaveBeenCalled();
+    });
+
+    it('should reconcile invoices when a credit card closing or due day changes', async () => {
+      const id = makeId().toString();
+      const current = {
+        _id: id,
+        name: 'Cartão',
+        type: AccountType.CREDIT_CARD,
+        closingDay: 10,
+        dueDay: 20,
+      };
+      const updated = { ...current, closingDay: 30, dueDay: 4 };
+      accountRepo.findById.mockResolvedValue(current);
+      accountRepo.update.mockResolvedValue(updated);
+
+      await service.update(id, { closingDay: 30, dueDay: 4 }, true);
+
+      expect(invoicesService.reconcileAccountInvoices).toHaveBeenCalledWith(
+        updated
+      );
+    });
+
+    it('should not reconcile invoices when the credit card cycle is unchanged', async () => {
+      const id = makeId().toString();
+      const current = {
+        _id: id,
+        name: 'Cartão',
+        type: AccountType.CREDIT_CARD,
+        closingDay: 30,
+        dueDay: 4,
+      };
+      accountRepo.findById.mockResolvedValue(current);
+      accountRepo.update.mockResolvedValue({ ...current, name: 'Novo nome' });
+
+      await service.update(id, { name: 'Novo nome' }, true);
+
+      expect(invoicesService.reconcileAccountInvoices).not.toHaveBeenCalled();
+    });
+
+    it('should not reconcile invoices for a checking account', async () => {
+      const id = makeId().toString();
+      const current = {
+        _id: id,
+        name: 'Conta',
+        type: AccountType.CHECKING,
+        closingDay: 10,
+        dueDay: 20,
+      };
+      accountRepo.findById.mockResolvedValue(current);
+      accountRepo.update.mockResolvedValue({ ...current, closingDay: 30 });
+
+      await service.update(id, { closingDay: 30 }, true);
+
+      expect(invoicesService.reconcileAccountInvoices).not.toHaveBeenCalled();
     });
   });
 

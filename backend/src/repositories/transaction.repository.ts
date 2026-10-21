@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import {
   Transaction,
   TransactionDocument,
+  TransactionType,
 } from '../entities/transaction.entity';
 
 @Injectable()
@@ -128,6 +129,41 @@ export class TransactionRepository {
 
   async findByStatus(status: string): Promise<Transaction[]> {
     return this.transactionModel.find({ status }).exec();
+  }
+
+  async findExpensesForInvoiceReconciliation(
+    accountId: string,
+    protectedInvoiceIds: string[]
+  ): Promise<Transaction[]> {
+    const query: Record<string, any> = {
+      account: accountId,
+      type: TransactionType.EXPENSE,
+      isPayment: { $ne: true },
+      isReversal: { $ne: true },
+    };
+
+    if (protectedInvoiceIds.length > 0) {
+      query.invoice = {
+        $nin: protectedInvoiceIds.map((id) => new Types.ObjectId(id)),
+      };
+    }
+
+    return this.transactionModel.find(query).exec();
+  }
+
+  async setInvoicesForTransactions(
+    assignments: { transactionId: string; invoiceId: string }[]
+  ): Promise<void> {
+    if (assignments.length === 0) return;
+
+    await this.transactionModel.bulkWrite(
+      assignments.map(({ transactionId, invoiceId }) => ({
+        updateOne: {
+          filter: { _id: new Types.ObjectId(transactionId) },
+          update: { $set: { invoice: new Types.ObjectId(invoiceId) } },
+        },
+      }))
+    );
   }
 
   async findByDateRange(

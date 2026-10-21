@@ -45,6 +45,10 @@ export class AccountService {
   }
 
   async update(id: string, data: Partial<Account>, isFromApi: boolean = false) {
+    const current = await this.accountRepository.findById(id);
+    if (!current)
+      throw new NotFoundException(`Account with ID ${id} not found`);
+
     const updatePayload: any = { ...data };
     if (isFromApi) {
       if (updatePayload.initialBalance !== undefined) {
@@ -58,6 +62,18 @@ export class AccountService {
     const account = await this.accountRepository.update(id, updatePayload);
     if (!account)
       throw new NotFoundException(`Account with ID ${id} not found`);
+
+    const cycleChanged =
+      current.type === AccountType.CREDIT_CARD &&
+      account.type === AccountType.CREDIT_CARD &&
+      ((data.closingDay !== undefined &&
+        data.closingDay !== current.closingDay) ||
+        (data.dueDay !== undefined && data.dueDay !== current.dueDay));
+
+    if (cycleChanged) {
+      await this.invoicesService.reconcileAccountInvoices(account);
+    }
+
     return account;
   }
 

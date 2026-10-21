@@ -290,6 +290,72 @@ describe('TransactionRepository', () => {
   });
 
   // ---------------------------------------------------------------------------
+  // invoice reconciliation
+  // ---------------------------------------------------------------------------
+  describe('findExpensesForInvoiceReconciliation', () => {
+    it('should query card expenses excluding payments, reversals and protected invoices', async () => {
+      MockModel.find.mockReturnValue(withChain([]));
+      const protectedId = makeId().toString();
+
+      await repository.findExpensesForInvoiceReconciliation('acc-1', [
+        protectedId,
+      ]);
+
+      const query = MockModel.find.mock.calls[0][0];
+      expect(query.account).toBe('acc-1');
+      expect(query.type).toBe(TransactionType.EXPENSE);
+      expect(query.isPayment).toEqual({ $ne: true });
+      expect(query.isReversal).toEqual({ $ne: true });
+      expect(query.invoice.$nin).toHaveLength(1);
+      expect(query.invoice.$nin[0].toString()).toBe(protectedId);
+    });
+
+    it('should not filter by invoice when there are no protected invoices', async () => {
+      MockModel.find.mockReturnValue(withChain([]));
+
+      await repository.findExpensesForInvoiceReconciliation('acc-1', []);
+
+      const query = MockModel.find.mock.calls[0][0];
+      expect(query.invoice).toBeUndefined();
+    });
+  });
+
+  describe('setInvoicesForTransactions', () => {
+    it('should bulk update the invoice link of each transaction', async () => {
+      const firstTransaction = makeId().toString();
+      const firstInvoice = makeId().toString();
+      const secondTransaction = makeId().toString();
+      const secondInvoice = makeId().toString();
+
+      await repository.setInvoicesForTransactions([
+        { transactionId: firstTransaction, invoiceId: firstInvoice },
+        { transactionId: secondTransaction, invoiceId: secondInvoice },
+      ]);
+
+      const [operations] = MockModel.bulkWrite.mock.calls[0] as [any[]];
+      expect(operations).toHaveLength(2);
+      expect(operations[0].updateOne.filter._id.toString()).toBe(
+        firstTransaction
+      );
+      expect(operations[0].updateOne.update.$set.invoice.toString()).toBe(
+        firstInvoice
+      );
+      expect(operations[1].updateOne.filter._id.toString()).toBe(
+        secondTransaction
+      );
+      expect(operations[1].updateOne.update.$set.invoice.toString()).toBe(
+        secondInvoice
+      );
+    });
+
+    it('should not call bulkWrite when there are no assignments', async () => {
+      await repository.setInvoicesForTransactions([]);
+
+      expect(MockModel.bulkWrite).not.toHaveBeenCalled();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // reorder
   // ---------------------------------------------------------------------------
   describe('reorder', () => {

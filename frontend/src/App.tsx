@@ -20,6 +20,45 @@ import { LoginPage } from './pages/LoginPage';
 import { RequireAuth } from './contexts/AuthContext';
 import { ToastContainer } from 'react-toastify';
 
+interface AppLayoutProps {
+  isMenuOpen: boolean;
+  isOnline: boolean;
+  onMenuOpen: () => void;
+  onMenuClose: () => void;
+}
+
+const AppLayout = ({
+  isMenuOpen,
+  isOnline,
+  onMenuOpen,
+  onMenuClose,
+}: AppLayoutProps) => (
+  <div className="min-h-screen bg-bone text-navy-900">
+    <Menu isOpen={isMenuOpen} onClose={onMenuClose} />
+
+    <div className="flex min-h-screen flex-col">
+      <Header onMenuClick={onMenuOpen} />
+
+      {!isOnline && (
+        <div className="flex shrink-0 items-center justify-center gap-2 border-b border-gold-400/30 bg-gold-400/10 px-4 py-2 text-xs font-medium text-gold-600">
+          <WifiOff className="h-3.5 w-3.5 shrink-0" />
+          <span>Sem conexão — exibindo dados salvos localmente</span>
+        </div>
+      )}
+
+      <main className="flex-1 pb-20 lg:pb-0">
+        <Outlet />
+        <footer className="mx-auto flex max-w-[1280px] items-center justify-between gap-4 px-4 pb-6 pt-2 text-[10px] text-navy-500 md:px-[50px]">
+          <span>nivo · Finanças pessoais</span>
+          <span>Privacidade · Ajuda</span>
+        </footer>
+      </main>
+
+      <BottomBar onMenuClick={onMenuOpen} />
+    </div>
+  </div>
+);
+
 function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -35,40 +74,22 @@ function App() {
     };
   }, []);
 
-  const AppLayout = () => (
-    <div className="min-h-screen bg-bone text-navy-900">
-      <Menu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
-
-      <div className="flex min-h-screen flex-col">
-        <Header onMenuClick={() => setIsMenuOpen(true)} />
-
-        {!isOnline && (
-          <div className="flex shrink-0 items-center justify-center gap-2 border-b border-gold-400/30 bg-gold-400/10 px-4 py-2 text-xs font-medium text-gold-600">
-            <WifiOff className="h-3.5 w-3.5 shrink-0" />
-            <span>Sem conexão — exibindo dados salvos localmente</span>
-          </div>
-        )}
-
-        <main className="flex-1 pb-20 lg:pb-0">
-          <Outlet />
-          <footer className="mx-auto flex max-w-[1280px] items-center justify-between gap-4 px-4 pb-6 pt-2 text-[10px] text-navy-500 md:px-[50px]">
-            <span>nivo · Finanças pessoais</span>
-            <span>Privacidade · Ajuda</span>
-          </footer>
-        </main>
-
-        <BottomBar onMenuClick={() => setIsMenuOpen(true)} />
-      </div>
-    </div>
-  );
-
   return (
     <Router>
       <ToastContainer position="bottom-right" theme="dark" />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route element={<RequireAuth />}>
-          <Route element={<AppLayout />}>
+          <Route
+            element={
+              <AppLayout
+                isMenuOpen={isMenuOpen}
+                isOnline={isOnline}
+                onMenuOpen={() => setIsMenuOpen(true)}
+                onMenuClose={() => setIsMenuOpen(false)}
+              />
+            }
+          >
             <Route path="/" element={<DashboardPage />} />
             <Route path="/budgets" element={<BudgetsPage />} />
             <Route path="/categories" element={<CategoriesPage />} />

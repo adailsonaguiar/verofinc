@@ -24,7 +24,7 @@ export const Menu: React.FC<MenuProps> = ({ isOpen, onClose }) => {
   };
 
   const go = (path: string) => {
-    navigate(path);
+    if (location.pathname !== path) navigate(path);
     onClose();
   };
 

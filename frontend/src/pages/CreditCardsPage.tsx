@@ -31,6 +31,10 @@ interface CardLike {
 const brl = (cents: number) =>
   (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
+/** Mirrors the backend defaults for cards without a configured cycle. */
+const DEFAULT_CLOSING_DAY = 31;
+const DEFAULT_DUE_DAY = 7;
+
 /** The backend has no brand/gradient field, so the plastic uses a dark ramp. */
 const CARD_GRADIENTS = [
   'from-[#333239] to-[#17171a]',
@@ -75,6 +79,7 @@ export const CreditCardsPage: React.FC = () => {
 
   const selectedCardIdRef = useRef<string | null>(null);
   const invoiceSectionRef = useRef<HTMLDivElement | null>(null);
+  const invoiceDataRequestRef = useRef(0);
 
   const selectedCard =
     cards.find((card) => card._id === selectedCardId) ?? null;
@@ -99,16 +104,15 @@ export const CreditCardsPage: React.FC = () => {
   }, [selectedCardId]);
 
   useEffect(() => {
-    if (!selectedCardId) {
+    if (!selectedCard) {
       setLoadingTransactions(false);
       setLoadingInvoices(false);
       return;
     }
     setTransactions([]);
     setInvoices([]);
-    loadCardTransactions(selectedCardId);
-    loadInvoices(selectedCardId);
-  }, [selectedCardId, currentYear, currentMonth]);
+    loadInvoiceData(selectedCard);
+  }, [selectedCard, currentYear, currentMonth]);
 
   const handleLimitChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const digits = e.target.value.replace(/\D/g, '').slice(0, 12);
@@ -218,26 +222,46 @@ export const CreditCardsPage: React.FC = () => {
     }
   };
 
-  const loadInvoices = async (cardId: string) => {
-    try {
-      setLoadingInvoices(true);
-      const data = await invoiceService.listByAccount(cardId);
-      if (selectedCardIdRef.current !== cardId) return;
-      setInvoices(data);
-    } catch (err) {
-      if (selectedCardIdRef.current === cardId) setInvoices([]);
-      console.error('Error loading invoices:', err);
-    } finally {
-      if (selectedCardIdRef.current === cardId) setLoadingInvoices(false);
-    }
-  };
+  const loadInvoiceData = async (card: CardLike) => {
+    const cardId = card._id;
+    const requestId = ++invoiceDataRequestRef.current;
+    const isCurrentRequest = () =>
+      selectedCardIdRef.current === cardId &&
+      invoiceDataRequestRef.current === requestId;
 
-  const loadCardTransactions = async (cardId: string) => {
+    setLoadingInvoices(true);
+    setLoadingTransactions(true);
+
     try {
-      setLoadingTransactions(true);
+      const invoiceList = await invoiceService.listByAccount(cardId);
+      if (!isCurrentRequest()) return;
+      setInvoices(invoiceList);
+
+      const referenceMonth = `${currentYear}-${String(currentMonth).padStart(
+        2,
+        '0'
+      )}`;
+      const invoice = invoiceList.find(
+        (item) => item.referenceMonth === referenceMonth
+      );
+      const period = invoice
+        ? {
+            startDate: new Date(invoice.startDate),
+            closingDate: new Date(invoice.closingDate),
+          }
+        : computeInvoicePeriod(
+            card.closingDay ?? DEFAULT_CLOSING_DAY,
+            card.dueDay ?? DEFAULT_DUE_DAY,
+            new Date(currentYear, currentMonth - 1, 1)
+          );
+
+      const startDate = new Date(period.startDate);
+      const endDate = new Date(period.closingDate);
+      endDate.setHours(23, 59, 59, 999);
+
       const params = {
-        year: currentYear,
-        month: currentMonth,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
         account: cardId,
         withCreditCardFilter: true,
       };
@@ -245,16 +269,23 @@ export const CreditCardsPage: React.FC = () => {
         .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
         .join('&');
       const res = await api.get(`/transactions?${query}`);
-      if (selectedCardIdRef.current !== cardId) return;
+      if (!isCurrentRequest()) return;
+
       const sorted = [...(res.data as Transaction[])].sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
       );
       setTransactions(sorted);
     } catch (err) {
-      if (selectedCardIdRef.current === cardId) setTransactions([]);
-      console.error('Error loading card transactions:', err);
+      if (isCurrentRequest()) {
+        setInvoices([]);
+        setTransactions([]);
+      }
+      console.error('Error loading invoice data:', err);
     } finally {
-      if (selectedCardIdRef.current === cardId) setLoadingTransactions(false);
+      if (isCurrentRequest()) {
+        setLoadingInvoices(false);
+        setLoadingTransactions(false);
+      }
     }
   };
 
@@ -301,8 +332,6 @@ export const CreditCardsPage: React.FC = () => {
       toast.success('Fatura paga com sucesso!');
       setShowPaymentModal(false);
       await loadCards();
-      await loadCardTransactions(cardId);
-      await loadInvoices(cardId);
     } catch (err) {
       console.error('Erro ao pagar fatura:', err);
       toast.error('Erro ao pagar fatura. Tente novamente.', {
@@ -334,10 +363,10 @@ export const CreditCardsPage: React.FC = () => {
   const currentInvoice = invoices.find(
     (inv) => inv.referenceMonth === currentRefMonth
   );
-  const invoicePeriod = selectedCard?.closingDay
+  const invoicePeriod = selectedCard
     ? computeInvoicePeriod(
-        selectedCard.closingDay,
-        selectedCard.dueDay ?? selectedCard.closingDay,
+        selectedCard.closingDay ?? DEFAULT_CLOSING_DAY,
+        selectedCard.dueDay ?? DEFAULT_DUE_DAY,
         new Date(currentYear, currentMonth - 1, 1)
       )
     : null;

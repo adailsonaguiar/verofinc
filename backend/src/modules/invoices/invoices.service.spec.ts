@@ -1,8 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { InvoicesService } from './invoices.service';
 import { InvoiceRepository } from '../../repositories/invoice.repository';
+import { AccountRepository } from '../../repositories/account.repository';
+import { TransactionRepository } from '../../repositories/transaction.repository';
 import { InvoiceStatus } from '../../entities/invoice.entity';
-import { Transaction } from '../../entities/transaction.entity';
+import {
+  Transaction,
+  TransactionType,
+} from '../../entities/transaction.entity';
 import { AccountType } from '../../entities/account.entity';
 import { getModelToken } from '@nestjs/mongoose';
 import { Types } from 'mongoose';
@@ -16,8 +21,14 @@ describe('InvoicesService', () => {
     findByAccount: Mock;
     findByAccountAndReferenceMonth: Mock;
     update: Mock;
+    delete: Mock;
     incrementTotal: Mock;
     decrementTotal: Mock;
+  };
+  let accountRepo: { findById: Mock };
+  let transactionRepo: {
+    findExpensesForInvoiceReconciliation: Mock;
+    setInvoicesForTransactions: Mock;
   };
   let transactionModel: { find: Mock };
 
@@ -39,13 +50,21 @@ describe('InvoicesService', () => {
       findByAccount: vi.fn(),
       findByAccountAndReferenceMonth: vi.fn(),
       update: vi.fn(),
+      delete: vi.fn(),
       incrementTotal: vi.fn(),
       decrementTotal: vi.fn(),
+    };
+    accountRepo = { findById: vi.fn() };
+    transactionRepo = {
+      findExpensesForInvoiceReconciliation: vi.fn().mockResolvedValue([]),
+      setInvoicesForTransactions: vi.fn().mockResolvedValue(undefined),
     };
     transactionModel = {
       find: vi.fn().mockReturnValue({
         populate: vi.fn().mockReturnValue({
-          sort: vi.fn().mockReturnValue({ exec: vi.fn().mockResolvedValue([]) }),
+          sort: vi
+            .fn()
+            .mockReturnValue({ exec: vi.fn().mockResolvedValue([]) }),
         }),
       }),
     };
@@ -54,6 +73,8 @@ describe('InvoicesService', () => {
       providers: [
         InvoicesService,
         { provide: InvoiceRepository, useValue: invoiceRepo },
+        { provide: AccountRepository, useValue: accountRepo },
+        { provide: TransactionRepository, useValue: transactionRepo },
         {
           provide: getModelToken(Transaction.name),
           useValue: transactionModel,
@@ -280,6 +301,240 @@ describe('InvoicesService', () => {
       } as any);
       await service.decrementTotal(id, 100);
       expect(invoiceRepo.decrementTotal).toHaveBeenCalledWith(id, 100);
+    });
+  });
+
+  describe('listByAccount', () => {
+    it('reconciles invoices whose stored period diverges from the current card cycle', async () => {
+      const accountId = makeId().toString();
+      const card = {
+        _id: accountId,
+        type: AccountType.CREDIT_CARD,
+        closingDay: 30,
+        dueDay: 4,
+      };
+      const stale = {
+        _id: makeId(),
+        referenceMonth: '2026-10',
+        startDate: new Date(2026, 8, 11),
+        closingDate: new Date(2026, 9, 10),
+        dueDate: new Date(2026, 9, 20),
+        status: InvoiceStatus.OPEN,
+        paidAmount: 0,
+      };
+      const fixed = {
+        ...stale,
+        startDate: new Date(2026, 9, 1),
+        closingDate: new Date(2026, 9, 30),
+        dueDate: new Date(2026, 10, 4),
+      };
+
+      accountRepo.findById.mockResolvedValue(card);
+      invoiceRepo.findByAccount
+        .mockResolvedValueOnce([stale])
+        .mockResolvedValueOnce([fixed]);
+      const reconcile = vi
+        .spyOn(service, 'reconcileAccountInvoices')
+        .mockResolvedValue(undefined);
+
+      const result = await service.listByAccount(accountId);
+
+      expect(reconcile).toHaveBeenCalledWith(card);
+      expect(invoiceRepo.findByAccount).toHaveBeenCalledTimes(2);
+      expect(result).toHaveLength(1);
+    });
+
+    it('does not reconcile when all open invoices already match the card cycle', async () => {
+      const accountId = makeId().toString();
+      const card = {
+        _id: accountId,
+        type: AccountType.CREDIT_CARD,
+        closingDay: 30,
+        dueDay: 4,
+      };
+      const invoice = {
+        _id: makeId(),
+        referenceMonth: '2026-10',
+        startDate: new Date(2026, 9, 1),
+        closingDate: new Date(2026, 9, 30),
+        dueDate: new Date(2026, 10, 4),
+        status: InvoiceStatus.OPEN,
+        paidAmount: 0,
+      };
+
+      accountRepo.findById.mockResolvedValue(card);
+      invoiceRepo.findByAccount.mockResolvedValue([invoice]);
+      const reconcile = vi.spyOn(service, 'reconcileAccountInvoices');
+
+      await service.listByAccount(accountId);
+
+      expect(reconcile).not.toHaveBeenCalled();
+      expect(invoiceRepo.findByAccount).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('reconcileAccountInvoices', () => {
+    const makeExpense = (overrides: any = {}) => ({
+      _id: makeId(),
+      amount: 10000,
+      date: new Date(2026, 9, 5),
+      type: TransactionType.EXPENSE,
+      isPayment: false,
+      ...overrides,
+    });
+
+    const makeInvoice = (overrides: any = {}) => ({
+      _id: makeId(),
+      referenceMonth: '2026-10',
+      startDate: new Date(2026, 8, 11),
+      closingDate: new Date(2026, 9, 10),
+      dueDate: new Date(2026, 9, 20),
+      status: InvoiceStatus.OPEN,
+      paidAmount: 0,
+      totalAmount: 0,
+      ...overrides,
+    });
+
+    it('updates periods, totals and transaction links using the current cycle', async () => {
+      const accountId = makeId().toString();
+      const card = {
+        _id: accountId,
+        type: AccountType.CREDIT_CARD,
+        closingDay: 30,
+        dueDay: 4,
+      };
+      const october = makeInvoice({ totalAmount: 30000 });
+      const septemberId = makeId();
+      const octTransaction = makeExpense({
+        amount: 10000,
+        date: new Date(2026, 9, 5),
+        invoice: october._id,
+      });
+      const lateOctober = makeExpense({
+        amount: 20000,
+        date: new Date(2026, 9, 20),
+        invoice: october._id,
+      });
+      const septemberTransaction = makeExpense({
+        amount: 5000,
+        date: new Date(2026, 8, 15),
+        invoice: october._id,
+      });
+
+      invoiceRepo.findByAccount.mockResolvedValue([october]);
+      transactionRepo.findExpensesForInvoiceReconciliation.mockResolvedValue([
+        octTransaction,
+        lateOctober,
+        septemberTransaction,
+      ]);
+      invoiceRepo.create.mockResolvedValue({
+        _id: septemberId,
+        referenceMonth: '2026-09',
+        status: InvoiceStatus.OPEN,
+        paidAmount: 0,
+        totalAmount: 0,
+      });
+
+      await service.reconcileAccountInvoices(card);
+
+      expect(invoiceRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          referenceMonth: '2026-09',
+          startDate: new Date(2026, 7, 31),
+          closingDate: new Date(2026, 8, 30),
+          dueDate: new Date(2026, 9, 4),
+        })
+      );
+      expect(invoiceRepo.update).toHaveBeenCalledWith(
+        october._id.toString(),
+        expect.objectContaining({
+          startDate: new Date(2026, 9, 1),
+          closingDate: new Date(2026, 9, 30),
+          dueDate: new Date(2026, 10, 4),
+          totalAmount: 30000,
+        })
+      );
+      expect(invoiceRepo.update).toHaveBeenCalledWith(
+        septemberId.toString(),
+        expect.objectContaining({ totalAmount: 5000 })
+      );
+      expect(transactionRepo.setInvoicesForTransactions).toHaveBeenCalledWith([
+        {
+          transactionId: septemberTransaction._id.toString(),
+          invoiceId: septemberId.toString(),
+        },
+      ]);
+    });
+
+    it('preserves paid invoices and transactions that would enter them', async () => {
+      const accountId = makeId().toString();
+      const card = {
+        _id: accountId,
+        type: AccountType.CREDIT_CARD,
+        closingDay: 30,
+        dueDay: 4,
+      };
+      const paid = makeInvoice({
+        referenceMonth: '2026-09',
+        status: InvoiceStatus.PAID,
+        paidAmount: 5000,
+        totalAmount: 5000,
+      });
+      const current = makeInvoice({ totalAmount: 5000 });
+      const transaction = makeExpense({
+        amount: 5000,
+        date: new Date(2026, 8, 15),
+        invoice: current._id,
+      });
+
+      invoiceRepo.findByAccount.mockResolvedValue([paid, current]);
+      transactionRepo.findExpensesForInvoiceReconciliation.mockResolvedValue([
+        transaction,
+      ]);
+
+      await service.reconcileAccountInvoices(card);
+
+      expect(invoiceRepo.update).not.toHaveBeenCalledWith(
+        paid._id.toString(),
+        expect.anything()
+      );
+      expect(invoiceRepo.update).toHaveBeenCalledWith(
+        current._id.toString(),
+        expect.objectContaining({
+          totalAmount: 5000,
+          startDate: new Date(2026, 9, 1),
+          closingDate: new Date(2026, 9, 30),
+          dueDate: new Date(2026, 10, 4),
+        })
+      );
+      expect(invoiceRepo.create).not.toHaveBeenCalled();
+      expect(transactionRepo.setInvoicesForTransactions).toHaveBeenCalledWith(
+        []
+      );
+    });
+
+    it('removes orphan invoices that are no longer referenced', async () => {
+      const accountId = makeId().toString();
+      const card = {
+        _id: accountId,
+        type: AccountType.CREDIT_CARD,
+        closingDay: 30,
+        dueDay: 4,
+      };
+      const orphan = makeInvoice({
+        referenceMonth: '2026-11',
+        totalAmount: 0,
+      });
+
+      invoiceRepo.findByAccount.mockResolvedValue([orphan]);
+      transactionRepo.findExpensesForInvoiceReconciliation.mockResolvedValue(
+        []
+      );
+
+      await service.reconcileAccountInvoices(card);
+
+      expect(invoiceRepo.delete).toHaveBeenCalledWith(orphan._id.toString());
+      expect(invoiceRepo.update).not.toHaveBeenCalled();
     });
   });
 });

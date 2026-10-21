@@ -44,6 +44,10 @@ export class InvoiceRepository {
       .exec();
   }
 
+  async delete(id: string): Promise<void> {
+    await this.invoiceModel.findByIdAndDelete(id).exec();
+  }
+
   async incrementTotal(
     id: string,
     amount: number
