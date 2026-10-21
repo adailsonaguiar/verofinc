@@ -11,7 +11,7 @@ import {
   TransactionStatus,
 } from '../../entities/transaction.entity';
 import { Types } from 'mongoose';
-import { describe, it, expect, beforeEach, vi, Mock } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest';
 
 describe('AccountService', () => {
   let service: AccountService;
@@ -327,6 +327,10 @@ describe('AccountService', () => {
   // payInvoice
   // ---------------------------------------------------------------------------
   describe('payInvoice', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
     const buildCreditCard = (overrides = {}) => ({
       _id: makeId(),
       name: 'Visa Gold',
@@ -513,6 +517,62 @@ describe('AccountService', () => {
       expect(result.invoiceAmount).toBe(400);
       expect(result.creditCardName).toBe(card.name);
       expect(result.checkingAccountName).toBe(checking.name);
+    });
+
+    it('should date both payment transactions with the current payment date', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(2026, 4, 20, 12, 0, 0));
+
+      const card = buildCreditCard();
+      const checking = buildCheckingAccount();
+      accountRepo.findById.mockResolvedValueOnce(card);
+      accountRepo.findById.mockResolvedValueOnce(checking);
+      transactionsService.findWithFilters.mockResolvedValueOnce([
+        { type: TransactionType.EXPENSE, isPayment: false, amount: 40000 },
+      ]);
+      categoriesService.findByType.mockResolvedValue([
+        { _id: makeId(), name: 'Pagamento de Fatura', type: 'expense' },
+      ]);
+      transactionsService.create.mockResolvedValue({});
+
+      await service.payInvoice(
+        card._id.toString(),
+        checking._id.toString(),
+        2026,
+        5
+      );
+
+      const calls = transactionsService.create.mock.calls;
+      expect(calls[0][0].date).toBe('2026-05-20');
+      expect(calls[1][0].date).toBe('2026-05-20');
+    });
+
+    it('should use the local payment day even when UTC would shift the date', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(2026, 4, 20, 0, 30, 0));
+
+      const card = buildCreditCard();
+      const checking = buildCheckingAccount();
+      accountRepo.findById.mockResolvedValueOnce(card);
+      accountRepo.findById.mockResolvedValueOnce(checking);
+      transactionsService.findWithFilters.mockResolvedValueOnce([
+        { type: TransactionType.EXPENSE, isPayment: false, amount: 40000 },
+      ]);
+      categoriesService.findByType.mockResolvedValue([
+        { _id: makeId(), name: 'Pagamento de Fatura', type: 'expense' },
+      ]);
+      transactionsService.create.mockResolvedValue({});
+
+      await service.payInvoice(
+        card._id.toString(),
+        checking._id.toString(),
+        2026,
+        5
+      );
+
+      const calls = transactionsService.create.mock.calls;
+      expect(calls[0][0].date).toBe('2026-05-20');
+      expect(calls[1][0].date).toBe('2026-05-20');
     });
 
     it('should query transactions within invoice period using closing day and create invoice if needed', async () => {

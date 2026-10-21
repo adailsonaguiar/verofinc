@@ -174,10 +174,11 @@ export class AccountService {
     }
 
     const magicCategoryId = (sysCategory as any)._id.toString();
-    // Data do pagamento = último dia do mês selecionado
-    const paymentDate = new Date(year, month - 1, 1)
-      .toISOString()
-      .split('T')[0];
+    // Data do pagamento = dia em que o pagamento é registrado
+    const now = new Date();
+    const paymentDate = `${now.getFullYear()}-${String(
+      now.getMonth() + 1
+    ).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
     // Criar transação de pagamento na conta corrente (despesa)
     await this.transactionsService.create({
