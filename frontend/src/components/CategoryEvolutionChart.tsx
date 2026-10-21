@@ -50,7 +50,9 @@ export const CategoryEvolutionChart: React.FC<CategoryEvolutionChartProps> = ({
 
     const monthlyTotals: Record<string, number> = {};
     allTransactions
-      .filter((t) => t.type === 'expense' && t.category?._id === selectedCategoryId)
+      .filter(
+        (t) => t.type === 'expense' && t.category?._id === selectedCategoryId
+      )
       .forEach((t) => {
         const date = new Date(t.date);
         const key = `${date.getFullYear()}-${String(
@@ -79,12 +81,12 @@ export const CategoryEvolutionChart: React.FC<CategoryEvolutionChartProps> = ({
       <SectionTitle
         title="Evolução por categoria"
         subtitle="Gastos mensais da categoria selecionada"
-        className="mb-4"
+        className="mb-4 flex-wrap"
         action={
           <select
             value={selectedCategoryId}
             onChange={(e) => setSelectedCategoryId(e.target.value)}
-            className="input !w-auto !py-2 text-sm"
+            className="input !w-auto min-w-0 max-w-full !py-2 text-sm"
           >
             {expenseCategories.map((cat) => (
               <option key={cat._id} value={cat._id}>

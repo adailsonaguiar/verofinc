@@ -5,13 +5,14 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { TransactionsModule } from './modules/transactions/transactions.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { AccountsModule } from './modules/accounts/accounts.module';
-import { LedgerModule } from './modules/ledger/ledger.module';
 import { InvoicesModule } from './modules/invoices/invoices.module';
 import { BudgetsModule } from './modules/budgets/budgets.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { ScheduledPaymentsModule } from './modules/scheduled-payments/scheduled-payments.module';
+import { ExportModule } from './modules/export/export.module';
 
 @Module({
   imports: [
@@ -29,11 +30,12 @@ import { ThrottlerModule } from '@nestjs/throttler';
     CategoriesModule,
     TransactionsModule,
     AccountsModule,
-    LedgerModule,
     InvoicesModule,
     BudgetsModule,
     UsersModule,
     AuthModule,
+    ScheduledPaymentsModule,
+    ExportModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,

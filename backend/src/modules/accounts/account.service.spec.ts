@@ -166,6 +166,69 @@ describe('AccountService', () => {
   });
 
   // ---------------------------------------------------------------------------
+  // updateAccountBalance
+  // ---------------------------------------------------------------------------
+  describe('updateAccountBalance', () => {
+    it('should apply a positive amount to the current balance', async () => {
+      const id = makeId().toString();
+      accountRepo.findById.mockResolvedValue({
+        _id: id,
+        initialBalance: 10000,
+      });
+
+      await service.updateAccountBalance(id, 5000);
+
+      expect(accountRepo.update).toHaveBeenCalledWith(id, {
+        initialBalance: 15000,
+      });
+    });
+
+    it('should apply a negative amount without multiplying tens of cents', async () => {
+      const id = makeId().toString();
+      accountRepo.findById.mockResolvedValue({
+        _id: id,
+        initialBalance: 10000,
+      });
+
+      await service.updateAccountBalance(id, -4000);
+
+      expect(accountRepo.update).toHaveBeenCalledWith(id, {
+        initialBalance: 6000,
+      });
+    });
+
+    it('should treat a missing initial balance as zero', async () => {
+      const id = makeId().toString();
+      accountRepo.findById.mockResolvedValue({ _id: id });
+
+      await service.updateAccountBalance(id, 5000);
+
+      expect(accountRepo.update).toHaveBeenCalledWith(id, {
+        initialBalance: 5000,
+      });
+    });
+
+    it('should throw when the resulting balance would be negative', async () => {
+      const id = makeId().toString();
+      accountRepo.findById.mockResolvedValue({ _id: id, initialBalance: 1000 });
+
+      await expect(service.updateAccountBalance(id, -2000)).rejects.toThrow(
+        `Insufficient funds in account ID ${id}`
+      );
+      expect(accountRepo.update).not.toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when the account does not exist', async () => {
+      accountRepo.findById.mockResolvedValue(null);
+
+      await expect(
+        service.updateAccountBalance('nonexistent-id', 5000)
+      ).rejects.toThrow(NotFoundException);
+      expect(accountRepo.update).not.toHaveBeenCalled();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // update
   // ---------------------------------------------------------------------------
   describe('update', () => {

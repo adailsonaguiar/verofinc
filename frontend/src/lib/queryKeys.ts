@@ -27,4 +27,10 @@ export const queryKeys = {
     detail: (accountId: string, year: number, month: number) =>
       ['invoices', accountId, year, month] as const,
   },
+  scheduledPayments: {
+    all: ['scheduled-payments'] as const,
+    list: (status: string) => ['scheduled-payments', status] as const,
+    byMonth: (year: number, month: number) =>
+      ['scheduled-payments', 'month', year, month] as const,
+  },
 };

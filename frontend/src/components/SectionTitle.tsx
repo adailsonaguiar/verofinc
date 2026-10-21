@@ -14,8 +14,8 @@ export const SectionTitle: React.FC<SectionTitleProps> = ({
   action,
   className = '',
 }) => (
-  <div className={`flex items-start justify-between gap-4 ${className}`}>
-    <div>
+  <div className={`flex min-w-0 items-start justify-between gap-4 ${className}`}>
+    <div className="min-w-0">
       <div className="font-display text-lg text-navy-900">{title}</div>
       {subtitle && <div className="text-xs text-navy-500 mt-0.5">{subtitle}</div>}
     </div>

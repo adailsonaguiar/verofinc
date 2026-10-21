@@ -2,6 +2,8 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { Types } from 'mongoose';
 import { TransactionRepository } from '../../repositories/transaction.repository';
@@ -12,8 +14,7 @@ import {
   TransactionStatus,
   TransactionType,
 } from '../../entities/transaction.entity';
-import { LedgerService } from '../ledger/ledger.service';
-import { LedgerOperationType } from '../../entities/ledger.entity';
+import { AccountService } from '../accounts/account.service';
 import { AccountRepository } from '../../repositories/account.repository';
 import { AccountType } from '@/entities/account.entity';
 import { InvoicesService } from '../invoices/invoices.service';
@@ -22,7 +23,8 @@ import { InvoicesService } from '../invoices/invoices.service';
 export class TransactionsService {
   constructor(
     private readonly transactionRepository: TransactionRepository,
-    private readonly ledgerService: LedgerService,
+    @Inject(forwardRef(() => AccountService))
+    private readonly accountService: AccountService,
     private readonly accountRepository: AccountRepository,
     private readonly invoicesService: InvoicesService
   ) {}
@@ -31,7 +33,7 @@ export class TransactionsService {
     transactions: Transaction[]
   ): Promise<Transaction[]> {
     const accounts = await this.accountRepository.findAll();
-    console.log({accounts})
+    console.log({ accounts });
     return transactions.filter((tx) => {
       const account = accounts.find(
         (acc) => (acc as any)._id.toString() === (tx.account as any).toString()
@@ -190,14 +192,11 @@ export class TransactionsService {
 
     if (created.status === TransactionStatus.PAID) {
       try {
-        await this.ledgerService.logOperation(
-          LedgerOperationType.CREATE,
+        await this.accountService.updateAccountBalance(
+          created.account.toString(),
           created.type === TransactionType.EXPENSE
             ? -created.amount
-            : created.amount,
-          new Types.ObjectId(created.account.toString()),
-          `Transação criada: ${created.description}`,
-          new Types.ObjectId((created as any)._id)
+            : created.amount
         );
       } catch (error) {
         await this.transactionRepository.delete(
@@ -249,14 +248,11 @@ export class TransactionsService {
 
         if (nextCreated.status === TransactionStatus.PAID) {
           try {
-            await this.ledgerService.logOperation(
-              LedgerOperationType.CREATE,
+            await this.accountService.updateAccountBalance(
+              nextCreated.account.toString(),
               nextCreated.type === TransactionType.EXPENSE
                 ? -nextCreated.amount
-                : nextCreated.amount,
-              new Types.ObjectId(nextCreated.account.toString()),
-              `Transação criada: ${nextCreated.description}`,
-              new Types.ObjectId((nextCreated as any)._id)
+                : nextCreated.amount
             );
           } catch (error) {
             await this.transactionRepository.delete(
@@ -283,11 +279,10 @@ export class TransactionsService {
     return transaction;
   }
 
-  private async handleLedgerUpdatesOnTransactionUpdate(
+  private async handleBalanceUpdatesOnTransactionUpdate(
     original: Transaction,
     updateData: any
   ): Promise<void> {
-    const originalId = (original as any)._id.toString();
     const originalAccountId = original.account.toString();
     const newAccountId = updateData.account
       ? updateData.account.toString()
@@ -298,14 +293,11 @@ export class TransactionsService {
       original.status === TransactionStatus.PAID &&
       updateData.status === TransactionStatus.UNPAID
     ) {
-      await this.ledgerService.logOperation(
-        LedgerOperationType.UPDATE,
+      await this.accountService.updateAccountBalance(
+        originalAccountId,
         original.type === TransactionType.EXPENSE
           ? original.amount
-          : -original.amount,
-        new Types.ObjectId(originalAccountId),
-        `Transação atualizada para unpaid: ${updateData.description}`,
-        new Types.ObjectId(originalId)
+          : -original.amount
       );
       return;
     }
@@ -327,12 +319,9 @@ export class TransactionsService {
         const netChange = newEffect - originalEffect;
 
         if (netChange !== 0) {
-          await this.ledgerService.logOperation(
-            LedgerOperationType.UPDATE,
-            netChange,
-            new Types.ObjectId(newAccountId),
-            `Transação atualizada: ${updateData.description}`,
-            new Types.ObjectId(originalId)
+          await this.accountService.updateAccountBalance(
+            newAccountId,
+            netChange
           );
         }
       } else {
@@ -346,34 +335,22 @@ export class TransactionsService {
             : updateData.amount;
 
         if (newApplyValue < 0) {
-          await this.ledgerService.logOperation(
-            LedgerOperationType.UPDATE,
-            newApplyValue,
-            new Types.ObjectId(newAccountId),
-            `Transação transferida (entrada): ${updateData.description}`,
-            new Types.ObjectId(originalId)
+          await this.accountService.updateAccountBalance(
+            newAccountId,
+            newApplyValue
           );
-          await this.ledgerService.logOperation(
-            LedgerOperationType.UPDATE,
-            originalRevertValue,
-            new Types.ObjectId(originalAccountId),
-            `Transação transferida (saída): ${updateData.description}`,
-            new Types.ObjectId(originalId)
+          await this.accountService.updateAccountBalance(
+            originalAccountId,
+            originalRevertValue
           );
         } else {
-          await this.ledgerService.logOperation(
-            LedgerOperationType.UPDATE,
-            originalRevertValue,
-            new Types.ObjectId(originalAccountId),
-            `Transação transferida (saída): ${updateData.description}`,
-            new Types.ObjectId(originalId)
+          await this.accountService.updateAccountBalance(
+            originalAccountId,
+            originalRevertValue
           );
-          await this.ledgerService.logOperation(
-            LedgerOperationType.UPDATE,
-            newApplyValue,
-            new Types.ObjectId(newAccountId),
-            `Transação transferida (entrada): ${updateData.description}`,
-            new Types.ObjectId(originalId)
+          await this.accountService.updateAccountBalance(
+            newAccountId,
+            newApplyValue
           );
         }
       }
@@ -385,14 +362,11 @@ export class TransactionsService {
       original.status === TransactionStatus.UNPAID &&
       updateData.status === TransactionStatus.PAID
     ) {
-      await this.ledgerService.logOperation(
-        LedgerOperationType.UPDATE,
+      await this.accountService.updateAccountBalance(
+        newAccountId,
         updateData.type === TransactionType.EXPENSE
           ? -updateData.amount
-          : updateData.amount,
-        new Types.ObjectId(newAccountId),
-        `Transação atualizada para PAID: ${updateData.description}`,
-        new Types.ObjectId(originalId)
+          : updateData.amount
       );
     }
   }
@@ -450,7 +424,7 @@ export class TransactionsService {
     const updated = await this.transactionRepository.update(id, updateData);
 
     try {
-      await this.handleLedgerUpdatesOnTransactionUpdate(original, updateData);
+      await this.handleBalanceUpdatesOnTransactionUpdate(original, updateData);
     } catch (err) {
       await this.transactionRepository.update(id, original);
       throw err;
@@ -475,14 +449,11 @@ export class TransactionsService {
 
     if (original.status === TransactionStatus.PAID) {
       try {
-        await this.ledgerService.logOperation(
-          LedgerOperationType.DELETE,
+        await this.accountService.updateAccountBalance(
+          original.account.toString(),
           original.type === TransactionType.EXPENSE
             ? original.amount
-            : -original.amount,
-          new Types.ObjectId(original.account.toString()),
-          `Transação removida: ${original.description}`,
-          new Types.ObjectId((original as any)._id)
+            : -original.amount
         );
       } catch (err) {
         await this.transactionRepository.create(original);
