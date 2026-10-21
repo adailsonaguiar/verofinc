@@ -49,10 +49,6 @@ const AppLayout = ({
 
       <main className="flex-1 pb-20 lg:pb-0">
         <Outlet />
-        <footer className="mx-auto flex max-w-[1280px] items-center justify-between gap-4 px-4 pb-6 pt-2 text-[10px] text-navy-500 md:px-[50px]">
-          <span>nivo · Finanças pessoais</span>
-          <span>Privacidade · Ajuda</span>
-        </footer>
       </main>
 
       <BottomBar onMenuClick={onMenuOpen} />
@@ -95,7 +91,10 @@ function App() {
             <Route path="/budgets" element={<BudgetsPage />} />
             <Route path="/categories" element={<CategoriesPage />} />
             <Route path="/transactions" element={<TransactionsPage />} />
-            <Route path="/scheduled-payments" element={<ScheduledPaymentsPage />} />
+            <Route
+              path="/scheduled-payments"
+              element={<ScheduledPaymentsPage />}
+            />
             <Route path="/accounts" element={<AccountsPage />} />
             <Route path="/credit-cards" element={<CreditCardsPage />} />
           </Route>

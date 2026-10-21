@@ -386,11 +386,11 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-4">
-        <div className="card p-5">
+      <div className="grid min-w-0 lg:grid-cols-3 gap-4">
+        <div className="card min-w-0 p-5">
           <DashboardRecentTransactions transactions={recentGlobalTransactions} />
         </div>
-        <div className="lg:col-span-2">
+        <div className="min-w-0 lg:col-span-2">
           <CategoryEvolutionChart
             allTransactions={allTransactions}
             categories={categories}

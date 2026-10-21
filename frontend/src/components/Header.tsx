@@ -32,7 +32,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const initial = (user?.name || user?.email || 'n').charAt(0).toUpperCase();
 
   return (
-    <header className="sticky top-0 z-30 border-b border-bone-border bg-bone/85 backdrop-blur">
+    <header className="sticky top-0 z-30 border-b border-bone-border bg-bone/85 backdrop-blur hidden md:block">
       <div className="mx-auto flex h-[76px] max-w-[1280px] items-center gap-3 px-4 md:px-[50px]">
         <button
           onClick={onMenuClick}
@@ -110,16 +110,16 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             </button>
           )}
 
-          <button
+          {/* <button
             className="relative flex h-9 w-9 items-center justify-center rounded-lg text-navy-500 transition-colors hover:bg-navy-100 hover:text-navy-900"
             title="Notificações (em breve)"
             aria-label="Notificações"
           >
             <Bell className="h-[18px] w-[18px]" />
             <i className="absolute right-[7px] top-[7px] h-[5px] w-[5px] rounded-full bg-gold-400" />
-          </button>
+          </button> */}
 
-          <button
+          {/* <button
             onClick={onMenuClick}
             className="ml-1 flex items-center gap-1.5 rounded-lg p-1 text-navy-500 transition-colors hover:text-navy-900"
             aria-label="Perfil"
@@ -127,7 +127,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             <span className="grid h-[27px] w-[27px] place-items-center rounded-lg bg-[#ca7251] text-[10px] font-bold text-[#211512]">
               {initial}
             </span>
-          </button>
+          </button> */}
         </div>
       </div>
     </header>
