@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Pencil, Plus, Trash2, Wallet, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Loader2, Pencil, Plus, Printer, Trash2, Wallet, X } from 'lucide-react';
 import { accountService } from '../services/accountService';
 import { transactionService } from '../services/transactionService';
 import { invoiceService } from '../services/invoiceService';
@@ -15,12 +16,14 @@ import { PageHeading } from '../components/PageHeading';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { computeInvoicePeriod, formatInvoiceDay } from '../utils/invoices';
+import { formatCurrency, formatDate } from '../utils/transactions';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 interface InvoiceData {
   invoices: Invoice[];
   transactions: Transaction[];
+  invoiceTransactions: Transaction[] | null;
 }
 
 const brl = (cents: number) =>
@@ -78,9 +81,13 @@ async function fetchInvoiceData(
     account: card._id,
     withCreditCardFilter: true,
   });
+  const invoiceTransactions = invoice
+    ? (await invoiceService.getById(invoice._id)).transactions ?? []
+    : null;
 
   return {
     invoices: invoiceList,
+    invoiceTransactions,
     transactions: [...transactions].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     ),
@@ -153,6 +160,7 @@ export const CreditCardsPage: React.FC = () => {
 
   const invoices = invoiceQuery.data?.invoices ?? [];
   const transactions = invoiceQuery.data?.transactions ?? [];
+  const printTransactions = invoiceQuery.data?.invoiceTransactions ?? transactions;
   const loadingInvoices = invoiceQuery.isPending;
   const loadingTransactions = invoiceQuery.isPending;
   const checkingAccounts = useMemo(
@@ -350,6 +358,14 @@ export const CreditCardsPage: React.FC = () => {
   const monthInvoicePaid = currentInvoice
     ? currentInvoice.status === InvoiceStatus.PAID
     : monthInvoiceAmount <= 0;
+  const printPeriod = currentInvoice
+    ? {
+        startDate: new Date(currentInvoice.startDate),
+        closingDate: new Date(currentInvoice.closingDate),
+        dueDate: new Date(currentInvoice.dueDate),
+      }
+    : invoicePeriod;
+  const printReady = invoiceQuery.isSuccess && Boolean(printPeriod);
 
   const invoiceStatusLabel = (status: InvoiceStatus) => {
     switch (status) {
@@ -630,6 +646,16 @@ export const CreditCardsPage: React.FC = () => {
                 onNext={handleNextMonth}
               />
               <button
+                type="button"
+                onClick={() => window.print()}
+                disabled={!printReady}
+                className="btn btn-outline"
+                aria-label={`Imprimir fatura de ${selectedCard.name} de ${currentMonthLabel || currentRefMonth}`}
+              >
+                <Printer className="w-4 h-4" />
+                Imprimir fatura
+              </button>
+              <button
                 onClick={handleOpenPaymentModal}
                 disabled={
                   monthInvoicePaid ||
@@ -704,7 +730,11 @@ export const CreditCardsPage: React.FC = () => {
             </span>
           </div>
 
-          {loadingTransactions ? (
+          {invoiceQuery.isError ? (
+            <div className="py-12 px-4 text-center text-sm text-rose-700" role="alert">
+              Não foi possível carregar a fatura. Tente novamente mais tarde.
+            </div>
+          ) : loadingTransactions ? (
             <div className="py-12 text-center text-sm text-navy-500">
               Carregando compras...
             </div>
@@ -812,6 +842,55 @@ export const CreditCardsPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {selectedCard && printReady && printPeriod &&
+        createPortal(
+          <section className="invoice-print" aria-label="Fatura para impressão">
+            <header className="invoice-print-header">
+              <h1>Fatura — {selectedCard.name}</h1>
+              <p>{currentMonthLabel || currentRefMonth}</p>
+              <p>
+                Período: {format(printPeriod.startDate, 'dd/MM/yyyy')} a{' '}
+                {format(printPeriod.closingDate, 'dd/MM/yyyy')} · Vencimento:{' '}
+                {format(printPeriod.dueDate, 'dd/MM/yyyy')}
+              </p>
+            </header>
+            <table className="invoice-print-table">
+              <thead>
+                <tr>
+                  <th scope="col">Data</th>
+                  <th scope="col">Descrição</th>
+                  <th scope="col">Categoria</th>
+                  <th scope="col">Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {printTransactions.map((transaction) => (
+                  <tr key={transaction._id}>
+                    <td>{formatDate(transaction.date)}</td>
+                    <td>{transaction.description}</td>
+                    <td>{transaction.category?.name || 'Sem categoria'}</td>
+                    <td>
+                      {transaction.type === 'income' ? '+' : '-'}
+                      {formatCurrency(transaction.amount)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {printTransactions.length === 0 && <p>Nenhuma transação nesta fatura.</p>}
+            <footer className="invoice-print-total">
+              <span>Total da fatura</span>
+              <strong>{formatCurrency(currentInvoice?.totalAmount ?? monthExpensesSum)}</strong>
+            </footer>
+            {(currentInvoice?.paidAmount ?? monthPaymentsSum) > 0 && (
+              <p className="invoice-print-payment">
+                Valor pago: {formatCurrency(currentInvoice?.paidAmount ?? monthPaymentsSum)}
+              </p>
+            )}
+          </section>,
+          document.body
+        )}
     </div>
   );
 };
