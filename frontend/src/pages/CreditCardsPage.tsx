@@ -16,6 +16,7 @@ import { PageHeading } from '../components/PageHeading';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { computeInvoicePeriod, formatInvoiceDay } from '../utils/invoices';
+import { getInvoiceSummary } from '../utils/invoiceSummary';
 import { formatCurrency, formatDate } from '../utils/transactions';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -345,19 +346,18 @@ export const CreditCardsPage: React.FC = () => {
       )
     : null;
 
-  // Invoice of the selected month: expenses minus payments already made
+  // Invoice total excludes payments; the remaining balance is used when paying.
   const monthExpensesSum = transactions
     .filter((t) => t.type === 'expense' && !t.isPayment)
     .reduce((sum, t) => sum + t.amount, 0);
   const monthPaymentsSum = transactions
     .filter((t) => t.type === 'income' && t.isPayment)
     .reduce((sum, t) => sum + t.amount, 0);
-  const monthInvoiceAmount = (monthExpensesSum - monthPaymentsSum) / 100;
-  // "Paga" follows the invoice entity status when one exists; otherwise fall
-  // back to the transaction-sum heuristic.
-  const monthInvoicePaid = currentInvoice
-    ? currentInvoice.status === InvoiceStatus.PAID
-    : monthInvoiceAmount <= 0;
+  const {
+    paid: monthInvoicePaid,
+    total: monthInvoiceTotalInCents,
+    amount: monthInvoiceAmountInCents,
+  } = getInvoiceSummary(currentInvoice, monthExpensesSum, monthPaymentsSum);
   const printPeriod = currentInvoice
     ? {
         startDate: new Date(currentInvoice.startDate),
@@ -722,11 +722,7 @@ export const CreditCardsPage: React.FC = () => {
                   : 'text-rose-700'
               }`}
             >
-              {loadingInvoices
-                ? '—'
-                : monthInvoicePaid
-                ? 'Paga'
-                : brl(monthInvoiceAmount * 100)}
+              {loadingInvoices ? '—' : brl(monthInvoiceTotalInCents)}
             </span>
           </div>
 
@@ -786,7 +782,7 @@ export const CreditCardsPage: React.FC = () => {
               <div>
                 <p className="stat-label">Fatura de {currentMonthLabel}</p>
                 <p className="num text-2xl text-rose-700 mt-1">
-                  {brl(monthInvoiceAmount * 100)}
+                  {brl(monthInvoiceAmountInCents)}
                 </p>
               </div>
 
@@ -881,7 +877,7 @@ export const CreditCardsPage: React.FC = () => {
             {printTransactions.length === 0 && <p>Nenhuma transação nesta fatura.</p>}
             <footer className="invoice-print-total">
               <span>Total da fatura</span>
-              <strong>{formatCurrency(currentInvoice?.totalAmount ?? monthExpensesSum)}</strong>
+               <strong>{formatCurrency(monthInvoiceTotalInCents)}</strong>
             </footer>
             {(currentInvoice?.paidAmount ?? monthPaymentsSum) > 0 && (
               <p className="invoice-print-payment">
