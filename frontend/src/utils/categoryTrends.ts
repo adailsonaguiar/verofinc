@@ -9,6 +9,9 @@ export interface CategoryTrend {
   difference: number;
   percentage: number | null;
   significantIncrease: boolean;
+  previousThreeMonthAverage: number;
+  increaseVsAverage: number;
+  percentageVsAverage: number | null;
 }
 
 export function categoryTrends(transactions: Transaction[], year: number, month: number) {
@@ -34,8 +37,15 @@ export function categoryTrends(transactions: Transaction[], year: number, month:
     const previous = amounts[4];
     const difference = current - previous;
     const percentage = previous > 0 ? Math.round(difference / previous * 100) : null;
+    const previousThreeMonthTotal = amounts[2] + amounts[3] + amounts[4];
+    const previousThreeMonthAverage = previousThreeMonthTotal / 3;
     return {
       id, name: row.name, amounts, current, previous, difference, percentage,
+      previousThreeMonthAverage,
+      increaseVsAverage: current - previousThreeMonthAverage,
+      percentageVsAverage: previousThreeMonthTotal > 0
+        ? (current / previousThreeMonthAverage - 1) * 100
+        : null,
       // Exige aumento relevante tanto em reais quanto em proporção; sem base,
       // o gasto é novo, não uma variação percentual infinita.
       significantIncrease: difference >= 10000 && (previous === 0 || difference / previous >= 0.3),
@@ -47,5 +57,11 @@ export function categoryTrends(transactions: Transaction[], year: number, month:
     categories: categories.sort((a, b) => b.current - a.current || a.name.localeCompare(b.name)),
     increases: categories.filter((item) => item.significantIncrease)
       .sort((a, b) => b.difference - a.difference || a.name.localeCompare(b.name)),
+    aboveThreeMonthAverage: categories
+      .filter((item) => {
+        const previousTotal = item.amounts[2] + item.amounts[3] + item.amounts[4];
+        return previousTotal > 0 && item.current * 60 > previousTotal * 21;
+      })
+      .sort((a, b) => b.increaseVsAverage - a.increaseVsAverage || a.name.localeCompare(b.name)),
   };
 }

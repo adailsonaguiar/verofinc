@@ -20,7 +20,7 @@ interface DashboardCategoryTrendsProps {
 }
 
 export const DashboardCategoryTrends: React.FC<DashboardCategoryTrendsProps> = ({ transactions, year, month }) => {
-  const { months, categories, increases } = useMemo(
+  const { months, categories, increases, aboveThreeMonthAverage } = useMemo(
     () => categoryTrends(transactions, year, month), [transactions, year, month]
   );
   const comparison = categories.filter((item) => item.current > 0 || item.previous > 0)
@@ -111,6 +111,33 @@ export const DashboardCategoryTrends: React.FC<DashboardCategoryTrendsProps> = (
                 />
               </div>
             </div>
+          </div>
+          <div className="card p-5 md:p-6">
+            <h3 className="font-display text-lg">Acima da média dos últimos 3 meses</h3>
+            <p className="mt-1 text-sm text-navy-500">
+              Todas as categorias com gasto mais de 5% acima da média de {monthName(months[2])}, {monthName(months[3])} e {monthName(months[4])}.
+            </p>
+            {aboveThreeMonthAverage.length > 0 ? (
+              <ul className="mt-4 divide-y divide-bone-divider">
+                {aboveThreeMonthAverage.map((item) => (
+                  <li key={item.id} className="flex flex-col gap-1 py-3 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                    <span className="font-medium text-navy-900">{item.name}</span>
+                    <span className="num text-navy-700">
+                      Média {formatCurrency(item.previousThreeMonthAverage)} → {formatCurrency(item.current)}{' '}
+                      <strong className="text-rose-700">
+                        +{formatCurrency(item.increaseVsAverage)} ({(item.percentageVsAverage ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%)
+                      </strong>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-4 text-sm text-navy-700">Nenhuma categoria ficou mais de 5% acima da média dos três meses anteriores.</p>
+            )}
+            <p className="mt-3 text-xs text-navy-500">Meses sem gasto entram como zero na média. Categorias sem gasto nos três meses anteriores não têm percentual comparável.</p>
+            {year === new Date().getFullYear() && month === new Date().getMonth() + 1 && (
+              <p className="mt-2 text-xs text-navy-500">O mês atual ainda está em andamento; os valores podem mudar.</p>
+            )}
           </div>
           <div className="card p-5 md:p-6">
             <h3 className="font-display text-lg">Onde os gastos mais cresceram</h3>

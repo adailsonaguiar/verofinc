@@ -47,3 +47,23 @@ test('mudança de ano mantém ordem cronológica e categoria sem gasto no mês a
   assert.equal(result.categories[0].difference, -15000);
   assert.deepEqual(result.increases, []);
 });
+
+test('lista todas as categorias acima de 5% da média dos três meses anteriores', () => {
+  const result = categoryTrends([
+    expense('2026-08-05', 10000), expense('2026-09-05', 20000), expense('2026-10-05', 30000),
+    expense('2026-11-05', 22000), // média 20.000, aumento de 10% e 2.000 centavos
+    expense('2026-08-05', 10000, 'transport', 'Transporte'),
+    expense('2026-11-05', 4000, 'transport', 'Transporte'), // meses sem gasto contam como zero
+    expense('2026-08-05', 10000, 'health', 'Saúde'),
+    expense('2026-09-05', 10000, 'health', 'Saúde'),
+    expense('2026-10-05', 10000, 'health', 'Saúde'),
+    expense('2026-11-05', 10500, 'health', 'Saúde'), // exatamente 5% não entra
+    expense('2026-11-05', 50000, 'new', 'Nova'), // sem média anterior: não divide por zero
+  ], 2026, 11);
+
+  assert.deepEqual(result.aboveThreeMonthAverage.map((item) => item.name), ['Alimentação', 'Transporte']);
+  assert.equal(result.aboveThreeMonthAverage[0].previousThreeMonthAverage, 20000);
+  assert.equal(result.aboveThreeMonthAverage[0].increaseVsAverage, 2000);
+  assert.equal(Math.round(result.aboveThreeMonthAverage[0].percentageVsAverage!), 10);
+  assert.equal(result.aboveThreeMonthAverage[1].previousThreeMonthAverage, 10000 / 3);
+});
