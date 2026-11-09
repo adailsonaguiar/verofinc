@@ -118,3 +118,98 @@
   letter-spacing: -0.04em;
   font-weight: 650;
 }
+
+.invoice-print {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 16mm;
+  }
+
+  html, body {
+    background: white !important;
+    color: #171916 !important;
+    color-scheme: light;
+  }
+
+  body > #root {
+    display: none !important;
+  }
+
+  .invoice-print {
+    display: block;
+    font-size: 10pt;
+  }
+
+  .invoice-print-header {
+    padding-bottom: 12mm;
+    border-bottom: 1px solid #999;
+  }
+
+  .invoice-print-header h1 {
+    font-size: 20pt;
+    font-weight: 650;
+    margin: 0 0 3mm;
+  }
+
+  .invoice-print-header p {
+    margin: 1mm 0;
+  }
+
+  .invoice-print-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8mm;
+    table-layout: fixed;
+  }
+
+  .invoice-print-table th,
+  .invoice-print-table td {
+    padding: 3mm 2mm;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+  }
+
+  .invoice-print-table th:first-child,
+  .invoice-print-table td:first-child {
+    width: 22mm;
+  }
+
+  .invoice-print-table th:nth-child(3),
+  .invoice-print-table td:nth-child(3) {
+    width: 35mm;
+  }
+
+  .invoice-print-table th:last-child,
+  .invoice-print-table td:last-child {
+    width: 34mm;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .invoice-print-table tr,
+  .invoice-print-total {
+    break-inside: avoid;
+  }
+
+  .invoice-print-total {
+    display: flex;
+    justify-content: space-between;
+    gap: 8mm;
+    margin-top: 8mm;
+    padding-top: 4mm;
+    border-top: 2px solid #171916;
+    font-size: 12pt;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .invoice-print-payment {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+}
