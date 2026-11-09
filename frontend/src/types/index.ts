@@ -99,6 +99,7 @@ export interface Transaction {
   invoice?: string;
   isFixed?: boolean;
   isPayment?: boolean;
+  isReversal?: boolean;
   sortOrder?: number;
 }
 
