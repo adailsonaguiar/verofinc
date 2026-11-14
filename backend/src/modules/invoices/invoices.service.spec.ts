@@ -251,6 +251,20 @@ describe('InvoicesService', () => {
       );
     });
 
+    it('reconciles an unpaid open invoice total with its purchases at settlement', async () => {
+      const invoice = {
+        _id: makeId(), totalAmount: 233519, paidAmount: 0, status: InvoiceStatus.OPEN,
+      } as any;
+      invoiceRepo.findByAccountAndReferenceMonth.mockResolvedValue(invoice);
+      invoiceRepo.update.mockResolvedValue({ ...invoice, totalAmount: 237695, paidAmount: 237695 });
+
+      await service.markPaidByReferenceMonth(makeId().toString(), '2026-11', 237695);
+
+      expect(invoiceRepo.update).toHaveBeenCalledWith(invoice._id.toString(),
+        expect.objectContaining({ totalAmount: 237695, paidAmount: 237695, status: InvoiceStatus.PAID })
+      );
+    });
+
     it('marks the full invoice total as paid without changing it', async () => {
       const accountId = makeId().toString();
       const invoice = {

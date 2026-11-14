@@ -13,6 +13,30 @@ test('fatura aberta com valor em aberto não aparece como paga mesmo sem transa�
   assert.deepEqual(summary, { paid: false, total: 158532, amount: 158532 });
 });
 
+test('fatura aberta usa o total das compras carregadas mesmo quando o total persistido está defasado', () => {
+  assert.deepEqual(
+    getInvoiceSummary(
+      { status: 'open' as Invoice['status'], totalAmount: 233519, paidAmount: 0 },
+      237695,
+      394778,
+      true
+    ),
+    { paid: false, total: 237695, amount: 237695 }
+  );
+});
+
+test('fatura quitada preserva o total consolidado mesmo com compras editadas', () => {
+  assert.deepEqual(
+    getInvoiceSummary(
+      { status: 'paid' as Invoice['status'], totalAmount: 233519, paidAmount: 233519 },
+      237695,
+      0,
+      true
+    ),
+    { paid: true, total: 233519, amount: 0 }
+  );
+});
+
 test('ausência de fatura e de transações não significa pagamento', () => {
   assert.deepEqual(getInvoiceSummary(undefined, 0, 0), {
     paid: false,

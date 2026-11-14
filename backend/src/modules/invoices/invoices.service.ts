@@ -394,7 +394,8 @@ export class InvoicesService {
 
   async markPaidByReferenceMonth(
     accountId: string,
-    referenceMonth: string
+    referenceMonth: string,
+    currentTotalInCents?: number
   ): Promise<InvoiceDocument | null> {
     const invoice = await this.invoiceRepository.findByAccountAndReferenceMonth(
       accountId,
@@ -402,9 +403,18 @@ export class InvoicesService {
     );
     if (!invoice) return null;
 
+    // Correct a stale open total on settlement, without rewriting protected snapshots.
+    const totalAmount =
+      invoice.status === InvoiceStatus.OPEN &&
+      invoice.paidAmount === 0 &&
+      currentTotalInCents !== undefined
+        ? currentTotalInCents
+        : invoice.totalAmount;
+
     return this.invoiceRepository.update(invoice._id.toString(), {
       status: InvoiceStatus.PAID,
-      paidAmount: invoice.totalAmount,
+      ...(totalAmount !== invoice.totalAmount ? { totalAmount } : {}),
+      paidAmount: totalAmount,
       paidAt: new Date(),
     });
   }

@@ -14,6 +14,7 @@ import {
 import { TransactionsService } from '../transactions/transactions.service';
 import { CategoriesService } from '../categories/categories.service';
 import { InvoicesService } from '../invoices/invoices.service';
+import { InvoiceStatus } from '../../entities/invoice.entity';
 
 @Injectable()
 export class AccountService {
@@ -142,6 +143,9 @@ export class AccountService {
         'Unable to resolve invoice for this period'
       );
     }
+    if (invoice.status === InvoiceStatus.PAID) {
+      throw new BadRequestException('Invoice is already paid');
+    }
 
     const startDate = invoice.startDate;
     const endDate = new Date(invoice.closingDate);
@@ -159,11 +163,12 @@ export class AccountService {
       .filter((t) => t.type === TransactionType.EXPENSE && !t.isPayment)
       .reduce((sum, t) => sum + t.amount, 0);
 
-    const monthPayments = monthTransactions
-      .filter((t) => t.type === TransactionType.INCOME && t.isPayment)
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    const invoiceAmount = (monthExpenses - monthPayments) / 100;
+    // Payment receipts in this date range may belong to an earlier invoice.
+    const invoiceTotal =
+      invoice.paidAmount > 0 || invoice.status === InvoiceStatus.CLOSED
+        ? invoice.totalAmount
+        : monthExpenses;
+    const invoiceAmount = (invoiceTotal - (invoice.paidAmount ?? 0)) / 100;
 
     if (invoiceAmount <= 0) {
       throw new BadRequestException('No invoice to pay for this month');
@@ -222,7 +227,8 @@ export class AccountService {
 
     await this.invoicesService.markPaidByReferenceMonth(
       creditCardId,
-      invoice.referenceMonth
+      invoice.referenceMonth,
+      invoiceTotal
     );
 
     return {
