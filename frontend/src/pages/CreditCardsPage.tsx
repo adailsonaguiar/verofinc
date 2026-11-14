@@ -160,8 +160,10 @@ export const CreditCardsPage: React.FC = () => {
   });
 
   const invoices = invoiceQuery.data?.invoices ?? [];
-  const transactions = invoiceQuery.data?.transactions ?? [];
-  const printTransactions = invoiceQuery.data?.invoiceTransactions ?? transactions;
+  const transactions =
+    invoiceQuery.data?.invoiceTransactions ??
+    (invoiceQuery.data?.transactions ?? []).filter((t) => !t.isPayment);
+  const printTransactions = transactions;
   const loadingInvoices = invoiceQuery.isPending;
   const loadingTransactions = invoiceQuery.isPending;
   const checkingAccounts = useMemo(
@@ -357,7 +359,12 @@ export const CreditCardsPage: React.FC = () => {
     paid: monthInvoicePaid,
     total: monthInvoiceTotalInCents,
     amount: monthInvoiceAmountInCents,
-  } = getInvoiceSummary(currentInvoice, monthExpensesSum, monthPaymentsSum);
+  } = getInvoiceSummary(
+    currentInvoice,
+    monthExpensesSum,
+    monthPaymentsSum,
+    invoiceQuery.data?.invoiceTransactions != null
+  );
   const printPeriod = currentInvoice
     ? {
         startDate: new Date(currentInvoice.startDate),
