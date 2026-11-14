@@ -38,6 +38,7 @@ describe('TransactionsService', () => {
   let accountRepo: { findAll: Mock; findById: Mock; update: Mock };
   let invoicesService: {
     getOrCreateInvoice: Mock;
+    findById: Mock;
     incrementTotal: Mock;
     decrementTotal: Mock;
   };
@@ -95,6 +96,7 @@ describe('TransactionsService', () => {
 
     invoicesService = {
       getOrCreateInvoice: vi.fn().mockResolvedValue(null),
+      findById: vi.fn().mockResolvedValue({ status: 'open', paidAmount: 0 }),
       incrementTotal: vi.fn().mockResolvedValue(undefined),
       decrementTotal: vi.fn().mockResolvedValue(undefined),
     };
@@ -254,6 +256,66 @@ describe('TransactionsService', () => {
   });
 
   describe('update', () => {
+    it('adjusts the invoice total when an existing card purchase amount changes', async () => {
+      const card = makeCreditCard();
+      const invoiceId = makeId();
+      const purchase = makeTx({ account: card._id, invoice: invoiceId, amount: 10000 });
+      accountRepo.findById.mockResolvedValue(card);
+      transactionRepo.findById.mockResolvedValue(purchase);
+      transactionRepo.update.mockResolvedValue({ ...purchase, amount: 14176 });
+
+      await service.update(purchase._id.toString(), { amount: 141.76 });
+
+      expect(invoicesService.incrementTotal).toHaveBeenCalledWith(
+        invoiceId.toString(),
+        4176
+      );
+      expect(invoicesService.decrementTotal).not.toHaveBeenCalled();
+    });
+
+    it('decreases the invoice total when a card purchase amount is reduced', async () => {
+      const card = makeCreditCard();
+      const invoiceId = makeId();
+      const purchase = makeTx({ account: card._id, invoice: invoiceId, amount: 10000 });
+      accountRepo.findById.mockResolvedValue(card);
+      transactionRepo.findById.mockResolvedValue(purchase);
+      transactionRepo.update.mockResolvedValue({ ...purchase, amount: 5824 });
+
+      await service.update(purchase._id.toString(), { amount: 58.24 });
+
+      expect(invoicesService.decrementTotal).toHaveBeenCalledWith(
+        invoiceId.toString(),
+        4176
+      );
+      expect(invoicesService.incrementTotal).not.toHaveBeenCalled();
+    });
+
+    it('does not change invoice totals for a description-only edit', async () => {
+      const card = makeCreditCard();
+      const purchase = makeTx({ account: card._id, invoice: makeId() });
+      accountRepo.findById.mockResolvedValue(card);
+      transactionRepo.findById.mockResolvedValue(purchase);
+      transactionRepo.update.mockResolvedValue(purchase);
+
+      await service.update(purchase._id.toString(), { description: 'Compra corrigida' });
+
+      expect(invoicesService.incrementTotal).not.toHaveBeenCalled();
+      expect(invoicesService.decrementTotal).not.toHaveBeenCalled();
+    });
+
+    it('rejects changing the amount of a settled purchase', async () => {
+      const card = makeCreditCard();
+      const purchase = makeTx({ account: card._id, invoice: makeId(), amount: 10000 });
+      accountRepo.findById.mockResolvedValue(card);
+      transactionRepo.findById.mockResolvedValue(purchase);
+      invoicesService.findById.mockResolvedValue({ status: 'paid', paidAmount: 10000 });
+
+      await expect(service.update(purchase._id.toString(), { amount: 141.76 }))
+        .rejects.toThrow(BadRequestException);
+      expect(transactionRepo.update).not.toHaveBeenCalled();
+      expect(invoicesService.incrementTotal).not.toHaveBeenCalled();
+    });
+
     it('should correctly calculate net difference if updating amount in the same account', async () => {
       const mockAccount = {
         _id: new Types.ObjectId(),

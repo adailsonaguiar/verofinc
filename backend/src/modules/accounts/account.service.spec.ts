@@ -723,8 +723,78 @@ describe('AccountService', () => {
 
       expect(invoicesService.markPaidByReferenceMonth).toHaveBeenCalledWith(
         card._id.toString(),
-        '2026-05'
+        '2026-05',
+        40000
       );
+    });
+
+    it('ignores a previous invoice payment inside the current period', async () => {
+      const card = buildCreditCard();
+      const checking = buildCheckingAccount();
+      accountRepo.findById.mockResolvedValueOnce(card).mockResolvedValueOnce(checking);
+      invoicesService.getOrCreateInvoice.mockResolvedValueOnce({
+        _id: makeId(),
+        referenceMonth: '2026-11',
+        startDate: new Date(2026, 9, 11),
+        closingDate: new Date(2026, 10, 13),
+        totalAmount: 233519,
+        paidAmount: 0,
+        status: 'open',
+      });
+      transactionsService.findWithFilters.mockResolvedValueOnce([
+        { type: TransactionType.EXPENSE, amount: 237695 },
+        { type: TransactionType.INCOME, isPayment: true, amount: 394778 },
+      ]);
+      categoriesService.findByType.mockResolvedValue([
+        { _id: makeId(), name: 'Pagamento de Fatura', type: 'expense' },
+      ]);
+      transactionsService.create.mockResolvedValue({});
+
+      const result = await service.payInvoice(card._id.toString(), checking._id.toString(), 2026, 11);
+
+      expect(result.invoiceAmount).toBe(2376.95);
+      expect(invoicesService.markPaidByReferenceMonth).toHaveBeenCalledWith(
+        card._id.toString(), '2026-11', 237695
+      );
+    });
+
+    it('pays only the remaining balance of a partially paid invoice', async () => {
+      const card = buildCreditCard();
+      const checking = buildCheckingAccount();
+      accountRepo.findById.mockResolvedValueOnce(card).mockResolvedValueOnce(checking);
+      invoicesService.getOrCreateInvoice.mockResolvedValueOnce({
+        _id: makeId(), referenceMonth: '2026-11',
+        startDate: new Date(2026, 9, 11), closingDate: new Date(2026, 10, 10),
+        totalAmount: 20000, paidAmount: 5000, status: 'partially_paid',
+      });
+      transactionsService.findWithFilters.mockResolvedValueOnce([
+        { type: TransactionType.EXPENSE, amount: 20000 },
+        { type: TransactionType.INCOME, isPayment: true, amount: 5000 },
+      ]);
+      categoriesService.findByType.mockResolvedValue([
+        { _id: makeId(), name: 'Pagamento de Fatura', type: 'expense' },
+      ]);
+      transactionsService.create.mockResolvedValue({});
+
+      const result = await service.payInvoice(card._id.toString(), checking._id.toString(), 2026, 11);
+
+      expect(result.invoiceAmount).toBe(150);
+      expect(invoicesService.markPaidByReferenceMonth).toHaveBeenCalledWith(
+        card._id.toString(), '2026-11', 20000
+      );
+    });
+
+    it('rejects paying an invoice that is already paid', async () => {
+      const card = buildCreditCard();
+      const checking = buildCheckingAccount();
+      accountRepo.findById.mockResolvedValueOnce(card).mockResolvedValueOnce(checking);
+      invoicesService.getOrCreateInvoice.mockResolvedValueOnce({
+        status: 'paid', referenceMonth: '2026-11', totalAmount: 20000, paidAmount: 20000,
+      });
+
+      await expect(service.payInvoice(card._id.toString(), checking._id.toString(), 2026, 11))
+        .rejects.toThrow(BadRequestException);
+      expect(transactionsService.create).not.toHaveBeenCalled();
     });
   });
 });

@@ -18,6 +18,7 @@ import { AccountService } from '../accounts/account.service';
 import { AccountRepository } from '../../repositories/account.repository';
 import { AccountType } from '@/entities/account.entity';
 import { InvoicesService } from '../invoices/invoices.service';
+import { InvoiceStatus } from '../../entities/invoice.entity';
 
 @Injectable()
 export class TransactionsService {
@@ -376,7 +377,9 @@ export class TransactionsService {
     updateTransactionDto: UpdateTransactionDto
   ): Promise<Transaction> {
     if (updateTransactionDto.amount !== undefined) {
-      updateTransactionDto.amount = updateTransactionDto.amount * 100;
+      updateTransactionDto.amount = Math.round(
+        updateTransactionDto.amount * 100
+      );
     }
     const original = await this.transactionRepository.findById(id);
     if (!original)
@@ -421,6 +424,18 @@ export class TransactionsService {
       }
     }
 
+    if (original.invoice && updateData.amount !== original.amount) {
+      const invoice = await this.invoicesService.findById(original.invoice.toString());
+      if (
+        invoice.paidAmount > 0 ||
+        invoice.status === InvoiceStatus.PAID ||
+        invoice.status === InvoiceStatus.CLOSED ||
+        invoice.status === InvoiceStatus.PARTIALLY_PAID
+      ) {
+        throw new BadRequestException('Cannot edit a settled invoice purchase');
+      }
+    }
+
     const updated = await this.transactionRepository.update(id, updateData);
 
     try {
@@ -428,6 +443,25 @@ export class TransactionsService {
     } catch (err) {
       await this.transactionRepository.update(id, original);
       throw err;
+    }
+
+    if (
+      original.invoice &&
+      original.type === TransactionType.EXPENSE &&
+      original.account.toString() === updateData.account.toString()
+    ) {
+      const difference = updateData.amount - original.amount;
+      if (difference > 0) {
+        await this.invoicesService.incrementTotal(
+          original.invoice.toString(),
+          difference
+        );
+      } else if (difference < 0) {
+        await this.invoicesService.decrementTotal(
+          original.invoice.toString(),
+          -difference
+        );
+      }
     }
 
     return updated;
