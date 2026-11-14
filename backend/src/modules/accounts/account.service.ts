@@ -222,8 +222,7 @@ export class AccountService {
 
     await this.invoicesService.markPaidByReferenceMonth(
       creditCardId,
-      invoice.referenceMonth,
-      monthExpenses - monthPayments
+      invoice.referenceMonth
     );
 
     return {

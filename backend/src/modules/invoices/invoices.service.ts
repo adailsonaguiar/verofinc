@@ -394,8 +394,7 @@ export class InvoicesService {
 
   async markPaidByReferenceMonth(
     accountId: string,
-    referenceMonth: string,
-    amountInCents?: number
+    referenceMonth: string
   ): Promise<InvoiceDocument | null> {
     const invoice = await this.invoiceRepository.findByAccountAndReferenceMonth(
       accountId,
@@ -403,13 +402,9 @@ export class InvoicesService {
     );
     if (!invoice) return null;
 
-    const paidAmount =
-      amountInCents !== undefined ? amountInCents : invoice.totalAmount;
-
     return this.invoiceRepository.update(invoice._id.toString(), {
       status: InvoiceStatus.PAID,
-      totalAmount: paidAmount,
-      paidAmount,
+      paidAmount: invoice.totalAmount,
       paidAt: new Date(),
     });
   }

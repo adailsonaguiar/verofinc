@@ -723,8 +723,7 @@ describe('AccountService', () => {
 
       expect(invoicesService.markPaidByReferenceMonth).toHaveBeenCalledWith(
         card._id.toString(),
-        '2026-05',
-        40000
+        '2026-05'
       );
     });
   });
