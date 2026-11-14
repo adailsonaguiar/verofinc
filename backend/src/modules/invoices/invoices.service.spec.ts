@@ -11,7 +11,7 @@ import {
 import { AccountType } from '../../entities/account.entity';
 import { getModelToken } from '@nestjs/mongoose';
 import { Types } from 'mongoose';
-import { describe, it, expect, beforeEach, vi, Mock } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest';
 
 describe('InvoicesService', () => {
   let service: InvoicesService;
@@ -217,34 +217,41 @@ describe('InvoicesService', () => {
   });
 
   describe('markPaidByReferenceMonth', () => {
-    it('sets the invoice as PAID using the provided amount when given', async () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('preserves the original total when settling an invoice with a previous partial payment', async () => {
+      vi.useFakeTimers();
+      const paymentDate = new Date(2026, 8, 17, 12);
+      vi.setSystemTime(paymentDate);
       const accountId = makeId().toString();
       const invoice = {
         _id: makeId(),
-        totalAmount: 2000,
-        status: InvoiceStatus.OPEN,
+        totalAmount: 20000,
+        paidAmount: 5000,
+        status: InvoiceStatus.PARTIALLY_PAID,
       } as any;
       invoiceRepo.findByAccountAndReferenceMonth.mockResolvedValue(invoice);
       invoiceRepo.update.mockResolvedValue({
         ...invoice,
         status: InvoiceStatus.PAID,
-        totalAmount: 187341,
-        paidAmount: 187341,
+        paidAmount: 20000,
       });
 
-      await service.markPaidByReferenceMonth(accountId, '2026-09', 187341);
+      await service.markPaidByReferenceMonth(accountId, '2026-09');
 
       expect(invoiceRepo.update).toHaveBeenCalledWith(
         invoice._id.toString(),
-        expect.objectContaining({
+        {
           status: InvoiceStatus.PAID,
-          totalAmount: 187341,
-          paidAmount: 187341,
-        })
+          paidAmount: 20000,
+          paidAt: paymentDate,
+        }
       );
     });
 
-    it('falls back to invoice.totalAmount when no amount is provided', async () => {
+    it('marks the full invoice total as paid without changing it', async () => {
       const accountId = makeId().toString();
       const invoice = {
         _id: makeId(),
@@ -262,10 +269,11 @@ describe('InvoicesService', () => {
 
       expect(invoiceRepo.update).toHaveBeenCalledWith(
         invoice._id.toString(),
-        expect.objectContaining({
+        {
           status: InvoiceStatus.PAID,
           paidAmount: 8500,
-        })
+          paidAt: expect.any(Date),
+        }
       );
     });
 
